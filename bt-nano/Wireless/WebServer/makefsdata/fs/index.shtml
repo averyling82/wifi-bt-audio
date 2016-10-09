@@ -1,0 +1,39 @@
+<html>
+<head><title>webserver demo</title></head>
+<script>
+function prevcgi()
+{ 
+document.form1.action="prev.cgi";
+document.form1.submit();
+}
+function nextcgi()
+{
+document.form1.action="next.cgi";
+document.form1.submit();
+}
+</script>  
+<body>
+<font face="arial">
+<a href="index.shtml">SSIDs Stats</a> <b>|</b> <a href="runtime.shtml">Run-Time Stats</a> <b>|</b> <a href="http://www.rock-chips.com/">Rockchips Homepage</a> 
+<br><p>
+<h2>SSIDs statistics</h2>
+<p>
+<font face="courier"><pre>BSSID              Channel  RSSI  SSID            <br>**************************************************<br>
+<form name="form1">
+<!--#ssid0-->
+<!--#ssid1-->
+<!--#ssid2-->
+<!--#ssid3-->
+<!--#ssid4-->
+<!--#ssid5-->
+<!--#ssid6-->
+<!--#ssid7-->
+<!--#ssid8-->
+<!--#ssid9-->
+
+<input type="button" value='Prev' style="width:50px" onclick="prevcgi();"/> <!--#menu--> <input type="submit" value='Next' style="width:50px" onclick="nextcgi();"/>
+</form>
+</pre></font>
+</font>
+</body>
+</html>

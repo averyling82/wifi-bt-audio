@@ -1,0 +1,65 @@
+#! armcc -E --device DLM
+/*
+********************************************************************************************
+*
+*        Copyright (c):Fuzhou Rockchip Electronics Co., Ltd
+*                             All rights reserved.
+*
+* FileName: Bsp\EVK_V2.0\Scatter\ScatterLoader.c
+* Owner: aaron.sun
+* Date: 2015.6.10
+* Time: 16:01:48
+* Version: 1.0
+* Desc:
+* History:
+*    <author>    <date>       <time>     <version>     <Desc>
+*    aaron.sun     2015.6.10     16:01:48   1.0
+********************************************************************************************
+*/
+
+
+#define HRAM_CODE_BASE      0x00000000
+#define HRAM_CODE_SIZE      0x00020000
+
+#define HRAM_DATA_BASE      0x01020000
+#define HRAM_DATA_SIZE      0x00040000
+
+
+LOAD_HRAM_CODE_REGION HRAM_CODE_BASE
+{
+
+      BB_SYS_CODE(HRAM_CODE_BASE)
+      {
+             *.o(BB_START_VECT, +First)
+           *.o(BB_START_CODE)
+
+           *(BBSysCode)
+           *(+RO)
+
+      }
+
+      ScatterAssert(ImageLimit(BB_SYS_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+}
+
+
+LOAD_BBSYS_DATA_REGION HRAM_DATA_BASE
+{
+      BB_MAIN_STACK (HRAM_DATA_BASE)
+      {
+          *.o(_chip_freq2_, +First)
+          *(BBMainStack)
+      }
+
+      BB_SYS_DATA (HRAM_DATA_BASE + 0x4000)
+      {
+          *.o(bb_vect, +First)
+          *(BBSysData)
+          *(+RW)
+          *(+ZI)
+
+      }
+
+        ScatterAssert(ImageLimit(BB_SYS_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+}
+
+;*******************************************************************************

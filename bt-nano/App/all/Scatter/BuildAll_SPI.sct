@@ -1,0 +1,2693 @@
+;
+;*******************************************************************************
+;      Copyright (c):Fuzhou Rockchip Electronics Co., Ltd
+;                         All rights reserved.
+;
+; File Name£º   CortexM3.sct
+;
+; Description:
+;
+; History:      <author>          <time>        <version>
+;             aaron.sun        2015-6-10          1.0
+;    desc:    sct file for emmc boot
+;*******************************************************************************
+;
+#define BOOT_ROM_BASE       0x00000000
+
+#define HRAM_CODE_BASE      0x01000000
+#define HRAM_CODE_SIZE      0x00020000
+
+#define HRAM_DATA_BASE      0x01020000
+#define HRAM_DATA_SIZE      0x00040000
+
+#define LOADER_DATA_BASE    0x0304A000
+#define LOADER_CODE_BASE    0x03088000
+
+#define SYS_DATA_BASE       0x03000000
+#define SYS_DATA_SIZE       0x00050000
+
+#define SYS_CODE_BASE       0x03050000
+#define SYS_CODE_SIZE       0x0003c000
+#define SYS_HEAP_BASE       0x0308c000
+#define SYS_HEAP_SIZE       0x00004000
+
+#define DEV_CODE_START      0x0306D000
+
+#define PMU_DATA_BASE       0x00000000
+#define PMU_DATA_SIZE       0x00001000
+#define PMU_CODE_BASE       0x00001000
+#define PMU_CODE_SIZE       0x0000F000
+#define SHELL_CODE_START    0x0000C800
+
+START_REGION 0x04000000
+{
+    START 0x04000000
+    {
+        *(link_entry)
+    }
+}
+
+LOAD_REGION SYS_CODE_BASE
+{
+    ;--------------------------------------------------------------
+    ;Module Info Table
+
+    MODULE_INFO 0x21000000
+    {
+        *.o(_ModuleInfo_)
+    }
+
+    WIFI_FIRMWARE_ONE 0X31000000
+    {
+      *(_wifi_fw_)
+
+    }
+
+    WIFI_FIRMWARE_TWO 0X41000000
+    {
+      *(wifi_nvram)
+    }
+
+    WIFI_FIRMWARE_RKI6000 0X41200000
+    {
+      *(i6000_wifi_fw)
+    }
+
+    BT_FIRMWARE 0X51000000
+    {
+      *(LwbtInitScriptCode)
+    }
+
+    AUDIO_EQ_DATA 0X61000000              ;Eq Table Data
+    {
+        *(RkEqData)
+    }
+
+    LWIP_POOL_DATA 0X71000000
+    {
+        *(memp_memory_backup)
+    }
+
+    DMR_DEVICE_DATA 0X81000000
+    {
+        *(CG_UPNPAV_DMR_DEVICE_DESCRIPTION)
+    }
+
+    DMR_CONNECTIONMANAGER_SERVICE_DATA 0X82000000
+    {
+        *(CG_UPNPAV_DMR_CONNECTIONMANAGER_SERVICE_DESCRIPTION)
+    }
+
+    DMR_RENDERINGCONTROL_SERVICE_DATA 0X83000000
+    {
+        *(CG_UPNPAV_DMR_RENDERINGCONTROL_SERVICE_DESCRIPTION)
+    }
+
+    DMR_AVTRANSPORT_SERVICE_DATA 0X84000000
+    {
+        *(CG_UPNPAV_DMR_AVTRANSPORT_SERVICE_DESCRIPTION)
+    }
+
+    DMR_NAMINGBITMAP_DATA  0X85000000
+    {
+        *(NAMINGBITMAP)
+    }
+
+    DMR_NMSTRTPAGES_DATA  0X86000000
+    {
+        *(NMSTRTPAGES)
+    }
+
+    DMR_NAMEPAGES_DATA  0X87000000
+    {
+        *(NAMEPAGES)
+    }
+
+    SHELL_CMD_NAME_DATA 0x88000000
+    {
+        *.o(ShellRegisterName, +First)
+        ShellTask.o(.conststrlit)
+        music.o(.conststrlit)
+        timerdevice.o(.conststrlit)
+        adcdevice.o(.conststrlit)
+        keydevice.o(.conststrlit)
+        pwmdevice.o(.conststrlit)
+        vopdevice.o(.conststrlit)
+        lcddevice.o(.conststrlit)
+        displaydevice.o(.conststrlit)
+        guitask.o(.conststrlit)
+        bcoredevice.o(.conststrlit)
+        msgdevice.o(.conststrlit)
+        dirdevice.o(.conststrlit)
+        i2sdevice.o(.conststrlit)
+        rockcodecdevice.o(.conststrlit)
+        audiodevice.o(.conststrlit)
+        mailboxdevice.o(.conststrlit)
+        sddevice.o(.conststrlit)
+        fifodevice.o(.conststrlit)
+        i2cdevice.o(.conststrlit)
+        usbotgdev.o(.conststrlit)
+        usbmscdevice.o(.conststrlit)
+        spidevice.o(.conststrlit)
+        spinordevice.o(.conststrlit)
+        lundevice.o(.conststrlit)
+        fwanalysis.o(.conststrlit)
+        dmadevice.o(.conststrlit)
+        sdmmcdevice.o(.conststrlit)
+        emmcdevice.o(.conststrlit)
+        partiondevice.o(.conststrlit)
+        fatdevice.o(.conststrlit)
+        filedevice.o(.conststrlit)
+        sdiodevice.o(.conststrlit)
+        wifi.o(.conststrlit)
+        dlna.o(.conststrlit)
+        airplay.o(.conststrlit)
+        rk903device.o(.conststrlit)
+        wlcdevice.o(.conststrlit)
+        uartdevice.o(.conststrlit)
+        spiflashdevice.o(.conststrlit)
+        watchdogdevice.o(.conststrlit)
+        gpio.o(.conststrlit)
+        FmDevice.o(.conststrlit)
+    }
+
+    TASK_INF_DATA 0x89000000
+    {
+        *.o(InitTaskItem, +First)
+        taskplugin.o(.conststrlit)
+    }
+
+    ;--------------------------------------------------------------
+    ;System Section
+
+    AP_SYS_CODE (SYS_CODE_BASE) ;OVERLAY
+    {
+        *.o(AP_START_VECT, +First)
+        *.o(AP_START_CODE)
+        *(cpu_nanod_lib_pmc_common)
+        *(system_shell_shelltask_common)
+        ShellTask.o(+RO)
+        *(os_fwanalysis_fwupdate_common)
+        *(SysCode)
+        *(driver_uart_uartdevie_common)
+        uart.o(+RO,+RW,+ZI)
+    }
+
+    AP_SYS_DATA (SYS_DATA_BASE)
+    {
+        *.o(ap_vect, +First)
+        *.o(DevInfo_Table)
+        sysinfosave.o(+RW)
+        fwanalysis.o(+ZI)
+        ShellTask.o(+RW,+ZI)
+    }
+
+    AP_MAIN_STACK (ImageLimit(AP_SYS_DATA))
+    {
+        *(APMainStack)
+    }
+
+    APP_HEAP_STACK(ImageLimit(AP_MAIN_STACK)) OVERLAY
+    {
+        *(AppHeapStack)
+    }
+
+    ScatterAssert(ImageLimit(APP_HEAP_STACK) < (SYS_DATA_BASE + SYS_DATA_SIZE))
+
+    HEAP_STACK(SYS_HEAP_BASE) OVERLAY
+    {
+        *(HeapStack)
+    }
+
+    ScatterAssert(ImageLimit(HEAP_STACK) <= (SYS_HEAP_BASE + SYS_HEAP_SIZE))
+
+
+    ;--------------------------------------------------------------
+    ;SYS INIT
+
+    INIT_CODE (ImageLimit(AP_SYS_CODE) + 0x10000) OVERLAY
+    {
+        *(bsp_evk_v20_bsp_init)
+        *(os_plugin_deviceplugin_init)
+        *(os_plugin_taskplugin_init)
+        *(os_fwanalysis_fwanalysis_init)
+        *(system_syssever_powermanager_init)
+        *(system_moduleoverlay_sysinfosave_init)
+        *(system_shell_shelltask_init)
+        *(os_devicemanager_devicemanagertask_init)
+        *(SysInitCode)
+        *(SysInitData)
+        *(SysInitBss)
+    }
+
+    INIT_DATA (ImageLimit(AP_SYS_DATA)) OVERLAY
+    {
+
+
+    }
+
+    ;--------------------------------------------------------------
+    ;INIT PAD
+
+    INIT_PAD_CODE (ImageLimit(AP_SYS_CODE)) OVERLAY
+    {
+
+
+    }
+    INIT_PAD_DATA (ImageLimit(AP_SYS_DATA)) OVERLAY
+    {
+
+    }
+
+;==============================================================================
+;
+;task
+;
+;==============================================================================
+    #define TASK_START_BASE ImageLimit(AP_SYS_CODE)
+
+    GUI_TASK_CODE(TASK_START_BASE) OVERLAY
+    {
+        *(gui_guitask_common)
+        guitask.o(+RO, +RW, +ZI)
+        guiselect.o(+RO, +RW, +ZI)
+        guitext.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(GUI_TASK_CODE) < DEV_CODE_START)
+
+    MAIN_TASK_CODE(ImageLimit(GUI_TASK_CODE)) OVERLAY
+    {
+        *(app_main_task_main_task_common)
+        main_task.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(MAIN_TASK_CODE) < DEV_CODE_START)
+
+    CHARGE_TASK_CODE(ImageLimit(GUI_TASK_CODE)) OVERLAY
+    {
+        *(app_usb_chargetask_common)
+        chargetask.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(CHARGE_TASK_CODE) < DEV_CODE_START)
+
+    MAIN_MENU_CODE(ImageLimit(MAIN_TASK_CODE)) OVERLAY
+    {
+        *(app_main_task_main_task_menu)
+    }
+    ScatterAssert(ImageLimit(MAIN_MENU_CODE) < DEV_CODE_START)
+    #define MAIN_MENU_MAX (ImageLimit(MAIN_MENU_CODE))
+
+
+    USBSERVICE_TASK_CODE(ImageLimit(MAIN_TASK_CODE)) OVERLAY
+    {
+        *(system_usbserver_usbserverice_common)
+        usbservice.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(USBSERVICE_TASK_CODE) < DEV_CODE_START)
+    #define USBSERVICE_TASK_MAX (ImageLimit(USBSERVICE_TASK_CODE) > MAIN_MENU_MAX  ? ImageLimit(USBSERVICE_TASK_CODE):MAIN_MENU_MAX )
+
+    LINEIN_TASK_CODE(ImageLimit(MAIN_TASK_CODE)) OVERLAY
+    {
+        *(app_line_in_lineintask_common)
+        lineintask.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(LINEIN_TASK_CODE) < DEV_CODE_START)
+    #define LININ_TASK_MAX (ImageLimit(LINEIN_TASK_CODE) > USBSERVICE_TASK_MAX  ? ImageLimit(LINEIN_TASK_CODE):USBSERVICE_TASK_MAX )
+
+    FMUI_TASK_CODE(ImageLimit(MAIN_TASK_CODE)) OVERLAY
+    {
+        *(app_fm_fmuitask_common)
+        fmuitask.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(FMUI_TASK_CODE) < DEV_CODE_START)
+    #define FMUI_TASK_MAX (ImageLimit(FMUI_TASK_CODE) > LININ_TASK_MAX  ? ImageLimit(FMUI_TASK_CODE):LININ_TASK_MAX )
+
+    RECOD_TASK_CODE(ImageLimit(MAIN_TASK_CODE)) OVERLAY
+    {
+        *(app_record_recod_task_common)
+        recod_task.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(RECOD_TASK_CODE) < DEV_CODE_START)
+    #define RECOD_TASK_MAX (ImageLimit(RECOD_TASK_CODE) > FMUI_TASK_MAX  ? ImageLimit(RECOD_TASK_CODE):FMUI_TASK_MAX )
+
+    MEDIA_LIBRARY_TASK_CODE(ImageLimit(MAIN_TASK_CODE)) OVERLAY
+    {
+        *(app_media_task_common)
+        media_library.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(MEDIA_LIBRARY_TASK_CODE) < DEV_CODE_START)
+    #define MEDIA_LIBRARY_TASK_MAX (ImageLimit(MEDIA_LIBRARY_TASK_CODE) > RECOD_TASK_MAX  ? ImageLimit(MEDIA_LIBRARY_TASK_CODE):RECOD_TASK_MAX )
+
+    MEDIA_BROWSER_TASK_CODE(ImageLimit(MAIN_TASK_CODE)) OVERLAY
+    {
+        *(app_media_browser_task_common)
+        media_browser.o(+RO, +RW, +ZI)
+        SortInfoGet.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(MEDIA_BROWSER_TASK_CODE) < DEV_CODE_START)
+    #define MEDIA_BROWSER_TASK_MAX (ImageLimit(MEDIA_BROWSER_TASK_CODE) > MEDIA_LIBRARY_TASK_MAX  ? ImageLimit(MEDIA_BROWSER_TASK_CODE):MEDIA_LIBRARY_TASK_MAX )
+
+    MUSIC_PLAY_MENU_TASK_CODE(ImageLimit(MAIN_TASK_CODE)) OVERLAY
+    {
+        *(app_music_play_menu_task_common)
+        play_menu_task.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(MUSIC_PLAY_MENU_TASK_CODE) < DEV_CODE_START)
+    #define MUSIC_PLAY_MENU_TASK_MAX (ImageLimit(MUSIC_PLAY_MENU_TASK_CODE) > MEDIA_BROWSER_TASK_MAX  ? ImageLimit(MUSIC_PLAY_MENU_TASK_CODE):MEDIA_BROWSER_TASK_MAX)
+
+    BROWSERUI_TASK_CODE(ImageLimit(MAIN_TASK_CODE)) OVERLAY
+    {
+        *(app_browser_browseruitask_common)
+        browseruitask.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(BROWSERUI_TASK_CODE) < DEV_CODE_START)
+    #define BROWSERUI_TASK_MAX (ImageLimit(BROWSERUI_TASK_CODE) > MUSIC_PLAY_MENU_TASK_MAX ? ImageLimit(BROWSERUI_TASK_CODE):MUSIC_PLAY_MENU_TASK_MAX)
+
+    SYSTEMSET_TASK_CODE(ImageLimit(MAIN_TASK_CODE)) OVERLAY
+    {
+        *(app_systemset_systemsettask_common)
+        systemsettask.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(SYSTEMSET_TASK_CODE) < DEV_CODE_START)
+
+    SYSTEMSETWIFISELECT_TASK_CODE(ImageLimit(SYSTEMSET_TASK_CODE)) OVERLAY
+    {
+        *(app_systemset_systemsetwifiselecttask_common)
+        systemsetwifiselecttask.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(SYSTEMSETWIFISELECT_TASK_CODE) < DEV_CODE_START)
+    #define SYSTEMSETWIFISELECT_TASK_MAX (ImageLimit(SYSTEMSETWIFISELECT_TASK_CODE) > BROWSERUI_TASK_MAX ? ImageLimit(SYSTEMSETWIFISELECT_TASK_CODE):BROWSERUI_TASK_MAX)
+
+    #define AUDIO_TASK_CODE_START SYSTEMSETWIFISELECT_TASK_MAX
+
+    ;media update
+    MEDIA_UPDATE_TASK_CODE(AUDIO_TASK_CODE_START) OVERLAY
+    {
+        *(app_media_update_task_common)
+        media_update.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(MEDIA_UPDATE_TASK_CODE) < DEV_CODE_START)
+
+    ;file info save
+    FILE_INFO_SAVE_CODE(ImageLimit(MEDIA_UPDATE_TASK_CODE)) OVERLAY
+    {
+        FileInfoSave.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(FILE_INFO_SAVE_CODE) < DEV_CODE_START)
+
+    ;ID3
+    ID3_DEV_CODE(ImageLimit(FILE_INFO_SAVE_CODE)) OVERLAY
+    {
+        AsicToUnicode.o(+RO,+RW,+ZI)
+        AsicToUnicodeTable.o(+RO,+RW,+ZI)
+        cue.o(+RO,+RW,+ZI)
+        ID3.o(+RO,+RW,+ZI)
+        wma_parse.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(ID3_DEV_CODE) < DEV_CODE_START)
+
+    ;file info sort
+    FILE_INFO_SORT_CODE(ImageLimit(MEDIA_UPDATE_TASK_CODE)) OVERLAY
+    {
+        FileInfoSort.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(FILE_INFO_SORT_CODE) < DEV_CODE_START)
+
+    ;pcm player1
+    FILESTREAM_TASK_CODE(AUDIO_TASK_CODE_START) OVERLAY
+    {
+        *(app_filestream_filestreamtask_common)
+        filestreamtask.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(FILESTREAM_TASK_CODE) < DEV_CODE_START)
+
+    MEDIA_TASK_CODE(ImageLimit(FILESTREAM_TASK_CODE)) OVERLAY
+    {
+        *(app_media_mediatask_common)
+        mediatask.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(MEDIA_TASK_CODE) < DEV_CODE_START)
+
+    ;test player
+    AUDIOSUB_TASK_CODE(AUDIO_TASK_CODE_START) OVERLAY
+    {
+        *(app_audio_audiosubtask_read)
+        *(app_audio_audiosubtask_write)
+        audiosubtask.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(AUDIOSUB_TASK_CODE) < DEV_CODE_START)
+
+    AUDIOMAIN_TASK_CODE(TASK_START_BASE) OVERLAY
+    {
+        *(app_audio_audiomaintask_read)
+        *(app_audio_audiomaintask_write)
+        audiomaintask.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(AUDIOMAIN_TASK_CODE) < DEV_CODE_START)
+
+
+    ;audio player
+    STREAMCONTROL_TASK_CODE(AUDIO_TASK_CODE_START) OVERLAY
+    {
+        *(app_filestream_streamcontroltask_common)
+        streamcontroltask.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(STREAMCONTROL_TASK_CODE) < DEV_CODE_START)
+
+    LINEINCONTROL_TASK_CODE(ImageLimit(STREAMCONTROL_TASK_CODE)) OVERLAY
+    {
+        *(app_line_in_lineincontroltask_common)
+        lineIncontrolTask.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(LINEINCONTROL_TASK_CODE) < DEV_CODE_START)
+    #define LINEINCONTROL_TASK_MAX (ImageLimit(LINEINCONTROL_TASK_CODE))
+
+    FMCONTROL_TASK_CODE(ImageLimit(STREAMCONTROL_TASK_CODE)) OVERLAY
+    {
+        *(app_fm_fmcontroltask_common)
+        fmcontroltask.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(FMCONTROL_TASK_CODE) < DEV_CODE_START)
+
+    ;chad.ma add
+    RECORDCONTROL_TASK_CODE(ImageLimit(FMCONTROL_TASK_CODE)) OVERLAY
+    {
+        *(app_record_recordcontroltask_common)
+        recordcontroltask.o(+RO, +RW, +ZI)
+
+        ;*(NSCode)                      ;NS not use for temp
+        ;ns_interface.o(+RO, +RW, +ZI)  ;NS not use for temp
+    }
+
+    ScatterAssert(ImageLimit(RECORDCONTROL_TASK_CODE) < DEV_CODE_START)
+    #define RECORDCTL_TASK_MAX (ImageLimit(RECORDCONTROL_TASK_CODE) > LINEINCONTROL_TASK_MAX  ? ImageLimit(RECORDCONTROL_TASK_CODE):LINEINCONTROL_TASK_MAX )
+
+    AUDIOCONTROL_TASK_CODE(ImageLimit(STREAMCONTROL_TASK_CODE)) OVERLAY
+    {
+        *(app_audio_audiocontroltask_common)
+        audiocontroltask.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(AUDIOCONTROL_TASK_CODE) < DEV_CODE_START)
+    #define AUDIOCTL_TASK_MAX (ImageLimit(AUDIOCONTROL_TASK_CODE))
+
+    ;#define AUDIO_DECODE_CODE_BASE ImageLimit(AUDIOCONTROL_TASK_CODE)
+    ;chad.ma modified
+    #define AUDIO_DECODE_CODE_BASE  (AUDIOCTL_TASK_MAX > RECORDCTL_TASK_MAX ? AUDIOCTL_TASK_MAX:RECORDCTL_TASK_MAX)
+
+    ;---------------------------------------------------------------
+    ;Mp3 Decode
+    MP3_DECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(Mp3InitCode)
+        *(Mp3DecCode)
+        *(Mp3DecData)
+        *(Mp3DecBss)
+        *(Mp3DecDataHL)
+
+    }
+    ScatterAssert(ImageLimit(MP3_DECODE_CODE) < DEV_CODE_START)
+    #define MP3_DECODE_MAX (ImageLimit(MP3_DECODE_CODE))
+
+    ;--------------------------------------------------------------
+    ;XXX Decode
+    XXX_DECODE_CODE(AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(XXXDecCode)
+        *(XXXDecData)
+        *(XXXDevBss)
+    }
+
+    ScatterAssert(ImageLimit(XXX_DECODE_CODE) < DEV_CODE_START)
+    #define XXX_DECODE_MAX (ImageLimit(XXX_DECODE_CODE) > MP3_DECODE_MAX  ? ImageLimit(XXX_DECODE_CODE):MP3_DECODE_MAX)
+
+    ;---------------------------------------------------------------
+    ;WavDecode
+    WAV_DECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(WavDecInitCode)
+        *(WavDecCode)
+        *(WavDecData)
+        *(WavDecBss)
+    }
+
+    ScatterAssert(ImageLimit(WAV_DECODE_CODE) < DEV_CODE_START)
+    #define WAV_DECODE_MAX (ImageLimit(WAV_DECODE_CODE) > XXX_DECODE_MAX  ? ImageLimit(WAV_DECODE_CODE):XXX_DECODE_MAX)
+
+    ;AmrDecode
+    AMR_DECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(AmrDecInitCode)
+        *(AmrDecCode)
+        *(AmrDecData)
+        *(AmrDecBss)
+    }
+
+    ScatterAssert(ImageLimit(AMR_DECODE_CODE) < DEV_CODE_START)
+    #define AMR_DECODE_MAX (ImageLimit(AMR_DECODE_CODE) > WAV_DECODE_MAX  ? ImageLimit(AMR_DECODE_CODE):WAV_DECODE_MAX)
+
+    ;---------------------------------------------------------------
+    ;FlacDecode
+    FLAC_DECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(FlacDecCode)
+        *(FlacDecData)
+        *(FlacDecBss)
+    }
+
+    ScatterAssert(ImageLimit(FLAC_DECODE_CODE) < DEV_CODE_START)
+    #define FLAC_DECODE_MAX (ImageLimit(FLAC_DECODE_CODE) > AMR_DECODE_MAX  ? ImageLimit(FLAC_DECODE_CODE):AMR_DECODE_MAX)
+
+    ;---------------------------------------------------------------
+    ;AacDecode
+    AAC_DECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(AacDecCode)
+        *(AacDecData)
+        *(AacDecBss)
+    }
+
+    ScatterAssert(ImageLimit(AAC_DECODE_CODE) < DEV_CODE_START)
+    #define AAC_DECODE_MAX (ImageLimit(AAC_DECODE_CODE) > FLAC_DECODE_MAX  ? ImageLimit(AAC_DECODE_CODE):FLAC_DECODE_MAX)
+
+    ;---------------------------------------------------------------
+    ;APEDecode
+    APE_DECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(ApeDecCode)
+        *(ApeDecData)
+        *(ApeDecBss)
+    }
+
+    ScatterAssert(ImageLimit(APE_DECODE_CODE) < DEV_CODE_START)
+    #define APE_DECODE_MAX (ImageLimit(APE_DECODE_CODE) > AAC_DECODE_MAX  ? ImageLimit(APE_DECODE_CODE):AAC_DECODE_MAX)
+
+    ;---------------------------------------------------------------
+    ;OGGDecode
+    OGG_DECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(OggDecCode)
+        *(OggDecData)
+        *(OggDecBss)
+    }
+
+    ScatterAssert(ImageLimit(OGG_DECODE_CODE) < DEV_CODE_START)
+    #define OGG_DECODE_MAX (ImageLimit(OGG_DECODE_CODE) > APE_DECODE_MAX  ? ImageLimit(OGG_DECODE_CODE):APE_DECODE_MAX)
+
+    ;---------------------------------------------------------------
+    ;FlacHDecode
+    FLAC_HDECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(FlacHDecCode)
+        *(FlacHDecData)
+        *(FlacHDecBss)
+    }
+
+    ScatterAssert(ImageLimit(FLAC_HDECODE_CODE) < DEV_CODE_START)
+    #define FLAC_HDECODE_MAX (ImageLimit(FLAC_HDECODE_CODE) > OGG_DECODE_MAX  ? ImageLimit(FLAC_HDECODE_CODE):OGG_DECODE_MAX)
+
+    ;---------------------------------------------------------------
+    ;AlacDecode
+    ALAC_HDECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(AlacHDecCode)
+        *(AlacHDecData)
+        *(AlacHDecBss)
+    }
+
+    ScatterAssert(ImageLimit(ALAC_HDECODE_CODE) < DEV_CODE_START)
+    #define ALAC_HDECODE_MAX (ImageLimit(ALAC_HDECODE_CODE) > FLAC_HDECODE_MAX  ? ImageLimit(ALAC_HDECODE_CODE):FLAC_HDECODE_MAX)
+
+    ;---------------------------------------------------------------
+    ;APEHDecode
+    APE_HDECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(ApeHDecCode)
+        *(ApeHDecData)
+        *(ApeHDecBss)
+    }
+
+    ScatterAssert(ImageLimit(APE_HDECODE_CODE) < DEV_CODE_START)
+    #define APE_HDECODE_MAX (ImageLimit(APE_HDECODE_CODE) > ALAC_HDECODE_MAX  ? ImageLimit(APE_HDECODE_CODE):ALAC_HDECODE_MAX)
+
+    ;---------------------------------------------------------------
+    ;SBCDecode
+    SBC_DECODE_CODE (AUDIO_DECODE_CODE_BASE) OVERLAY
+    {
+        *(SbcDecCode)
+        *(SbcDecData)
+        *(SbcDecBss)
+    }
+
+    ScatterAssert(ImageLimit(SBC_DECODE_CODE) < DEV_CODE_START)
+    #define SBC_DECODE_MAX (ImageLimit(SBC_DECODE_CODE) > APE_HDECODE_MAX  ? ImageLimit(SBC_DECODE_CODE):APE_HDECODE_MAX)
+
+
+    ;---------------------------------------------------------------
+    ;chad.ma add
+    ;WAV ENCODE
+    WAV_ENCODE_CODE(AUDIO_DECODE_CODE_BASE) OVERLAY         ;ADPCM ENCODE
+    {
+        *(WavEncCode)
+        *(WavEncData)
+        *(WavEncBss)
+    }
+
+    ScatterAssert(ImageLimit(WAV_ENCODE_CODE) < DEV_CODE_START)
+    #define WAV_ENCODE_MAX (ImageLimit(WAV_ENCODE_CODE) > SBC_DECODE_MAX  ? ImageLimit(WAV_ENCODE_CODE):SBC_DECODE_MAX)
+
+    ;AMR ENCODE
+    AMR_ENCODE_CODE(AUDIO_DECODE_CODE_BASE) OVERLAY         ;AMR ENCODE
+    {
+        *(EncodeAmrCode)
+        *(EncodeAmrData)
+        *(EncodeAmrBss)
+    }
+
+    ScatterAssert(ImageLimit(AMR_ENCODE_CODE) < DEV_CODE_START)
+    #define AMR_ENCODE_MAX (ImageLimit(AMR_ENCODE_CODE) > WAV_ENCODE_MAX  ? ImageLimit(AMR_ENCODE_CODE):WAV_ENCODE_MAX)
+
+    ;---------------------------------------------------------------
+    ;XXX ENCODE
+    XXX_ENCODE_CODE(AUDIO_DECODE_CODE_BASE) OVERLAY                 ;XXX ENCODE
+    {
+        *(EncodeXXXCode)
+        *(EncodeXXXData)
+        *(EncodeXXXBss)
+    }
+
+    ScatterAssert(ImageLimit(XXX_ENCODE_CODE) < DEV_CODE_START)
+    #define XXX_ENCODE_MAX (ImageLimit(XXX_ENCODE_CODE) > AMR_ENCODE_MAX  ? ImageLimit(XXX_ENCODE_CODE):AMR_ENCODE_MAX)
+
+    ;#define AUDIO_DECODE_CODE_END SBC_DECODE_MAX
+    ;chad.ma modified
+    #define AUDIO_DECODE_CODE_END  XXX_ENCODE_MAX
+
+    AEC_CODE(AUDIO_DECODE_CODE_END) OVERLAY
+    {
+        *(AecAlgCode)
+        *(AecAlgData)
+        *(AecAlgBss)
+    }
+    ScatterAssert(ImageLimit(AEC_CODE) < DEV_CODE_START)
+
+    BLUETOOTH_CODE(ImageLimit(AEC_CODE)) OVERLAY
+    {
+        *(BlueToothControlCode)
+        *(BlueToothControlData)
+        *(BlueToothControlBss)
+        avctp.o               (+RO,+RW,+ZI)
+        avrcp.o               (+RO,+RW,+ZI)
+        avdtp.o               (+RO,+RW,+ZI)
+        hsp_hfp.o             (+RO,+RW,+ZI)
+        btrtk8761acontrol.o   (+RO)
+        bluetoothcontrol.o    (+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(BLUETOOTH_CODE) < DEV_CODE_START)
+
+    HTTP_TASK_CODE(AUDIO_DECODE_CODE_END) OVERLAY
+    {
+        *(wice_http_common)
+    }
+    ScatterAssert(ImageLimit(HTTP_TASK_CODE) < DEV_CODE_START)
+
+    ;httpd
+    LWIP_DEV_HTTPD_CODE(AUDIO_DECODE_CODE_END) OVERLAY
+    {
+        httpd.o(+RO,+RW,+ZI)
+        web_httpd.o(+RO,+RW,+ZI)
+        fs.o(+RO,+RW,+ZI)
+        httpd_cgi_ssi.o(+RO)
+        ;*(lwip_httpd_init)
+    }
+    ScatterAssert(ImageLimit(LWIP_DEV_HTTPD_CODE) < DEV_CODE_START)
+
+
+    ;http
+    LWIP_DEV_HTTP_CODE(ImageLimit(HTTP_TASK_CODE)) OVERLAY
+    {
+        http.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(LWIP_DEV_HTTP_CODE) < DEV_CODE_START)
+
+
+    ;tls/ssl
+    MBEDTLS_DEV_CODE(ImageLimit(LWIP_DEV_HTTP_CODE)) OVERLAY
+    {
+        aes.o(+RO,+RW,+ZI)
+        aesni.o(+RO,+RW,+ZI)
+        arc4.o(+RO,+RW,+ZI)
+        ;asn1parse.o(+RO,+RW,+ZI)
+        asn1write.o(+RO,+RW,+ZI)
+        ;base64.o(+RO,+RW,+ZI)
+        ;bignum.o(+RO,+RW,+ZI)
+        blowfish.o(+RO,+RW,+ZI)
+        camellia.o(+RO,+RW,+ZI)
+        ccm.o(+RO,+RW,+ZI)
+        certs.o(+RO,+RW,+ZI)
+        cipher.o(+RO,+RW,+ZI)
+        cipher_wrap.o(+RO,+RW,+ZI)
+        ctr_drbg.o(+RO,+RW,+ZI)
+        debug.o(+RO,+RW,+ZI)
+        des.o(+RO,+RW,+ZI)
+        dhm.o(+RO,+RW,+ZI)
+        ecdh.o(+RO,+RW,+ZI)
+        ecdsa.o(+RO,+RW,+ZI)
+        ecp.o(+RO,+RW,+ZI)
+        ecp_curves.o(+RO,+RW,+ZI)
+        entropy.o(+RO,+RW,+ZI)
+        entropy_poll.o(+RO,+RW,+ZI)
+        error.o(+RO,+RW,+ZI)
+        gcm.o(+RO,+RW,+ZI)
+        havege.o(+RO,+RW,+ZI)
+        hmac_drbg.o(+RO,+RW,+ZI)
+        ;md.o(+RO,+RW,+ZI)
+        ;md_wrap.o(+RO,+RW,+ZI)
+        md2.o(+RO,+RW,+ZI)
+        md4.o(+RO,+RW,+ZI)
+        md5.o(+RO,+RW,+ZI)
+        memory_buffer_alloc.o(+RO,+RW,+ZI)
+        net.o(+RO,+RW,+ZI)
+        ;oid.o(+RO,+RW,+ZI)
+        padlock.o(+RO,+RW,+ZI)
+        ;pem.o(+RO,+RW,+ZI)
+        ;pk.o(+RO,+RW,+ZI)
+        ;pk_wrap.o(+RO,+RW,+ZI)
+        pkcs5.o(+RO,+RW,+ZI)
+        pkcs11.o(+RO,+RW,+ZI)
+        pkcs12.o(+RO,+RW,+ZI)
+        ;pkparse.o(+RO,+RW,+ZI)
+        pkwrite.o(+RO,+RW,+ZI)
+        platform.o(+RO,+RW,+ZI)
+        ripemd160.o(+RO,+RW,+ZI)
+        ;rsa.o(+RO,+RW,+ZI)
+        ;sha1.o(+RO,+RW,+ZI)
+        sha256.o(+RO,+RW,+ZI)
+        sha512.o(+RO,+RW,+ZI)
+        ssl_cache.o(+RO,+RW,+ZI)
+        ssl_ciphersuites.o(+RO,+RW,+ZI)
+        ssl_cli.o(+RO,+RW,+ZI)
+        ssl_cookie.o(+RO,+RW,+ZI)
+        ssl_srv.o(+RO,+RW,+ZI)
+        ssl_ticket.o(+RO,+RW,+ZI)
+        ssl_tls.o(+RO,+RW,+ZI)
+        threading.o(+RO,+RW,+ZI)
+        timing.o(+RO,+RW,+ZI)
+        version.o(+RO,+RW,+ZI)
+        version_features.o(+RO,+RW,+ZI)
+        x509.o(+RO,+RW,+ZI)
+        x509_create.o(+RO,+RW,+ZI)
+        x509_crl.o(+RO,+RW,+ZI)
+        x509_crt.o(+RO,+RW,+ZI)
+        x509_csr.o(+RO,+RW,+ZI)
+        x509write_crt.o(+RO,+RW,+ZI)
+        x509write_csr.o(+RO,+RW,+ZI)
+        xtea.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(MBEDTLS_DEV_CODE) < DEV_CODE_START)
+
+
+    ;dlna
+    DLNA_TASK_CODE(ImageLimit(LWIP_DEV_HTTP_CODE)) OVERLAY
+    {
+        dlna.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(DLNA_TASK_CODE) < DEV_CODE_START)
+
+    UPNP_DEV_CODE(ImageLimit(DLNA_TASK_CODE)) OVERLAY
+    {
+        ;*(upnpCode)
+        chttp.o(+RO,+RW,+ZI)
+        chttp_date.o(+RO,+RW,+ZI)
+        chttp_header.o(+RO,+RW,+ZI)
+        chttp_header_list.o(+RO,+RW,+ZI)
+        chttp_packet.o(+RO,+RW,+ZI)
+        chttp_persistent_connection.o(+RO,+RW,+ZI)
+        chttp_request.o(+RO,+RW,+ZI)
+        chttp_response.o(+RO,+RW,+ZI)
+        chttp_server.o(+RO,+RW,+ZI)
+        chttp_server_list.o(+RO,+RW,+ZI)
+        cfile.o(+RO,+RW,+ZI)
+        cfile.list.o(+RO,+RW,+ZI)
+        cdatagram_packet.o(+RO,+RW,+ZI)
+        cinterface.o(+RO,+RW,+ZI)
+        cinterface_function.o(+RO,+RW,+ZI)
+        cinterface_list.o(+RO,+RW,+ZI)
+        cnet_function.o(+RO,+RW,+ZI)
+        csocket.o(+RO,+RW,+ZI)
+        csocket_list.o(+RO,+RW,+ZI)
+        curi.o(+RO,+RW,+ZI)
+        curl.o(+RO,+RW,+ZI)
+        csoap.o(+RO,+RW,+ZI)
+        csoap_request.o(+RO,+RW,+ZI)
+        csoap_response.o(+RO,+RW,+ZI)
+        caction_ctrl.o(+RO,+RW,+ZI)
+        caction_request.o(+RO,+RW,+ZI)
+        caction_response.o(+RO,+RW,+ZI)
+        ccontrol_function.o(+RO,+RW,+ZI)
+        cquery_ctrl.o(+RO,+RW,+ZI)
+        cquery_request.o(+RO,+RW,+ZI)
+        cquery_response.o(+RO,+RW,+ZI)
+        ceventlistener_list.o(+RO,+RW,+ZI)
+        cnotify_request.o(+RO,+RW,+ZI)
+        cproperty.o(+RO,+RW,+ZI)
+        cproperty_list.o(+RO,+RW,+ZI)
+        csubscriber.o(+RO,+RW,+ZI)
+        csubscriber_list.o(+RO,+RW,+ZI)
+        csubscription.o(+RO,+RW,+ZI)
+        csubscription_request.o(+RO,+RW,+ZI)
+        csubscription_response.o(+RO,+RW,+ZI)
+        chttpmu_socket.o(+RO,+RW,+ZI)
+        chttpu_socket.o(+RO,+RW,+ZI)
+        cssdp.o(+RO,+RW,+ZI)
+        cssdp_packet.o(+RO,+RW,+ZI)
+        cssdp_request.o(+RO,+RW,+ZI)
+        cssdp_response.o(+RO,+RW,+ZI)
+        cssdp_response_server.o(+RO,+RW,+ZI)
+        cssdp_response_server_list.o(+RO,+RW,+ZI)
+        cssdp_server.o(+RO,+RW,+ZI)
+        cssdp_server_list.o(+RO,+RW,+ZI)
+        cssdp_socket.o(+RO,+RW,+ZI)
+        caction.o(+RO,+RW,+ZI)
+        caction_list.o(+RO,+RW,+ZI)
+        cargument.o(+RO,+RW,+ZI)
+        cargument_list.o(+RO,+RW,+ZI)
+        cdevice.o(+RO,+RW,+ZI)
+        cdevice_advertiser.o(+RO,+RW,+ZI)
+        cdevice_http_server.o(+RO,+RW,+ZI)
+        cdevice_list.o(+RO,+RW,+ZI)
+        cdevice_ssdp_server.o(+RO,+RW,+ZI)
+        cicon.o(+RO,+RW,+ZI)
+        cicon_list.o(+RO,+RW,+ZI)
+        cservice.o(+RO,+RW,+ZI)
+        cservice_list.o(+RO,+RW,+ZI)
+        cservice_notify.o(+RO,+RW,+ZI)
+        cservice_ssdp_server.o(+RO,+RW,+ZI)
+        cservice_std_dcp.o(+RO,+RW,+ZI)
+        cservicestate_table.o(+RO,+RW,+ZI)
+        cstatevariable.o(+RO,+RW,+ZI)
+        cupnp_function.o(+RO,+RW,+ZI)
+        cupnp_status.o(+RO,+RW,+ZI)
+        cdictionary.o(+RO,+RW,+ZI)
+        cdictionary_elem.o(+RO,+RW,+ZI)
+        clist.o(+RO,+RW,+ZI)
+        clog.o(+RO,+RW,+ZI)
+        cmutex.o(+RO,+RW,+ZI)
+        cstring.o(+RO,+RW,+ZI)
+        cstring_function.o(+RO,+RW,+ZI)
+        cstring_tokenizer.o(+RO,+RW,+ZI)
+        cthread.o(+RO,+RW,+ZI)
+        cthread_list.o(+RO,+RW,+ZI)
+        ctime.o(+RO,+RW,+ZI)
+        ctime_wince.o(+RO,+RW,+ZI)
+        cxml_attribute.o(+RO,+RW,+ZI)
+        cxml_attribute_list.o(+RO,+RW,+ZI)
+        cxml_function.o(+RO,+RW,+ZI)
+        cxml_node.o(+RO,+RW,+ZI)
+        cxml_node_list.o(+RO,+RW,+ZI)
+        cxml_parser.o(+RO,+RW,+ZI)
+        cxml_parser_expat.o(+RO,+RW,+ZI)
+        cxml_parser_libxml2.o(+RO,+RW,+ZI)
+        cavtransport_service.o(+RO,+RW,+ZI)
+        cconnectionmgrr_service.o(+RO,+RW,+ZI)
+        cmediarenderer_device.o(+RO,+RW,+ZI)
+        crenderingcontrol_service.o(+RO,+RW,+ZI)
+        cconnectionmgr_service.o(+RO,+RW,+ZI)
+        ccontentdir_service.o(+RO,+RW,+ZI)
+        cmediaserver_device.o(+RO,+RW,+ZI)
+        ccontent.o(+RO,+RW,+ZI)
+        ccontent_list.o(+RO,+RW,+ZI)
+        cdidl.o(+RO,+RW,+ZI)
+        cmd5.o(+RO,+RW,+ZI)
+        cprotocolinfo.o(+RO,+RW,+ZI)
+        cprotocolinfo_list.o(+RO,+RW,+ZI)
+        cresource.o(+RO,+RW,+ZI)
+        cresource_data.o(+RO,+RW,+ZI)
+        cresource_list.o(+RO,+RW,+ZI)
+        rk_heap.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(UPNP_DEV_CODE) < DEV_CODE_START)
+
+    XMLPARSE_DEV_CODE(ImageLimit(UPNP_DEV_CODE)) OVERLAY
+    {
+        xmlparse.o(+RO,+RW,+ZI)
+        xmlrole.o(+RO,+RW,+ZI)
+        xmltok.o(+RO,+RW,+ZI)
+        xmltok_impl.o(+RO,+RW,+ZI)
+        xmltok_ns.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(XMLPARSE_DEV_CODE) < DEV_CODE_START)
+
+    DLNA_DEV_CODE(ImageLimit(XMLPARSE_DEV_CODE)) OVERLAY
+    {
+        controller.o(+RO,+RW,+ZI)
+        mplayer-ctrl.o(+RO,+RW,+ZI)
+        player.o(+RO,+RW,+ZI)
+        playlist.o(+RO,+RW,+ZI)
+        dmr.o(+RO,+RW,+ZI)
+        dmr-action.o(+RO,+RW,+ZI)
+        dmr-http.o(+RO,+RW,+ZI)
+        dmr-avtransport-service.o(+RO,+RW,+ZI)
+        dmr-connectionmgr-service.o(+RO,+RW,+ZI)
+        dmr-renderingctrl-service.o(+RO,+RW,+ZI)
+        dms.o(+RO,+RW,+ZI)
+        dms_filesys.o(+RO,+RW,+ZI)
+        dms_filesys_data.o(+RO,+RW,+ZI)
+        dms-action.o(+RO,+RW,+ZI)
+        dms-http.o(+RO,+RW,+ZI)
+        dms-playlist.o(+RO,+RW,+ZI)
+        descriptions_load.o(+RO,+RW,+ZI)
+        encoding_trans.o(+RO,+RW,+ZI)
+        rewrite_api.o(+RO,+RW,+ZI)
+        rk_list.o(+RO,+RW,+ZI)
+        udn.o(+RO,+RW,+ZI)
+        dlna-service.o(+RO,+RW,+ZI)
+        ;dlna.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(DLNA_DEV_CODE) < DEV_CODE_START)
+
+    CHANNELS_SPEAKER_CODE(ImageLimit(MEDIA_TASK_CODE)) OVERLAY
+    {
+        rk_fochannel.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(CHANNELS_SPEAKER_CODE) < DEV_CODE_START)
+
+    ;XXX
+    XXX_DEV_CODE(ImageLimit(ALAC_HDECODE_CODE)) OVERLAY
+    {
+        airplay.o(+RO,+RW,+ZI)
+        commons.o(+RO,+RW,+ZI)
+        mdns.o(+RO,+RW,+ZI)
+        mdns_tinysvcmdns.o(+RO,+RW,+ZI)
+        airplay_player.o(+RO,+RW,+ZI)
+        rtp.o(+RO,+RW,+ZI)
+        rtsp.o(+RO,+RW,+ZI)
+        shairport.o(+RO,+RW,+ZI)
+        tinysvcmdns.o(+RO,+RW,+ZI)
+        external.o(+RO,+RW,+ZI)
+        airplay_heap.o(+RO,+RW,+ZI)
+        airplay_mplayer_ctrl.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(XXX_DEV_CODE) < DEV_CODE_START)
+
+    SSL_DEV_CODE(ImageLimit(XXX_DEV_CODE)) OVERLAY
+    {
+        airplay_md5.o(+RO,+RW,+ZI)
+        airplay_aes.o(+RO,+RW,+ZI)
+        airplay_aes_core.o(+RO,+RW,+ZI)
+        airplay_aes_cbc.o(+RO,+RW,+ZI)
+        ;mbedtls_*.o(+RO,+RW,+ZI)
+
+        asn1parse.o(+RO,+RW,+ZI)
+        base64.o(+RO,+RW,+ZI)
+        bignum.o(+RO,+RW,+ZI)
+        md.o(+RO,+RW,+ZI)
+        md_wrap.o(+RO,+RW,+ZI)
+        oid.o(+RO,+RW,+ZI)
+        pem.o(+RO,+RW,+ZI)
+        pk.o(+RO,+RW,+ZI)
+        pk_wrap.o(+RO,+RW,+ZI)
+        pkparse.o(+RO,+RW,+ZI)
+        rsa.o(+RO,+RW,+ZI)
+        sha1.o(+RO,+RW,+ZI)
+        rk_tls_heap.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(SSL_DEV_CODE) < DEV_CODE_START)
+
+;==============================================================================
+;
+;device
+;
+;==============================================================================
+    #define DEVICE_START_BASE DEV_CODE_START
+
+    TIMER_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_timer_timerdevice_common)
+        timerdevice.o(+RO, +RW, +ZI)
+        Time.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(TIMER_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    ADC_DEV_CODE(ImageLimit(TIMER_DEV_CODE)) OVERLAY
+    {
+        *(driver_ad_adcdevice_common)
+        adcdevice.o(+RO, +RW, +ZI)
+        adc.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(ADC_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    KEY_DEV_CODE(ImageLimit(ADC_DEV_CODE)) OVERLAY
+    {
+        *(driver_key_keydevice_common)
+        keydevice.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(KEY_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    PWM_DEV_CODE(ImageLimit(KEY_DEV_CODE)) OVERLAY
+    {
+        *(driver_pwm_pwmdevice_common)
+        pwmdevice.o(+RO, +RW, +ZI)
+        pwm.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(PWM_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    MSG_DEV_CODE(ImageLimit(PWM_DEV_CODE)) OVERLAY
+    {
+        *(driver_msg_msgdevice_common)
+        msgdevice.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(MSG_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    WDOG_DEV_CODE(ImageLimit(MSG_DEV_CODE)) OVERLAY
+    {
+        *(driver_watchdog_watchdogdevice_common)
+        watchdogdevice.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(WDOG_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+
+    VOP_DEV_CODE(ImageLimit(WDOG_DEV_CODE)) OVERLAY
+    {
+        *(driver_vop_vopdevice_common)
+        vopdevice.o(+RO, +RW, +ZI)
+        vop.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(VOP_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    LCD_DEV_CODE(ImageLimit(VOP_DEV_CODE)) OVERLAY
+    {
+        *(driver_lcd_lcddevice_common)
+        lcddevice.o(+RO, +RW, +ZI)
+        lcddriver.o(+RO, +RW, +ZI)
+        st7735sdriver.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(LCD_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+
+    DISPLAY_DEV_CODE(ImageLimit(LCD_DEV_CODE)) OVERLAY
+    {
+        *(driver_display_displaydevice_common)
+        displaydevice.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(DISPLAY_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+
+    BCORE_DEV_CODE(ImageLimit(DISPLAY_DEV_CODE)) OVERLAY
+    {
+        *(driver_bcore_bcoredevice_common)
+        bcoredevice.o(+RO, +RW, +ZI)
+        *(cpu_nanod_lib_mailbox_common)
+    }
+    ScatterAssert(ImageLimit(BCORE_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    I2C_DEV_CODE(ImageLimit(BCORE_DEV_CODE)) OVERLAY
+    {
+        *(driver_i2c_i2cdevice_common)
+        i2cdevice.o(+RO,+RW,+ZI)
+        i2c.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(I2C_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+
+    I2S_DEV_CODE(ImageLimit(I2C_DEV_CODE)) OVERLAY
+    {
+        *(driver_i2s_i2sdevice_common)
+        i2sdevice.o(+RO,+RW, +ZI)
+        i2s.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(I2S_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    ROCKCODEC_DEV_CODE(ImageLimit(I2S_DEV_CODE)) OVERLAY
+    {
+        *(driver_rockcodec_rockcodecdevice_common)
+        rockcodecdevice.o(+RO, +RW, +ZI)
+        rockcodec.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(ROCKCODEC_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    AUDIO_DEV_CODE(ImageLimit(ROCKCODEC_DEV_CODE)) OVERLAY
+    {
+        *(driver_audio_audiodevice_common)
+        audiodevice.o(+RO, +RW, +ZI)
+        spectrum.o(+RO, +RW, +ZI)
+        fft_64.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(AUDIO_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    EFFECT_MODULE_CODE(ImageLimit(AUDIO_DEV_CODE)) OVERLAY
+    {
+        *(codecs_audio_effect_effect_common)
+        *(codecs_audio_effect_effect_data)
+        effect.o(+RO, +RW, +ZI)
+        filter_2_int_l.o(+RO, +RW, +ZI)
+        filter_2_int_r.o(+RO, +RW, +ZI)
+        rk_bass_asm_opt_16bit.o(+RO, +RW, +ZI)
+        rk_bass_asm_opt_24bit.o(+RO, +RW, +ZI)
+        rk_eq_asm_opt.o(+RO, +RW, +ZI)
+        rk_eq_asm_opt_16bit.o(+RO, +RW, +ZI)
+        rk_eq_asm_opt_24bit.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(EFFECT_MODULE_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    FADE_MODULE_CODE(ImageLimit(EFFECT_MODULE_CODE)) OVERLAY
+    {
+        *(codecs_audio_fade_common)
+        *(codecs_audio_fade_data)
+        fade.o(+RO)
+    }
+    ScatterAssert(ImageLimit(FADE_MODULE_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    FM_DEV_CODE(ImageLimit(FADE_MODULE_CODE)) OVERLAY
+    {
+        *(driver_fm_fmdevice_common)
+        fmdevice.o(+RO, +RW, +ZI)
+        hw_fm5807.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(FM_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    MAILBOX_DEV_CODE(ImageLimit(FM_DEV_CODE)) OVERLAY
+    {
+        *(driver_mailbox_mailboxdevice_common)
+        mailboxdevice.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(MAILBOX_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    FIFO_DEV_CODE(ImageLimit(MAILBOX_DEV_CODE)) OVERLAY
+    {
+        *(driver_fifo_fifodevice_common)
+        fifodevice.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(FIFO_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+
+    DIR_DEV_CODE(ImageLimit(FIFO_DEV_CODE)) OVERLAY
+    {
+        *(driver_file_dirdevice_common)
+        dirdevice.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(DIR_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    RK618_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_rk61x_rk618device_read)
+        *(driver_rk61x_rk618device_write)
+        rk618device.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(RK618_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    SDC_DEV_CODE(ImageLimit(DIR_DEV_CODE)) OVERLAY
+    {
+        *(driver_sdmmc_sdmmcdevice_common)
+        sdmmcdevice.o(+RO,+RW,+ZI)
+        sdmmc.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(SDC_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    SD_DEV_CODE(ImageLimit(SDC_DEV_CODE)) OVERLAY
+    {
+        *(driver_sd_sddevice_common)
+        sddevice.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(SD_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+    #define SD_DEV_MAX (ImageLimit(SD_DEV_CODE))
+
+    EMMC_DEV_CODE(ImageLimit(SDC_DEV_CODE)) OVERLAY
+    {
+         *(driver_emmc_emmcdevice_common)
+         *emmcdevice.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(EMMC_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+    #define EMMC_DEV_MAX (ImageLimit(EMMC_DEV_CODE) > SD_DEV_MAX  ? ImageLimit(EMMC_DEV_CODE):SD_DEV_MAX)
+
+    SPI_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_spi_spidevice_common)
+        spidevice.o(+RO, +RW, +ZI)
+        spi.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(SPI_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    SPINOR_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(river_spinor_spinordevice_read)
+        *(river_spinor_spinordevice_write)
+        spinordevice.o(+RO, +RW, +ZI)
+    }
+
+    ScatterAssert(ImageLimit(SPINOR_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+    #define SPINOR_DEV_MAX (ImageLimit(SPINOR_DEV_CODE) > EMMC_DEV_MAX  ? ImageLimit(SPINOR_DEV_CODE):EMMC_DEV_MAX)
+
+
+    SPIFLASH_DEV_CODE(DEVICE_START_BASE ) OVERLAY
+    {
+        ;*(driver_spiflash_spiflashdev_common)
+        ;spiflashdev.o(+RO, +RW, +ZI)
+        ;sfc.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(SPIFLASH_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+    #define SPIFLASH_DEV_MAX (ImageLimit(SPIFLASH_DEV_CODE) > SPINOR_DEV_MAX  ? ImageLimit(SPIFLASH_DEV_CODE):SPINOR_DEV_MAX)
+
+    LUN_DEV_CODE(SPIFLASH_DEV_MAX) OVERLAY
+    {
+
+    }
+    ScatterAssert(ImageLimit(LUN_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    PAR_DEV_CODE(ImageLimit(LUN_DEV_CODE)) OVERLAY
+    {
+        *(driver_partion_partiondevice_common)
+        partiondevice.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(PAR_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    FAT_DEV_CODE(ImageLimit(PAR_DEV_CODE)) OVERLAY
+    {
+        *(driver_volume_fatdevice_common)
+        fatdevice.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(FAT_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    FILE_DEV_CODE(ImageLimit(FAT_DEV_CODE)) OVERLAY
+    {
+        *(driver_file_filedevice_common)
+        filedevice.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(FILE_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    USBOTG_DEV_CODE(ImageLimit(FILE_DEV_CODE)) OVERLAY
+    {
+        *(driver_usb_usbotgdev_common)
+        usbotgdev.o(+RO,+RW,+ZI)
+        usb.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(USBOTG_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    USBMSC_DEV_CODE(ImageLimit(USBOTG_DEV_CODE)) OVERLAY
+    {
+        *(driver_usbmsc_usbmscdevice_common)
+        usbmscdevice.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(USBMSC_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    BLUETOOTH_LWBT_CODE(ImageLimit(FILE_DEV_CODE)) OVERLAY
+    {
+        *(LwbtCode)
+        *(LwbtData)
+        *(LwbtBss)
+        uartif_h5.o           (+RO)
+        rfcomm.o              (+RO,+RW,+ZI)
+        bt_ip_dt.o            (+RO)
+    }
+    ScatterAssert(ImageLimit(BLUETOOTH_LWBT_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    SDIO_DEV_CODE(ImageLimit(FILE_DEV_CODE)) OVERLAY
+    {
+        *(driver_sdio_sdiodevice_common)
+        sdiodevice.o(+RO,+RW,+ZI)
+        wwd_sdio.o(+RO,+RW,+ZI)
+    }
+
+    ScatterAssert(ImageLimit(SDIO_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    WIFIAPP_TASK_CODE(ImageLimit(SDIO_DEV_CODE)) OVERLAY
+    {
+        wifithread.o(+RO, +RW, +ZI)
+    }
+    ScatterAssert(ImageLimit(WIFIAPP_TASK_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    AP6181WIFI_DEV_CODE(ImageLimit(WIFIAPP_TASK_CODE)) OVERLAY
+    {
+         waf.o(+RO,+RW,+ZI)
+         wifi.o(+RO,+RW,+ZI)
+         wiced_network.o(+RO,+RW, +ZI)
+         wiced_network_common.o(+RO,+RW,+ZI)
+         wiced_platform_common.o(+RO,+RW,+ZI)
+         wiced_rtos_common.o(+RO,+RW,+ZI)
+         wiced_rtos.o(+RO,+RW,+ZI)
+         wwd_management.o(+RO,+RW,+ZI)
+         wwd_sdpcm.o(+RO,+RW,+ZI)
+         wwd_wifi.o(+RO,+RW,+ZI)
+         wwd_ap.o(+RO,+RW,+ZI)
+         wwd_rtos.o(+RO,+RW,+ZI)
+         platform_mcu_powersave.o(+RO,+RW,+ZI)
+         platform_watchdog.o(+RO,+RW,+ZI)
+         wwd_buffer.o(+RO,+RW,+ZI)
+         wwd_network.o(+RO,+RW,+ZI)
+         wwd_platform_common.o(+RO,+RW,+ZI)
+         wwd_thread.o(+RO,+RW,+ZI)
+         wwd_internal.o(+RO,+RW,+ZI)
+         wwd_resources.o(+RO,+RW,+ZI)
+         tlv.o(+RO,+RW,+ZI)
+         system_monitor.o(+RO,+RW,+ZI)
+         platform_resource.o(+RO,+RW,+ZI)
+         wwd_platform.o(+RO,+RW,+ZI)
+         wwd_bus_protocol.o(+RO,+RW,+ZI)
+         wwd_bus_common.o(+RO,+RW,+ZI)
+         changhong.o(+RO,+RW,+ZI)
+         ;wifithread.o(+RO,+RW,+ZI)
+         easy_setup_wiced.o(+RO,+RW,+ZI)
+         easy_setup.o(+RO,+RW,+ZI)
+         akiss.o(+RO,+RW,+ZI)
+         cooee.o(+RO,+RW,+ZI)
+         neeze.o(+RO,+RW,+ZI)
+         *(ap6181wice_wifi_init)
+    }
+    ScatterAssert(ImageLimit(AP6181WIFI_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    I6000_DEV_CODE(ImageLimit(FILE_DEV_CODE)) OVERLAY
+    {
+        ;*wlan.lib(+RO,+RW,+ZI)
+        ;wpas_*.o(+RO,+RW,+ZI)
+        ;spi_*.o(+RO,+RW,+ZI)
+        ;wlan_*.o(+RO,+RW,+ZI)
+        ;hal_*.o(+RO,+RW,+ZI)
+        ;wifi_*.o(+RO,+RW,+ZI)
+        ;freertos_*.o(+RO,+RW,+ZI)
+        ;wifi_netlink.o(+RO,+RW,+ZI)
+        ;fw_image*.c(+RO,+RW,+ZI)
+        wlan_connect.o(+RO,+RW,+ZI)
+        wlan_debug.o(+RO,+RW,+ZI)
+        wlan_dyn_chk.o(+RO,+RW,+ZI)
+        wlan_event_cb.o(+RO,+RW,+ZI)
+        wlan_ie_proc.o(+RO,+RW,+ZI)
+        wlan_init_deinit.o(+RO,+RW,+ZI)
+        wlan_ioctl_proc.o(+RO,+RW,+ZI)
+        wlan_io_ops.o(+RO,+RW,+ZI)
+        wlan_mgmt_engine.o(+RO,+RW,+ZI)
+        wlan_mgmt_proc.o(+RO,+RW,+ZI)
+        wlan_power_save.o(+RO,+RW,+ZI)
+        wlan_receive.o(+RO,+RW,+ZI)
+        wlan_scan.o(+RO,+RW,+ZI)
+        wlan_security.o(+RO,+RW,+ZI)
+        wlan_softap.o(+RO,+RW,+ZI)
+        wlan_sta_info.o(+RO,+RW,+ZI)
+        wlan_transmit.o(+RO,+RW,+ZI)
+        wlan_utility.o(+RO,+RW,+ZI)
+        wlan_work_cb.o(+RO,+RW,+ZI)
+        wlan_work_cb.o(+RO,+RW,+ZI)
+        wlan_smart_config.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(I6000_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    I6000_DEV_CODE2 (ImageLimit(LWIP_DEV_HTTP_CODE)) OVERLAY
+
+    {
+        ;;*wlan.lib(+RO,+RW,+ZI)
+        wpas_*.o(+RO,+RW,+ZI)
+        spi_*.o(+RO,+RW,+ZI)
+        debug_print.o(+RO,+RW,+ZI)
+        os_api.o(+RO,+RW,+ZI)
+        hal_*.o(+RO,+RW,+ZI)
+        wifi_spi*.o(+RO,+RW,+ZI)
+        wifi_test*.o(+RO,+RW,+ZI)
+        freertos_*.o(+RO,+RW,+ZI)
+        wifi_netlink.o(+RO,+RW,+ZI)
+        fw_image*.c(+RO,+RW,+ZI)
+        co_printf.o(+RO,+RW,+ZI)
+        Ethernetif_i6000.o(+RO,+RW,+ZI)
+        wlan_intf.o(+RO,+RW,+ZI)
+        wlan_ioctl.o(+RO,+RW,+ZI)
+        wlan_netif.o(+RO,+RW,+ZI)
+        wlan_task.o(+RO,+RW,+ZI)
+        tcp_test.o(+RO,+RW,+ZI)
+        udp_test.o(+RO,+RW,+ZI)
+        ttcp.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(I6000_DEV_CODE2) < (DEV_CODE_START))
+
+    #define LWIP_DEV_CODE_BASE (ImageLimit(I6000_DEV_CODE) > ImageLimit(AP6181WIFI_DEV_CODE) ? ImageLimit(I6000_DEV_CODE):ImageLimit(AP6181WIFI_DEV_CODE))
+
+    ;LWIP_DEV_CODE(ImageLimit(AP6181WIFI_DEV_CODE)) OVERLAY
+    LWIP_DEV_CODE(LWIP_DEV_CODE_BASE) OVERLAY
+    {
+        ;api_lib.o(+RO,+RW,+ZI)
+        ;api_msg.o(+RO,+RW,+ZI)
+        ;err.o(+RO,+RW,+ZI)
+        ;netbuf.o(+RO,+RW,+ZI)
+        ;netdb.o(+RO,+RW,+ZI)
+        ;netifapi.o(+RO,+RW,+ZI)
+        ;sockets.o(+RO,+RW,+ZI)
+        tcpip.o(+RO,+RW,+ZI)
+        sys_arch.o(+RO,+RW,+ZI)
+        def.o(+RO,+RW,+ZI)
+        dhcp.o(+RO,+RW,+ZI)
+        dns.o(+RO,+RW,+ZI)
+        init.o(+RO,+RW,+ZI)
+        mem.o(+RO,+RW,+ZI)
+        memp.o(+RO,+RW,+ZI)
+        netif.o(+RO,+RW,+ZI)
+        pbuf.o(+RO,+RW,+ZI)
+        raw.o(+RO,+RW,+ZI)
+        stats.o(+RO,+RW,+ZI)
+        sys.o(+RO,+RW,+ZI)
+        tcp.o(+RO,+RW,+ZI)
+        tcp_in.o(+RO,+RW,+ZI)
+        tcp_out.o(+RO,+RW,+ZI)
+        udp.o(+RO,+RW,+ZI)
+        icmp.o(+RO,+RW,+ZI)
+        igmp.o(+RO,+RW,+ZI)
+        inet.o(+RO,+RW,+ZI)
+        inet_chksum.o(+RO,+RW,+ZI)
+        ip.o(+RO,+RW,+ZI)
+        ip_addr.o(+RO,+RW,+ZI)
+        ip_frag.o(+RO,+RW,+ZI)
+        etharp.o(+RO,+RW,+ZI)
+        ethernetif.o(+RO,+RW,+ZI)
+        slipif.o(+RO,+RW,+ZI)
+        timer.o (+RO,+RW,+ZI)
+        ;ping.o(+RO,+RW,+ZI)
+        ;httpd.o(+RO,+RW,+ZI)
+        ;web_httpd.o(+RO,+RW,+ZI)
+        ;fs.o(+RO)
+        ;httpd_cgi_ssi.o(+RO)
+        ;http.o(+RO)
+        ;*(lwipcode)
+        ;*(lwipdata)
+        dhcpd.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(LWIP_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    LWIP_DEV_API_CODE(ImageLimit(LWIP_DEV_CODE)) OVERLAY
+    {
+        api_lib.o(+RO,+RW,+ZI)
+        api_msg.o(+RO,+RW,+ZI)
+        err.o(+RO,+RW,+ZI)
+        netbuf.o(+RO,+RW,+ZI)
+        netdb.o(+RO,+RW,+ZI)
+        netifapi.o(+RO,+RW,+ZI)
+        sockets.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(LWIP_DEV_API_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+
+    AP6181WIFI_INIT_CODE(LWIP_DEV_CODE_BASE) OVERLAY
+    {
+         ;*(ap6181wice_wifi_init)
+    }
+    ScatterAssert(ImageLimit(AP6181WIFI_INIT_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+
+    UART_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(UART_DEV_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+
+;==============================================================================
+;
+;Module
+;
+;==============================================================================
+#define MODULE_START_BASE ImageLimit(DISPLAY_DEV_CODE)
+
+
+;
+;==============================================================================
+;
+;   PMU Section
+;
+;==============================================================================
+;
+    PMU_DATA PMU_DATA_BASE OVERLAY
+    {
+       *.o(pmu_vect, +First)
+       *.o(+RW)
+       *.o(+ZI)
+    }
+
+    IDLE_STACK (ImageLimit(PMU_DATA))
+    {
+        *(IdleStack)
+    }
+
+    ScatterAssert(ImageLimit(IDLE_STACK) < PMU_CODE_BASE)
+
+    PMU_CODE PMU_CODE_BASE OVERLAY
+    {
+        *(pmucode)
+        ldiv.o
+        llshl.o
+        llushr.o
+        llsshr.o
+        toupper.o
+        memmovea.o
+        memseta.o
+        strlen.o
+        memchr.o
+        memcmp.o
+        strcpy.o
+        fadd.o
+        fmul.o
+        fdiv.o
+        dadd.o
+        dmul.o
+        ddiv.o
+        fflti.o
+        ffltui.o
+        dflti.o
+        dfltui.o
+        ffixi.o
+        ffixui.o
+        dfixi.o
+        dfixui.o
+        f2d.o
+        cdrcmple.o
+        d2f.o
+        cfcmple.o
+        cfrcmple.o
+        uidiv.o
+        iusefp.o
+        fepilogue.o
+        depilogue.o
+        dsqrt.o
+        dfixul.o
+        cdcmple.o
+        .ANY(+RO)
+    }
+
+
+
+
+;==============================================================================
+;
+;task, device, module init
+;
+;==============================================================================
+    #define INIT_START_CODE_BASE ImageLimit(PMU_CODE)
+    #define INIT_START_DATA_BASE ImageLimit(IDLE_STACK)
+
+    ;--------------------------------------------------------------
+    ;SYS SUSPEND
+
+    SYS_SUSPEND_CODE (INIT_START_CODE_BASE)  OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(SYS_SUSPEND_CODE) < SHELL_CODE_START)
+
+    SYS_SUSPEND_DATA (INIT_START_DATA_BASE ) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(SYS_SUSPEND_DATA) < PMU_CODE_BASE)
+
+    ;--------------------------------------------------------------
+    ;SYS RESUME
+
+    SYS_RESUME_CODE (INIT_START_CODE_BASE) OVERLAY
+    {
+        sysresume.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(SYS_RESUME_CODE) < SHELL_CODE_START)
+
+    SYS_RESUME_DATA (INIT_START_DATA_BASE ) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(SYS_RESUME_DATA) < PMU_CODE_BASE)
+
+    LINEIN_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+       *(app_line_in_lineintask_init)
+    }
+    ScatterAssert(ImageLimit(LINEIN_INIT_CODE) < SHELL_CODE_START)
+
+    LINEINCONTROL_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_line_in_lineincontroltask_init)
+    }
+    ScatterAssert(ImageLimit(LINEINCONTROL_INIT_CODE) < SHELL_CODE_START)
+
+    FMUI_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_fm_fmuitask_init)
+    }
+    ScatterAssert(ImageLimit(FMUI_INIT_CODE) < SHELL_CODE_START)
+
+    FMCONTROL_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_fm_fmcontroltask_init)
+    }
+    ScatterAssert(ImageLimit(FMCONTROL_INIT_CODE) < SHELL_CODE_START)
+
+    FM_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_fm_fmdevice_init)
+    }
+    ScatterAssert(ImageLimit(FM_INIT_CODE) < SHELL_CODE_START)
+
+    BROWSERUI_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_browser_browseruitask_init)
+    }
+    ScatterAssert(ImageLimit(BROWSERUI_INIT_CODE) < SHELL_CODE_START)
+
+    SYSTEMSETWIFISELECT_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_systemset_systemsetwifiselecttask_init)
+    }
+
+    ScatterAssert(ImageLimit(SYSTEMSETWIFISELECT_INIT_CODE) < SHELL_CODE_START)
+
+    SYSTEMSET_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_systemset_systemsettask_init)
+    }
+
+    ScatterAssert(ImageLimit(SYSTEMSET_INIT_CODE) < SHELL_CODE_START)
+
+    CHARGE_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_usb_chargetask_init)
+    }
+    ScatterAssert(ImageLimit(CHARGE_INIT_CODE) < SHELL_CODE_START)
+
+    RECOD_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_recod_task_init)
+    }
+    ScatterAssert(ImageLimit(RECOD_INIT_CODE) < SHELL_CODE_START)
+
+    MEDIA_LIBRARY_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_media_task_init)
+    }
+    ScatterAssert(ImageLimit(MEDIA_LIBRARY_INIT_CODE) < SHELL_CODE_START)
+
+    MEDIA_BROWSER_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_media_browser_task_init)
+    }
+    ScatterAssert(ImageLimit(MEDIA_BROWSER_INIT_CODE) < SHELL_CODE_START)
+
+    USBSERVICE_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(system_usbserver_usbserverice_init)
+    }
+    ScatterAssert(ImageLimit(USBSERVICE_INIT_CODE) < SHELL_CODE_START)
+
+    MAIN_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_main_task_main_task_init)
+    }
+    ScatterAssert(ImageLimit(MAIN_INIT_CODE) < SHELL_CODE_START)
+
+    MUSIC_PLAY_MENU_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_music_play_menu_task_init)
+    }
+
+    ScatterAssert(ImageLimit(MUSIC_PLAY_MENU_INIT_CODE) < SHELL_CODE_START)
+
+
+    TIMER_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_timer_timerdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(TIMER_INIT_CODE) < SHELL_CODE_START)
+
+    ADC_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_ad_adcdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(ADC_INIT_CODE) < SHELL_CODE_START)
+
+    KEY_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_key_keydevice_init)
+    }
+
+    ScatterAssert(ImageLimit(KEY_INIT_CODE) < SHELL_CODE_START)
+
+    PWM_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_pwm_pwmdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(PWM_INIT_CODE) < SHELL_CODE_START)
+
+    VOP_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_vop_vopdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(VOP_INIT_CODE) < SHELL_CODE_START)
+
+    LCD_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_lcd_lcddevice_init)
+    }
+
+    ScatterAssert(ImageLimit(LCD_INIT_CODE) < SHELL_CODE_START)
+
+    DISPLAY_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_display_displaydevice_init)
+    }
+
+    ScatterAssert(ImageLimit(DISPLAY_INIT_CODE) < SHELL_CODE_START)
+
+    GUI_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(gui_guitask_init)
+    }
+
+    ScatterAssert(ImageLimit(GUI_INIT_CODE) < SHELL_CODE_START)
+
+    BCORE_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_bcore_bcoredevice_init)
+    }
+    ScatterAssert(ImageLimit(BCORE_INIT_CODE) < SHELL_CODE_START)
+
+    MSG_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_msg_msgdevice_init)
+    }
+    ScatterAssert(ImageLimit(MSG_INIT_CODE) < SHELL_CODE_START)
+
+    DIR_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_file_dirdevice_init)
+    }
+    ScatterAssert(ImageLimit(DIR_INIT_CODE) < SHELL_CODE_START)
+
+    FILESTREAM_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_filestream_filestreamtask_init)
+    }
+    ScatterAssert(ImageLimit(FILESTREAM_INIT_CODE) < SHELL_CODE_START)
+
+    MEDIA_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_media_mediatask_init)
+    }
+    ScatterAssert(ImageLimit(MEDIA_INIT_CODE) < SHELL_CODE_START)
+
+    HTTP_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(wice_http_init)
+    }
+
+    ScatterAssert(ImageLimit(MEDIA_INIT_CODE) < SHELL_CODE_START)
+
+    STREAMCONTROL_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_filestream_streamcontroltask_init)
+    }
+
+    ScatterAssert(ImageLimit(STREAMCONTROL_INIT_CODE) < SHELL_CODE_START)
+
+    AUDIOCONTROL_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_audio_audiocontroltask_init)
+    }
+
+    ScatterAssert(ImageLimit(AUDIOCONTROL_INIT_CODE) < SHELL_CODE_START)
+
+    ;chad.ma add
+    RECORDCONTROL_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_record_recordcontroltask_init)
+    }
+
+    ScatterAssert(ImageLimit(RECORDCONTROL_INIT_CODE) < SHELL_CODE_START)
+
+    WIFI_APPLICATIONTASK_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(wice_wifithread_init)
+    }
+    ScatterAssert(ImageLimit(WIFI_APPLICATIONTASK_INIT_CODE) < SHELL_CODE_START)
+
+    DLNA_TASK_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+          *(dlna_task_init)
+    }
+    ScatterAssert(ImageLimit(DLNA_TASK_INIT_CODE) < SHELL_CODE_START)
+
+    XXX_TASK_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+         *(XXX_task_init)
+    }
+    ScatterAssert(ImageLimit(XXX_TASK_INIT_CODE) < SHELL_CODE_START)
+
+    I2S_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_i2s_i2sdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(I2S_INIT_CODE) < SHELL_CODE_START)
+
+    ROCKCODEC_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_rockcodec_rockcodecdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(ROCKCODEC_INIT_CODE) < SHELL_CODE_START)
+
+    AUDIO_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_audio_audiodevice_init)
+    }
+
+    ScatterAssert(ImageLimit(AUDIO_INIT_CODE) < SHELL_CODE_START)
+
+    AUDIOSUB_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_audio_audiosubtask_init)
+    }
+
+    ScatterAssert(ImageLimit(AUDIOSUB_INIT_CODE) < SHELL_CODE_START)
+
+    AUDIOMAIN_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_audio_audiomaintask_init)
+    }
+
+    ScatterAssert(ImageLimit(AUDIOMAIN_INIT_CODE) < SHELL_CODE_START)
+
+    MAILBOX_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_mailbox_mailboxdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(MAILBOX_INIT_CODE) < SHELL_CODE_START)
+
+
+    RK618_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_rk61x_rk618device_init)
+    }
+
+    ScatterAssert(ImageLimit(RK618_INIT_CODE) < SHELL_CODE_START)
+
+    SD_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_sd_sddevice_init)
+    }
+
+    ScatterAssert(ImageLimit(SD_INIT_CODE) < SHELL_CODE_START)
+
+    FIFO_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_fifo_fifodevice_init)
+    }
+
+    ScatterAssert(ImageLimit(FIFO_INIT_CODE) < SHELL_CODE_START)
+
+
+    I2C_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_i2c_i2cdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(I2C_INIT_CODE) < SHELL_CODE_START)
+
+    USBOTG_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_usb_usbotgdev_init)
+    }
+
+    ScatterAssert(ImageLimit(USBOTG_INIT_CODE) < SHELL_CODE_START)
+
+    USBMSC_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_usbmsc_usbmscdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(USBMSC_INIT_CODE) < SHELL_CODE_START)
+
+    SDC_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_sdmmc_sdmmcdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(SDC_INIT_CODE) < SHELL_CODE_START)
+
+    EMMC_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_emmc_emmcdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(EMMC_INIT_CODE) < SHELL_CODE_START)
+
+    LUN_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_lun_lundevice_init)
+    }
+
+    ScatterAssert(ImageLimit(LUN_INIT_CODE) < SHELL_CODE_START)
+
+    PAR_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_partion_partiondevice_init)
+    }
+
+    ScatterAssert(ImageLimit(PAR_INIT_CODE) < SHELL_CODE_START)
+
+    FAT_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_volume_fatdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(FAT_INIT_CODE) < SHELL_CODE_START)
+
+    FILE_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_file_filedevice_init)
+    }
+
+    ScatterAssert(ImageLimit(FILE_INIT_CODE) < SHELL_CODE_START)
+
+    SDIO_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_sdio_sdiodevice_init)
+    }
+
+    ScatterAssert(ImageLimit(SDIO_INIT_CODE) < SHELL_CODE_START)
+
+
+    RK903_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_rk903_rk903device_init)
+    }
+
+    ScatterAssert(ImageLimit(RK903_INIT_CODE) < SHELL_CODE_START)
+
+    WLC_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_wlc_wlcdevice_init)
+    }
+    ScatterAssert(ImageLimit(WLC_INIT_CODE) < SHELL_CODE_START)
+
+    UART_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_uart_uartdevie_init)
+    }
+    ScatterAssert(ImageLimit(UART_INIT_CODE) < SHELL_CODE_START)
+
+    SPIFLASH_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        ;*(driver_spiflash_spiflashdev_init)
+    }
+    ScatterAssert(ImageLimit(SPIFLASH_INIT_CODE) < SHELL_CODE_START)
+
+    SPI_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_spi_spidevice_init)
+    }
+
+    ScatterAssert(ImageLimit(SPI_INIT_CODE) < SHELL_CODE_START)
+
+    SPINOR_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(SPINOR_INIT_CODE) < SHELL_CODE_START)
+
+    WDOG_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_watchdog_watchdogdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(WDOG_INIT_CODE) < SHELL_CODE_START)
+
+;==============================================================================
+;
+;task, device, Module shell
+;
+;==============================================================================
+    #define SHELL_START_CODE_BASE SHELL_CODE_START
+
+    CUSTOMCMD_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+       shellcustomcmd.o(+RO)
+       shellcustomcmd.o(+RW)
+       shellcustomcmd.o(+ZI)
+    }
+    ScatterAssert(ImageLimit(CUSTOMCMD_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    FM_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_fm_fmdevice_shell)
+        FM.o(+RO)
+        FM.o(+RW)
+        FM.o(+ZI)
+    }
+    ScatterAssert(ImageLimit(FM_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    TASKCMD_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+       shelltaskcmd.o(+RO)
+       shelltaskcmd.o(+RW)
+       shelltaskcmd.o(+ZI)
+    }
+    ScatterAssert(ImageLimit(TASKCMD_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    DEVCMD_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+       shelldevcmd.o(+RO)
+       shelldevcmd.o(+RW)
+       shelldevcmd.o(+ZI)
+    }
+    ScatterAssert(ImageLimit(DEVCMD_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+
+    SYSCMD_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+       shellsyscmd.o(+RO)
+       shellsyscmd.o(+RW)
+       shellsyscmd.o(+ZI)
+    }
+    ScatterAssert(ImageLimit(SYSCMD_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    MUSIC_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(app_audio_music_shell)
+    }
+    ScatterAssert(ImageLimit(MUSIC_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    TIMER_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_timer_timerdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(TIMER_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    ADC_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_ad_adcdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(ADC_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    KEY_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_key_keydevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(KEY_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    PWM_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_pwm_pwmdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(PWM_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    VOP_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_vop_vopdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(VOP_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    LCD_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_lcd_lcddevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(LCD_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    DISPLAY_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_display_displaydevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(DISPLAY_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    GUI_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(gui_guitask_shell)
+    }
+
+    ScatterAssert(ImageLimit(GUI_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    BCORE_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_bcore_bcoredevice_shell)
+    }
+    ScatterAssert(ImageLimit(BCORE_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    MSG_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_msg_msgdevice_shell)
+    }
+    ScatterAssert(ImageLimit(MSG_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    DIR_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_file_dirdevice_shell)
+    }
+    ScatterAssert(ImageLimit(DIR_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    I2S_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_i2s_i2sdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(I2S_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    ROCKCODEC_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_rockcodec_rockcodecdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(ROCKCODEC_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    AUDIO_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_audio_audiodevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(AUDIO_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    RK618_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_rk61x_rk618device_shell)
+    }
+
+    ScatterAssert(ImageLimit(RK618_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    MAILBOX_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_mailbox_mailboxdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(MAILBOX_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    SD_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_sd_sddevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(SD_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    FIFO_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_fifo_fifodevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(FIFO_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    I2C_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_i2c_i2cdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(I2C_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    USBOTG_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_usb_usbotgdev_shell)
+    }
+
+    ScatterAssert(ImageLimit(USBOTG_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    USBMSC_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_usbmsc_usbmscdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(USBMSC_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    SPI_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_spi_spidevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(SPI_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    SPINOR_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_spinor_spinordevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(SPINOR_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+
+    LUN_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_lun_lundevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(LUN_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    FW_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(system_fwanalysis_fwanalysis_shell)
+    }
+
+    ScatterAssert(ImageLimit(FW_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    DMA_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_dma_dmadevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(DMA_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    SDC_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_sdmmc_sdmmcdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(SDC_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    EMMC_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_emmc_emmcdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(EMMC_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    PAR_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_partion_partiondevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(PAR_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    FAT_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_volume_fatdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(FAT_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    FILE_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_file_filedevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(FILE_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    SDIO_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_sdio_sdiodevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(SDIO_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    AP6181WIFI_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(ap6181wifiShell)
+    }
+    ScatterAssert(ImageLimit(AP6181WIFI_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    DLNA_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(DlnaShell)
+    }
+    ScatterAssert(ImageLimit(DLNA_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    XXX_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(XXXShell)
+    }
+    ScatterAssert(ImageLimit(XXX_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+
+    RK903_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_rk903_rk903device_shell)
+    }
+    ScatterAssert(ImageLimit(RK903_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    WLC_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_wlc_wlcdevice_shell)
+    }
+    ScatterAssert(ImageLimit(WLC_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    UART_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_uart_uartdevie_shell)
+    }
+    ScatterAssert(ImageLimit(UART_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    SPIFLASH_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_spiflash_spiflashdev_shell)
+    }
+    ScatterAssert(ImageLimit(SPIFLASH_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    WDOG_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_watchdog_watchdogdevice_shell)
+    }
+    ScatterAssert(ImageLimit(WDOG_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    GPIO_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(cpu_nanod_lib_gpio_shell)
+    }
+    ScatterAssert(ImageLimit(GPIO_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    PING_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+       ;ping.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(PING_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    IPCONFIG_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+       ping.o(+RO,+RW,+ZI)
+       ip_shell.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(IPCONFIG_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+    BLUETOOTH_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(bluetooth_shell)
+    }
+    ScatterAssert(ImageLimit(BLUETOOTH_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+    I6000_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(i6000_shell)
+        wifi_shell*.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(I6000_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+    ;chad.ma add
+    RECORD_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(app_record_record_shell)
+        record.o(+RO,+RW,+ZI)
+    }
+    ScatterAssert(ImageLimit(RECORD_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+
+;
+;==============================================================================
+;
+;   BB Section
+;
+;==============================================================================
+;
+    BB_SYS_CODE(HRAM_CODE_BASE) OVERLAY
+    {
+        *(BBSysCode)
+    }
+    ScatterAssert(ImageLimit(BB_SYS_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+
+    BB_SYS_DATA (HRAM_DATA_BASE) OVERLAY
+    {
+        *(BBSysData)
+        *(BBSysBss)
+    }
+    ScatterAssert(ImageLimit(BB_SYS_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+    #define HAUDIO_DECODE_CODE_BASE  (HRAM_CODE_BASE)
+    #define HAUDIO_DECODE_DATA_BASE  (HRAM_DATA_BASE)
+
+    ;---------------------------------------------------------------
+    ;SBC Decode Bin
+    SBC_DECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;SBC Decode Code
+    {
+        *(SbcDecBinCode)
+    }
+    SBC_DECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;SBC Decode Data
+    {
+        *(SbcDecBinData)
+        *(SbcDecBinBss)
+    }
+    SBC_DECODE_BIN_CODE_END (ImageLimit(SBC_DECODE_BIN_CODE)) OVERLAY {}
+    SBC_DECODE_BIN_DATA_END (ImageLimit(SBC_DECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(SBC_DECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(SBC_DECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+
+    ;---------------------------------------------------------------
+    ;chad.mad add
+    ;XXX Encode Bin
+    XXX_ENCODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;XXX Encode Code
+    {
+        *(XXXEncBinCode)
+    }
+    XXX_ENCODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;XXX Encode Data
+    {
+        *(XXXEncBinData)
+        *(XXXEncBinBss)
+    }
+    XXX_ENCODE_BIN_CODE_END (ImageLimit(XXX_ENCODE_BIN_CODE)) OVERLAY {}
+    XXX_ENCODE_BIN_DATA_END (ImageLimit(XXX_ENCODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(XXX_ENCODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(XXX_ENCODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+    ;---------------------------------------------------------------
+    ;chad.mad add
+    ;WAV Encode Bin
+    WAV_ENCODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;WAV Encode Code
+    {
+        *(WavEncBinCode)
+    }
+    WAV_ENCODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;WAV Encode Data
+    {
+        *(WavEncBinData)
+        *(WavEncBinBss)
+    }
+    WAV_ENCODE_BIN_CODE_END (ImageLimit(WAV_ENCODE_BIN_CODE)) OVERLAY {}
+    WAV_ENCODE_BIN_DATA_END (ImageLimit(WAV_ENCODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(WAV_ENCODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(WAV_ENCODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+    ;---------------------------------------------------------------
+    ;cjh add
+    ;AMR Encode Bin
+    AMR_ENCODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;AMR Encode Code
+    {
+        *(AmrEncBinCode)
+    }
+    AMR_ENCODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;AMR Encode Data
+    {
+        *(AmrEncBinData)
+        *(AmrEncBinBss)
+    }
+    AMR_ENCODE_BIN_CODE_END (ImageLimit(AMR_ENCODE_BIN_CODE)) OVERLAY {}
+    AMR_ENCODE_BIN_DATA_END (ImageLimit(AMR_ENCODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(AMR_ENCODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(AMR_ENCODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+    ;---------------------------------------------------------------
+    ;Mp3 Decode Bin
+    MP3_DECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;Mp3 Decode Code
+    {
+        *(Mp3DecBinCode)
+    }
+    MP3_DECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;Mp3 Decode Data
+    {
+        *(Mp3DecBinData)
+        *(Mp3DecBinBss)
+    }
+    MP3_DECODE_BIN_CODE_END (ImageLimit(MP3_DECODE_BIN_CODE)) OVERLAY {}
+    MP3_DECODE_BIN_DATA_END (ImageLimit(MP3_DECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(MP3_DECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(MP3_DECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+
+   ;---------------------------------------------------------------
+    ;XXX Decode Bin
+    XXX_DECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;XXX Decode Code
+    {
+        *(XXXCommonBinCode)
+    }
+    XXX_DECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;XXX Decode Data
+    {
+        *(XXXCommonBinData)
+        *(XXXCommonBinBss)
+    }
+    XXX_DECODE_BIN_CODE_END (ImageLimit(XXX_DECODE_BIN_CODE)) OVERLAY {}
+    XXX_DECODE_BIN_DATA_END (ImageLimit(XXX_DECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(XXX_DECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(XXX_DECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+
+     ;---------------------------------------------------------------
+    ;Wav Decode Bin
+    WAV_DECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;Mp3 Decode Code
+    {
+        *(WavDecBinCode)
+    }
+    WAV_DECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;Mp3 Decode Data
+    {
+        *(WavDecBinData)
+        *(WavDecBinBss)
+    }
+    WAV_DECODE_BIN_CODE_END (ImageLimit(WAV_DECODE_BIN_CODE)) OVERLAY {}
+    WAV_DECODE_BIN_DATA_END (ImageLimit(WAV_DECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(WAV_DECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(WAV_DECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+    ;---------------------------------------------------------------
+    ;Amr Decode Bin
+    AMR_DECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;Amr Decode Code
+    {
+        *(AmrDecBinCode)
+    }
+    AMR_DECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;Amr Decode Data
+    {
+        *(AmrDecBinData)
+        *(AmrDecBinBss)
+    }
+    AMR_DECODE_BIN_CODE_END (ImageLimit(AMR_DECODE_BIN_CODE)) OVERLAY {}
+    AMR_DECODE_BIN_DATA_END (ImageLimit(AMR_DECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(AMR_DECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(AMR_DECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+ ;---------------------------------------------------------------
+    ;Flac Decode Bin
+    FLAC_DECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;Mp3 Decode Code
+    {
+        *(FlacDecBinCode)
+    }
+    FLAC_DECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;Mp3 Decode Data
+    {
+        *(FlacDecBinData)
+        *(FlacDecBinBss)
+    }
+    FLAC_DECODE_BIN_CODE_END (ImageLimit(FLAC_DECODE_BIN_CODE)) OVERLAY {}
+    FLAC_DECODE_BIN_DATA_END (ImageLimit(FLAC_DECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(FLAC_DECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(FLAC_DECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+
+ ;---------------------------------------------------------------
+    ;AAC Decode Bin
+    AAC_DECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;Mp3 Decode Code
+    {
+        *(AacDecBinCode)
+    }
+    AAC_DECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;Mp3 Decode Data
+    {
+        *(AacDecBinData)
+        *(AacDecBinBss)
+    }
+    AAC_DECODE_BIN_CODE_END (ImageLimit(AAC_DECODE_BIN_CODE)) OVERLAY {}
+    AAC_DECODE_BIN_DATA_END (ImageLimit(AAC_DECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(AAC_DECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(AAC_DECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+
+ ;---------------------------------------------------------------
+    ;APE Decode Bin
+    APE_DECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;Mp3 Decode Code
+    {
+        *(ApeDecBinCode)
+    }
+    APE_DECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;Mp3 Decode Data
+    {
+        *(ApeDecBinData)
+        *(ApeDecBinBss)
+    }
+    APE_DECODE_BIN_CODE_END (ImageLimit(APE_DECODE_BIN_CODE)) OVERLAY {}
+    APE_DECODE_BIN_DATA_END (ImageLimit(APE_DECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(APE_DECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(APE_DECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+    ;---------------------------------------------------------------
+    ;OGG Decode Bin
+    OGG_DECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                    ;Mp3 Decode Code
+    {
+        *(OggDecBinCode)
+    }
+    OGG_DECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                    ;Mp3 Decode Data
+    {
+        *(OggDecBinData)
+        *(OggDecBinBss)
+    }
+    OGG_DECODE_BIN_CODE_END (ImageLimit(OGG_DECODE_BIN_CODE)) OVERLAY {}
+    OGG_DECODE_BIN_DATA_END (ImageLimit(OGG_DECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(OGG_DECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(OGG_DECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+    ;---------------------------------------------------------------
+   ;FlacHDecode BIN
+    FLAC_HDECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY               ;Flac Decode Code
+    {
+        *(FlacHDecBinCode)
+    }
+    FLAC_HDECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY               ;Flac Decode Data
+    {
+        *(FlacHDecBinData)
+        *(FlacHDecBinBss)
+    }
+    FLAC_HDECODE_BIN_CODE_END (ImageLimit(FLAC_HDECODE_BIN_CODE)) OVERLAY {}
+    FLAC_HDECODE_BIN_DATA_END (ImageLimit(FLAC_HDECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(FLAC_HDECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(FLAC_HDECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+    ;---------------------------------------------------------------
+    ;AlacDecode BIN
+    ALAC_HDECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                ;Alac Decode Code
+    {
+        *(AlacHDecBinCode)
+    }
+    ALAC_HDECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                ;Alac Decode Data
+    {
+        *(AlacHDecBinData)
+        *(AlacHDecBinBss)
+    }
+    ALAC_HDECODE_BIN_CODE_END (ImageLimit(ALAC_HDECODE_BIN_CODE)) OVERLAY {}
+    ALAC_HDECODE_BIN_DATA_END (ImageLimit(ALAC_HDECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(ALAC_HDECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(ALAC_HDECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+    ;---------------------------------------------------------------
+    ;APEHDecode BIN
+    APE_HDECODE_BIN_CODE (HAUDIO_DECODE_CODE_BASE) OVERLAY                ;APE Decode Code
+    {
+        *(ApeHDecBinCode)
+    }
+    APE_HDECODE_BIN_DATA (HAUDIO_DECODE_DATA_BASE) OVERLAY                ;APE Decode Data
+    {
+        *(ApeHDecBinData)
+        *(ApeHDecBinBss)
+    }
+    APE_HDECODE_BIN_CODE_END (ImageLimit(APE_HDECODE_BIN_CODE)) OVERLAY {}
+    APE_HDECODE_BIN_DATA_END (ImageLimit(APE_HDECODE_BIN_DATA)) OVERLAY {}
+    ScatterAssert(ImageLimit(APE_HDECODE_BIN_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+    ScatterAssert(ImageLimit(APE_HDECODE_BIN_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+}

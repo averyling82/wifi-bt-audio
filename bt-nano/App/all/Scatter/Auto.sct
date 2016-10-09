@@ -1,0 +1,752 @@
+;
+;*******************************************************************************
+;      Copyright (c): Fuzhou Rockchip Electronics Co., Ltd
+;                         All rights reserved.
+;
+; File Name：   CortexM3.sct
+;
+; Description:
+;
+; History:      <author>          <time>        <version>
+;             aaron.sun        2015-6-10          1.0
+;    desc:    sct file for emmc boot
+;*******************************************************************************
+;
+#define BOOT_ROM_BASE       0x00000000
+
+#define HRAM_CODE_BASE      0x01000000
+#define HRAM_CODE_SIZE      0x00020000
+
+#define HRAM_DATA_BASE      0x01020000
+#define HRAM_DATA_SIZE      0x00040000
+
+#define LOADER_DATA_BASE    0x0304A000
+#define LOADER_CODE_BASE    0x03088000
+
+#define SYS_DATA_BASE       0x03000000
+#define SYS_DATA_SIZE       0x00050000
+
+#define SYS_CODE_BASE       0x03050000
+#define SYS_CODE_SIZE       0x00040000
+#define SYS_HEAP_BASE       0x03090000
+
+#define DEV_CODE_START      0x03070000
+#define INIT_CODE_START     0x03078000
+#define SHELL_CODE_START    0x0307c000
+
+
+#define PMU_DATA_BASE       0x00000000
+#define PMU_DATA_SIZE       0x00001000
+#define PMU_CODE_BASE       0x00001000
+#define PMU_CODE_SIZE       0x0000E000
+
+;#define PMU_DATA_BASE       0x03090000
+;#define PMU_DATA_SIZE       0x00001000
+;#define PMU_CODE_BASE       0x03091000
+;#define PMU_CODE_SIZE       0x0000E000
+
+LOAD_REGION SYS_CODE_BASE
+{
+    ;--------------------------------------------------------------
+    ;Module Info Table
+
+    MODULE_INFO 0x21000000
+    {
+        *.o(ModuleInfo)
+    }
+
+    WIFI_FIRMWARE_ONE 0X31000000
+    {
+      *(wifi_fw)
+    }
+
+
+    WIFI_FIRMWARE_TWO 0X41000000
+    {
+      *(wifi_nvram)
+    }
+
+    BT_FIRMWARE 0X51000000
+    {
+
+    }
+
+    ;--------------------------------------------------------------
+    ;System Section
+
+    AP_SYS_CODE (SYS_CODE_BASE) OVERLAY
+    {
+        *.o(AP_START_VECT, +First)
+        *.o(AP_START_CODE)
+        ;*.o(+RO)
+        .ANY(+RO)
+    }
+
+    AP_SYS_DATA (SYS_DATA_BASE)
+    {
+        *.o(ap_vect, +First)
+        *.o(+RW)
+        *.o(+ZI)
+    }
+
+    AP_MAIN_STACK (ImageLimit(AP_SYS_DATA)+0x100)
+    {
+        *(APMainStack)
+    }
+
+    IDLE_STACK (ImageLimit(AP_MAIN_STACK)+0x100)
+    {
+        *(IdleStack)
+    }
+
+    APP_HEAP_STACK(ImageLimit(IDLE_STACK)) OVERLAY
+    {
+        *(AppHeapStack)
+    }
+
+    ScatterAssert(ImageLimit(APP_HEAP_STACK) < (SYS_DATA_BASE + SYS_DATA_SIZE))
+
+    ;--------------------------------------------------------------
+    ;SYS INIT
+
+    INIT_CODE (ImageLimit(AP_SYS_CODE)) OVERLAY
+    {
+        *(system_shell_shelltask_init)
+        *(bsp_evk_v10_bsp_init)
+        *(os_plugin_deviceplugin_init)
+        *(os_plugin_taskplugin_init)
+        *(system_fwanalysis_fwanalysis_init)
+    }
+
+    INIT_DATA (ImageLimit(AP_SYS_DATA)) OVERLAY
+    {
+
+
+    }
+
+    ;--------------------------------------------------------------
+    ;INIT PAD
+
+    INIT_PAD_CODE (ImageLimit(AP_SYS_CODE)) OVERLAY
+    {
+
+
+    }
+    INIT_PAD_DATA (ImageLimit(AP_SYS_DATA)) OVERLAY
+    {
+
+    }
+
+    ;==============================================================================
+    ;
+    ;task
+    ;
+    ;==============================================================================
+    #define TASK_START_BASE ImageLimit(AP_SYS_CODE)
+
+    CHARGE_TASK_CODE(TASK_START_BASE) OVERLAY
+    {
+        *(app_usb_chargetask_common)
+        chargetask.o(+RO)
+    }
+
+    AUDIOSUB_TASK_CODE(TASK_START_BASE) OVERLAY
+    {
+        *(app_audio_audiosubtask_read)
+        *(app_audio_audiosubtask_write)
+        audiosubtask.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(AUDIOSUB_TASK_CODE) < DEV_CODE_START)
+
+    AUDIOMAIN_TASK_CODE(TASK_START_BASE) OVERLAY
+    {
+        *(app_audio_audiomaintask_read)
+        *(app_audio_audiomaintask_write)
+        audiomaintask.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(AUDIOMAIN_TASK_CODE) < DEV_CODE_START)
+
+
+    ;==============================================================================
+    ;
+    ;device
+    ;
+    ;==============================================================================
+    #define DEVICE_START_BASE DEV_CODE_START
+
+    MAILBOX_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_mailbox_mailboxdevice_read)
+        *(driver_mailbox_mailboxdevice_write)
+        mailboxdevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(MAILBOX_DEV_CODE) < INIT_CODE_START)
+
+    RK618_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_rk61x_rk618device_read)
+        *(driver_rk61x_rk618device_write)
+        rk618device.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(RK618_DEV_CODE) < INIT_CODE_START)
+
+    SD_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_sd_sddevice_read)
+        *(driver_sd_sddevice_write)
+        sddevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(SD_DEV_CODE) < INIT_CODE_START)
+
+    I2C_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_i2c_i2cdevice_read)
+        *(driver_i2c_i2cdevice_write)
+        i2cdevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(RK618_DEV_CODE) < INIT_CODE_START)
+
+    PWM_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_pwm_pwmdevice_read)
+        *(driver_pwm_pwmdevice_write)
+        pwmdevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(PWM_DEV_CODE) < INIT_CODE_START)
+
+    USBOTG_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_usb_usbotgdev_read)
+        *(driver_usb_usbotgdev_write)
+        usbotgdev.o(+RO)
+        usbotgdev.o(+RW)
+        usbotgdev.o(+ZI)
+    }
+
+    ScatterAssert(ImageLimit(USBOTG_DEV_CODE) < INIT_CODE_START)
+
+    SPI_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        ;*(driver_spi_spidevice_read)
+        ;*(driver_spi_spidevice_write)
+        ;spidevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(SPI_DEV_CODE) < INIT_CODE_START)
+
+    SPINOR_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(river_spinor_spinordevice_read)
+        *(river_spinor_spinordevice_write)
+        spinordevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(SPINOR_DEV_CODE) < INIT_CODE_START)
+
+    SDC_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(RK618_DEV_CODE) < INIT_CODE_START)
+
+    EMMC_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(EMMC_DEV_CODE) < INIT_CODE_START)
+
+    LUN_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(LUN_DEV_CODE) < INIT_CODE_START)
+
+    PAR_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_partion_partiondevice_read)
+        *(driver_partion_partiondevice_write)
+        partiondevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(PAR_DEV_CODE) < INIT_CODE_START)
+
+    FAT_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_volume_fatdevice_read)
+        *(driver_volume_fatdevice_write)
+        fatdevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(FAT_DEV_CODE) < INIT_CODE_START)
+
+    FILE_DEV_CODE(DEVICE_START_BASE) OVERLAY
+    {
+        *(driver_file_filedevice_read)
+        *(driver_file_filedevice_write)
+        filedevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(FILE_DEV_CODE) < INIT_CODE_START)
+
+    SDIO_DEV_CODE(ImageLimit(SDC_DEV_CODE)) OVERLAY
+    {
+        *(driver_sdio_sdiodevice_read)
+        *(driver_sdio_sdiodevice_write)
+        sdiodevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(SDIO_DEV_CODE) < INIT_CODE_START)
+
+    INNOWIFI_DEV_CODE(ImageLimit(SPI_DEV_CODE)) OVERLAY
+    {
+        *(innowifiCode)
+        *inno_wlan.lib(+RO)
+         fs.o(+RO)
+         httpd.o(+RO)
+         httpd_cgi_ssi.o(+RO)
+         wifi_netlink.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(INNOWIFI_DEV_CODE) < INIT_CODE_START)
+
+    RK903_DEV_CODE(ImageLimit(SDIO_DEV_CODE)) OVERLAY
+    {
+        *(driver_rk903_rk903device_read)
+        *(driver_rk903_rk903device_write)
+        rk903device.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(RK903_DEV_CODE) < INIT_CODE_START)
+
+
+    WLC_DEV_CODE(ImageLimit(RK903_DEV_CODE)) OVERLAY
+    {
+        aes_wrap.o
+        driver_wext.o
+        eloop.o
+        os_internal.o
+        wpa.o
+        wpa_aes.o
+        wpa_md5.o
+        wpa_rc4.o
+        wpa_sha1.o
+        wpa_supplicant.o
+        *(driver_wlc_wlcdevice_read)
+        *(driver_wlc_wlcdevice_write)
+        wlcdevice.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(WLC_DEV_CODE) < INIT_CODE_START)
+
+    #define LWIP_DEV_CODE_BASE (ImageLimit(INNOWIFI_DEV_CODE) > ImageLimit(WLC_DEV_CODE) ? ImageLimit(INNOWIFI_DEV_CODE) : ImageLimit(WLC_DEV_CODE))
+
+    LWIP_DEV_CODE(LWIP_DEV_CODE_BASE) OVERLAY
+    {
+        api_lib.o(+RO)
+        api_msg.o(+RO)
+        err.o(+RO)
+        netbuf.o(+RO)
+        netdb.o(+RO)
+        netifapi.o(+RO)
+        sockets.o(+RO)
+        tcpip.o(+RO)
+        sys_arch.o(+RO)
+        def.o(+RO)
+        dhcp.o(+RO)
+
+        init.o(+RO)
+        mem.o(+RO)
+        memp.o(+RO)
+        netif.o(+RO)
+        pbuf.o(+RO)
+        raw.o(+RO)
+        stats.o(+RO)
+        sys.o(+RO)
+        tcp.o(+RO)
+        tcp_in.o(+RO)
+        tcp_out.o(+RO)
+        udp.o(+RO)
+        icmp.o(+RO)
+        igmp.o(+RO)
+        inet.o(+RO)
+        inet_chksum.o(+RO)
+        ip.o(+RO)
+        ip_addr.o(+RO)
+        ip_frag.o(+RO)
+        etharp.o(+RO)
+        ethernetif.o(+RO)
+        slipif.o(+RO)
+        timer.o (+RO)
+        ;*(lwipcode)
+    }
+
+    ;ScatterAssert(ImageLimit(LWIP_DEV_CODE) < INIT_CODE_START)
+
+
+    ;==============================================================================
+    ;
+    ;Module
+    ;
+    ;==============================================================================
+    #define MODULE_START_BASE DEV_CODE_START
+
+
+    ;==============================================================================
+    ;
+    ;task, device, module init
+    ;
+    ;==============================================================================
+    #define INIT_START_CODE_BASE INIT_CODE_START
+    #define INIT_START_DATA_BASE ImageLimit(AP_SYS_DATA)
+
+    ;--------------------------------------------------------------
+    ;SYS SUSPEND
+
+    SYS_SUSPEND_CODE (INIT_START_CODE_BASE)  OVERLAY
+    {
+        ;暂时把WEB代码放在这里
+
+        ;dns.o
+
+        ;WebTask.o
+        ;WebTran.o
+        ;cgi.o
+        ;fs.o
+        ;httpd.o
+    }
+
+    ScatterAssert(ImageLimit(SYS_SUSPEND_CODE) < SHELL_CODE_START)
+
+    SYS_SUSPEND_DATA (INIT_START_DATA_BASE ) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(SYS_SUSPEND_DATA) < (SYS_DATA_BASE + SYS_DATA_SIZE))
+
+    ;--------------------------------------------------------------
+    ;SYS RESUME
+
+    SYS_RESUME_CODE (INIT_START_CODE_BASE) OVERLAY
+    {
+        sysresume.o(+RO)
+    }
+
+    ScatterAssert(ImageLimit(SYS_RESUME_CODE) < SHELL_CODE_START)
+
+    SYS_RESUME_DATA (INIT_START_DATA_BASE ) OVERLAY
+    {
+
+    }
+
+    CHARGE_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_usb_chargetask_init)
+    }
+
+    ScatterAssert(ImageLimit(SYS_RESUME_DATA) < (SYS_DATA_BASE + SYS_DATA_SIZE))
+
+    AUDIOSUB_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_audio_audiosubtask_init)
+    }
+
+    ScatterAssert(ImageLimit(AUDIOSUB_INIT_CODE) < SHELL_CODE_START)
+
+    AUDIOMAIN_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(app_audio_audiomaintask_init)
+    }
+
+    ScatterAssert(ImageLimit(AUDIOMAIN_INIT_CODE) < SHELL_CODE_START)
+
+    MAILBOX_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_mailbox_mailboxdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(MAILBOX_INIT_CODE) < SHELL_CODE_START)
+
+
+    RK618_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_rk61x_rk618device_init)
+    }
+
+    ScatterAssert(ImageLimit(RK618_INIT_CODE) < SHELL_CODE_START)
+
+    SD_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_sd_sddevice_init)
+    }
+
+    ScatterAssert(ImageLimit(SD_INIT_CODE) < SHELL_CODE_START)
+
+    I2C_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_i2c_i2cdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(I2C_INIT_CODE) < SHELL_CODE_START)
+
+    PWM_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_pwm_pwmdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(PWM_INIT_CODE) < SHELL_CODE_START)
+
+    USBOTG_INIT_CODE(INIT_START_CODE_BASE) OVERLAY
+    {
+        *(driver_usb_usbotgdev_init)
+    }
+
+    ScatterAssert(ImageLimit(USBOTG_INIT_CODE) < SHELL_CODE_START)
+
+    SDC_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(SDC_INIT_CODE) < SHELL_CODE_START)
+
+    EMMC_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(EMMC_INIT_CODE) < SHELL_CODE_START)
+
+    LUN_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+
+    }
+
+    ScatterAssert(ImageLimit(LUN_INIT_CODE) < SHELL_CODE_START)
+
+    PAR_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_partion_partiondevice_init)
+    }
+
+    ScatterAssert(ImageLimit(PAR_INIT_CODE) < SHELL_CODE_START)
+
+    FAT_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_volume_fatdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(FAT_INIT_CODE) < SHELL_CODE_START)
+
+    FILE_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_file_filedevice_init)
+    }
+
+    ScatterAssert(ImageLimit(FILE_INIT_CODE) < SHELL_CODE_START)
+
+    SDIO_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_sdio_sdiodevice_init)
+    }
+
+    ScatterAssert(ImageLimit(SDIO_INIT_CODE) < SHELL_CODE_START)
+
+    RK903_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_rk903_rk903device_init)
+    }
+
+    ScatterAssert(ImageLimit(RK903_INIT_CODE) < SHELL_CODE_START)
+
+    WLC_INIT_CODE(INIT_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_wlc_wlcdevice_init)
+    }
+
+    ScatterAssert(ImageLimit(WLC_INIT_CODE) < SHELL_CODE_START)
+
+    ;==============================================================================
+    ;
+    ;task, device, Module shell
+    ;
+    ;==============================================================================
+    #define SHELL_START_CODE_BASE SHELL_CODE_START
+
+    RK618_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_rk61x_rk618device_shell)
+    }
+
+    ScatterAssert(ImageLimit(RK618_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    MAILBOX_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_mailbox_mailboxdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(MAILBOX_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    SD_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_sd_sddevice_shell)
+         sddevice.o(.conststrlit)
+    }
+
+    ScatterAssert(ImageLimit(SD_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    I2C_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_i2c_i2cdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(I2C_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    PWM_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_pwm_pwmdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(PWM_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    USBOTG_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_usb_usbotgdev_shell)
+        usbotgdev.o(.conststrlit)
+    }
+
+    ScatterAssert(ImageLimit(USBOTG_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    SPI_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_spi_spidevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(SPI_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    SPINOR_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_spinor_spinordevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(SPINOR_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+
+    LUN_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_lun_lundevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(LUN_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    FW_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(system_fwanalysis_fwanalysis_shell)
+    }
+
+    ScatterAssert(ImageLimit(FW_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    DMA_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_dma_dmadevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(DMA_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    SDC_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_sdmmc_sdmmcdevice_shell)
+        sdmmcdevice.o(.conststrlit)
+    }
+
+    ScatterAssert(ImageLimit(SDC_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    EMMC_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_emmc_emmcdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(EMMC_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    PAR_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_partion_partiondevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(PAR_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    FAT_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_volume_fatdevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(FAT_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    FILE_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_file_filedevice_shell)
+    }
+
+    ScatterAssert(ImageLimit(FILE_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    SDIO_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_sdio_sdiodevice_shell)
+        sdiodevice.o(.conststrlit)
+    }
+
+    ScatterAssert(ImageLimit(SDIO_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    RK903_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        *(driver_rk903_rk903device_shell)
+        rk903device.o(.conststrlit)
+    }
+
+    ScatterAssert(ImageLimit(RK903_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+    WLC_SHELL_CODE(SHELL_START_CODE_BASE) OVERLAY
+    {
+        *(driver_wlc_wlcdevice_shell)
+        wlcdevice.o(.conststrlit)
+    }
+
+    ScatterAssert(ImageLimit(WLC_SHELL_CODE) < (SYS_CODE_BASE + SYS_CODE_SIZE))
+
+
+;==============================================================================
+;
+;   BB Section
+;
+;==============================================================================
+;
+    BB_SYS_CODE(HRAM_CODE_BASE)    OVERLAY
+    {
+
+        *(BBSysCode)
+
+    }
+    ScatterAssert(ImageLimit(BB_SYS_CODE) < (HRAM_CODE_BASE + HRAM_CODE_SIZE))
+
+    BB_SYS_DATA (HRAM_DATA_BASE) OVERLAY
+   {
+
+        *(BBSysData)
+        *(BBSysBss)
+
+    }
+    ScatterAssert(ImageLimit(BB_SYS_DATA) < (HRAM_DATA_BASE + HRAM_DATA_SIZE))
+
+    #define HAUDIO_DECODE_CODE_BASE  (HRAM_CODE_BASE)
+    #define HAUDIO_DECODE_DATA_BASE  (HRAM_DATA_BASE)
+}

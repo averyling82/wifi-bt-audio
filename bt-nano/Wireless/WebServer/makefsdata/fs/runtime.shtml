@@ -1,0 +1,17 @@
+<html>
+<head><title>webserver demo</title></head>
+<body>
+<font face="arial">
+<a href="index.shtml">SSIDs Stats</a> <b>|</b> <a href="runtime.shtml">Run-Time Stats</a> <b>|</b> <a href="http://www.rock-chips.com/">Rockchips Homepage</a> 
+<br><p>
+<h2>Run-time statistics</h2>
+<p>
+<font face="courier"><pre>Run-Time                                          <br>**************************************************<br>
+<form name="form1" method="get" action="login.cgi">
+<td>SSID:     </td><td><input type="text" name="ssid"/></td>
+<tr><td>Password: </td><td><input type="text" name="password"/></td></tr>
+<tr><td>          </td><td><input type="submit" value='Login' style="width:80px"/></td></tr></form>
+</pre></font>
+</font>
+</body>
+</html>
