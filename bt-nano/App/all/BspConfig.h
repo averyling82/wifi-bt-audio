@@ -125,7 +125,7 @@
 #define _HIDDEN_DISK2_                          /* Enable hidden disk(B:)            */
 //#define ENABLE_MBR                            /* Enable MBR                        */
 
-#define _EMMC_BOOT_                             /* Enable eMMC Flash                 */
+//#define _EMMC_BOOT_                             /* Enable eMMC Flash                 */
 #ifdef _EMMC_BOOT_                              /* -----eMMC Flash config------------*/
 #define EMMC_SDC_DEV_ID     0                   /* SDC controller: 0 eMMC, 1 SDIO    */
 #define EMMC_SDC_CHANNEL    1                   /* SDC iomux: 0 SD card, 1 Emmc      */
@@ -147,10 +147,10 @@
 
 #endif
 
-//#define _SPI_BOOT_                            /* Enable SPI Flash                  */
+#define _SPI_BOOT_                            /* Enable SPI Flash                  */
 #ifdef _SPI_BOOT_                               /* -----SPI Flash config-------------*/
-#define SPI_LUN0_SIZE       3                  /* SPI Firmware area: 15MB           */
-#define SPI_LUN1_SIZE       1                   /* SPI Database area: 1MB            */
+#define SPI_LUN0_SIZE       6                  /* SPI Firmware area: 6MB           */
+#define SPI_LUN1_SIZE       2                   /* SPI Database area: 2MB            */
 #define SPI_PAGE_SIZE       1                   /* Page size: 1 sector               */
 #define SPI_BLOCK_SIZE      64                  /* Block size: 64 KB                 */
 //#define USE_SPI_STORAGE                       /* LUN2 Use SpiFlash                 */
@@ -170,9 +170,9 @@
 /*************************************************************************************
  *                               Function config
  *************************************************************************************/
-#define _USE_GUI_                               /* Enable GUI                        */
+//#define _USE_GUI_                               /* Enable GUI                        */
 #ifndef _USE_GUI_
-    #define NOSCREEN_USE_LED                    /* Enable LED in no screen mode      */
+    //#define NOSCREEN_USE_LED                    /* Enable LED in no screen mode      */
 #endif
 
 
@@ -188,7 +188,7 @@
 #endif
 
 
-#define _BLUETOOTH_                             /* Enable Bluetooth                  */
+//#define _BLUETOOTH_                             /* Enable Bluetooth                  */
 
 #define _USB_                                   /* Enable USB                        */
 #ifdef _USB_
@@ -212,7 +212,7 @@
 #ifdef _SPI_BOOT_
 #if(SPI_LUN0_SIZE > 3)
     #define _AMR_DECODE_                        /* Enable AMR decode                 */
-    #define _XXX_DECODE_                        /* Enable XXX decode                 */
+//    #define _XXX_DECODE_                        /* Enable XXX decode                 */
     #define _OGG_DECODE_                        /* Enable OGG decode                 */
     #define _APE_DECODE_                        /* Enable APE decode                 */
     #define _AAC_DECODE_                        /* Enable AAC decode                 */
