@@ -76,7 +76,7 @@ typedef enum
 #define RKNANOD_L                   0
 #define RKNANOD_G                   1
 #define RKNANOD_N                   2
-#define RKNANOD_CHIP_TYPE           RKNANOD_N
+#define RKNANOD_CHIP_TYPE           RKNANOD_G//RKNANOD_N//JJJHHH
 
 #define BATT_POWEROFF_CNT           20
 #define BATT_POWEROFF_VALUE         BATT_EMPTY_VALUE
@@ -1742,8 +1742,11 @@ INIT API void BatteryManagerDeInit(void)
 _SYSTEM_SYSSEVER_POWERMANAGER_INIT_
 INIT API void PowerManagerStart(void)
 {
+#ifdef __ENABLE_POWERMANAGER
     rkos_start_timer(PowerTimer);
     BatteryManagerInit();
+#endif
+
 }
 
 /*******************************************************************************
@@ -1757,9 +1760,11 @@ INIT API void PowerManagerStart(void)
 _SYSTEM_SYSSEVER_POWERMANAGER_INIT_
 INIT API void PowerManagerEnd(void)
 {
+#ifdef __ENABLE_POWERMANAGER
     rkos_stop_timer(PowerTimer);
     rkos_delete_timer(PowerTimer);
     BatteryManagerDeInit();
+#endif
 }
 
 

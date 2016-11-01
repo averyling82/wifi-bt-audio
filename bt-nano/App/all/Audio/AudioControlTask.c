@@ -577,7 +577,7 @@ _APP_AUDIO_AUDIOCONTROLTASK_COMMON_
 COMMON API void AudioStop(int ReqType)
 {
 
-    if(gpstAudioControlData->AudioPlayState == AUDIO_STATE_STOP)
+    if(gpstAudioControlData->AudioPlayState == AUDIO_STATE_STOP)//already stoped
     {
         return;
     }
@@ -913,6 +913,11 @@ COMMON API rk_err_t AudioGetNextMusic(int msg)
     int ret = 0;
     uint32  Playednumber;
 
+/*****JJJHHH always repeat**/
+    printf("JJJHHH RepeatMode=%d\n",gpstAudioControlData->AudioFileInfo.RepeatMode);
+	gpstAudioControlData->AudioFileInfo.RepeatMode = AUDIO_ALLREPEAT;
+/*******/
+	
     switch (gpstAudioControlData->AudioFileInfo.RepeatMode)
     {
         case AUDIO_REPEAT://single repeat
@@ -2193,7 +2198,7 @@ COMMON FUN rk_err_t DirPlayListNextFile(SYS_FILE_INFO * pstAudioFileInfo, int di
             }
         }
 
-        rk_printf("curfile = %d, total file = %d", pstAudioFileInfo->CurrentFileNum, pstAudioFileInfo->TotalFiles);
+        rk_printf("curfile = %d, total file = %d RepeatMode=%d", pstAudioFileInfo->CurrentFileNum, pstAudioFileInfo->TotalFiles,pstAudioFileInfo->RepeatMode);
 
         DirDev_GetFilePathByCurNum(pstAudioFileInfo->hDirDev, pstAudioFileInfo->path, pstAudioFileInfo->CurrentFileNum);
     }

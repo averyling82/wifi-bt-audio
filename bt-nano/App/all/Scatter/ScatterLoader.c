@@ -946,6 +946,14 @@ extern uint32 Image$$SSL_DEV_CODE$$Length;
 extern uint32 Image$$SSL_DEV_CODE$$ZI$$Base;
 extern uint32 Image$$SSL_DEV_CODE$$ZI$$Length;
 
+//SWITCH_PLAYER JJJHHH
+extern uint32 Load$$SHELL_SWITCH_PLAYER_CODE$$Base;
+extern uint32 Image$$SHELL_SWITCH_PLAYER_CODE$$Base;
+extern uint32 Image$$SHELL_SWITCH_PLAYER_CODE$$Length;
+//extern uint32 Image$$SHELL_SWITCH_PLAYER_CODE$$ZI$$Base;
+//extern uint32 Image$$SHELL_SWITCH_PLAYER_CODE$$ZI$$Length;
+
+
 //lwip
 extern uint32 Load$$LWIP_DEV_CODE$$Base;
 extern uint32 Image$$LWIP_DEV_CODE$$Base;
@@ -3959,6 +3967,21 @@ FIRMWARE_INFO_T const ModuleInfo  =
                 (uint32)(&Image$$SSL_DEV_CODE$$ZI$$Base),
                 (uint32)(&Image$$SSL_DEV_CODE$$ZI$$Length),
             },
+
+			//SHELL_SWITCH_PLAYER jjjhhh
+			{
+				(uint32)(&Load$$SHELL_SWITCH_PLAYER_CODE$$Base),
+				(uint32)(&Image$$SHELL_SWITCH_PLAYER_CODE$$Base),
+				(uint32)(&Image$$SHELL_SWITCH_PLAYER_CODE$$Length),
+				
+				NULL,
+				NULL,
+				NULL,
+				
+				NULL,//(uint32)(&Image$$SWITCH_PLAYER_CODE$$ZI$$Base),
+				NULL,//(uint32)(&Image$$SWITCH_PLAYER_CODE$$ZI$$Length),
+			},
+
 
             // lwip seg
             {

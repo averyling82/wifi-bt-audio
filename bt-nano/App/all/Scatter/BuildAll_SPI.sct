@@ -169,6 +169,7 @@ LOAD_REGION SYS_CODE_BASE
         watchdogdevice.o(.conststrlit)
         gpio.o(.conststrlit)
         FmDevice.o(.conststrlit)
+        shell_switch_player.o(.conststrlit)
     }
 
     TASK_INF_DATA 0x89000000
@@ -2351,6 +2352,11 @@ LOAD_REGION SYS_CODE_BASE
     }
     ScatterAssert(ImageLimit(XXX_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
 
+    SHELL_SWITCH_PLAYER_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    {
+        ;*(SwitchPlayerShell)
+    }
+    ScatterAssert(ImageLimit(SHELL_SWITCH_PLAYER_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
 
     RK903_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
     {

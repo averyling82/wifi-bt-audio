@@ -165,4 +165,24 @@ extern void rk_print_string(const uint8 * pstr);
 extern void rk_printf_no_time(const char * fmt,...);
 extern void debug_hex(char *buf, int BufSize, int radix);
 extern void rk_printf(const char * fmt,...);
+
+#include "BspConfig.h"
+#ifdef _ENABLE_WIFI_BLUETOOTH
+extern int32 MainTask_StartSubThread (uint32 MenuId);
+extern int32 MainTask_DeleteAllApp(void);
+typedef enum _MAIN_TASK_SUB_THREAD
+{
+    MUSIC_SUB_THREAD,
+    VEDIO_SUB_THREAD,
+    FM_SUB_THREAD,
+    PHOTO_SUB_THREAD,
+    BOOK_SUB_THREAD,
+    RECOD_SUB_THREAD,
+    BROWSER_SUB_THREAD,
+    GAME_SUB_THREAD,
+    SETMENU_SUB_THREAD,
+    SUB_THREAD_MAX
+
+}MAIN_TASK_SUB_THREAD;
+#endif//_ENABLE_WIFI_BLUETOOTH
 #endif

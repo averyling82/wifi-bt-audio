@@ -62,22 +62,22 @@
 
 //AdKey Reference Voltage define
 //ADC ref = LDO Output
-#define ADKEY2_MIN          ((0   +   0) / 2)
+#define ADKEY2_MIN          ((0   +   0) / 2)//MENU--0V
 #define ADKEY2_MAX          ((0   + 147) / 2)
 
-#define ADKEY3_MIN          ((147 +   0) / 2) //up
+#define ADKEY3_MIN          ((147 +   0) / 2) //UP--0.36V
 #define ADKEY3_MAX          ((147 + 330) / 2)
 
-#define ADKEY4_MIN          ((330 + 147) / 2) //FFD
+#define ADKEY4_MIN          ((330 + 147) / 2) //FFD--0.8V
 #define ADKEY4_MAX          ((330 + 522) / 2)
 
-#define ADKEY5_MIN          ((522 + 330) / 2) //FFW
+#define ADKEY5_MIN          ((522 + 330) / 2) //FFW--1.25V
 #define ADKEY5_MAX          ((522 + 780) / 2)
 
-#define ADKEY6_MIN          ((780 + 522) / 2) //Down
+#define ADKEY6_MIN          ((780 + 522) / 2) //Down--1.88V
 #define ADKEY6_MAX          ((780 + 956) / 2)
 
-#define ADKEY7_MIN          ((956 + 780) / 2) //ESC
+#define ADKEY7_MIN          ((956 + 780) / 2) //ESC--2.3V
 #define ADKEY7_MAX          ((956 + 1024) / 2)
 /*
 *-------------------------------------------------------------------------------

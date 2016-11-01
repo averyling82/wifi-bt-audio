@@ -126,6 +126,7 @@ _BSP_EVK_V20_BSP_COMMON_
 COMMON API void PnPSever(void)
 {
 #ifndef _USE_GUI_
+#ifndef _ENABLE_WIFI_BLUETOOTH
     #ifdef _BLUETOOTH_
     {
         #ifdef NOSCREEN_USE_LED //led display
@@ -247,6 +248,118 @@ COMMON API void PnPSever(void)
         #endif //NOSCREEN_USE_LED end
     }
     #endif //_WIFI_ end
+#else
+   {
+        #ifdef NOSCREEN_USE_LED //led display
+        {
+            if (MainTask_GetStatus(MAINTASK_WIFICONFIG)==1)
+            {
+                greenled_state++;
+                if ((greenled_state == 1)||(greenled_state == 2))
+                {
+                    MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
+                    MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
+
+                }
+                if ((greenled_state == 3)||(greenled_state == 4))
+                {
+                    MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
+                    MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
+                    if (greenled_state == 4)
+                    {
+                        greenled_state = 0;
+                    }
+                }
+            }
+            else
+            {
+				if ((gSysConfig.BtOpened == 1)&&(gSysConfig.BtControl == 1))
+				{
+					MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
+				}
+				if ((gSysConfig.BtControl == 1)&&(gSysConfig.BtOpened != 1))
+				{
+					redLed_state++;
+					if ((redLed_state == 1)||(redLed_state == 2))
+					{
+						MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
+					}
+					if ((redLed_state == 3)||(redLed_state == 4))
+					{
+						MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
+						if (redLed_state == 4)
+						{
+							redLed_state = 0;
+						}
+					}
+				}
+                if ((MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER) != 1)
+                    &&(MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) != 1)
+                    &&(MainTask_GetStatus(MAINTASK_APP_LOCAL_PLAYER) != 1))
+                {
+                    MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
+                    MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
+                }
+                if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER_START) == 1)
+                {
+                    greenled_state++;
+                    if ((greenled_state == 1)||(greenled_state == 2))
+                    {
+                        MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
+                        MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
+
+                    }
+                    if ((greenled_state == 3)||(greenled_state == 4))
+                    {
+                        MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
+                        MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
+                        if (greenled_state == 4)
+                        {
+                            greenled_state = 0;
+                        }
+                    }
+                }
+                if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER) == 1)
+                {
+                    MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
+                    MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
+                }
+
+                if (MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER_START) == 1)
+                {
+                    greenled_state++;
+                    if ((greenled_state == 1)||(greenled_state == 2))
+                    {
+                        MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
+                        MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
+
+                    }
+                    if ((greenled_state == 3)||(greenled_state == 4))
+                    {
+                        MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
+                        MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
+                        if (greenled_state == 4)
+                        {
+                            greenled_state = 0;
+                        }
+                    }
+                }
+                if (MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) == 1)
+                {
+                    MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
+                    MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
+                }
+
+                if (MainTask_GetStatus(MAINTASK_APP_LOCAL_PLAYER) == 1)
+                {
+                    MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
+                    MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
+                }
+            }
+        }
+        #endif //NOSCREEN_USE_LED end
+    }
+#endif//_ENABLE_WIFI_BLUETOOTH
 #endif //No _USE_GUI_ end
 
     if(VbusStatus == 0)
@@ -5579,6 +5692,7 @@ INIT API void RockCodecDevHwDeInit(uint32 DevID, uint32 Channel)
     ScuClockGateCtr(PCLK_ACODEC_GATE, 0);     //PCLK ACODEC gating open
 
     #ifdef HP_DET_CONFIG
+	
     Grf_GpioMuxSet(GPIO_CH2,HP_DET,IOMUX_GPIO2B3_IO);
     Gpio_SetPinDirection(GPIO_CH2,HP_DET,GPIO_IN);
     Grf_GPIO_SetPinPull(GPIO_CH2,HP_DET,DISABLE);

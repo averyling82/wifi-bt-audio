@@ -335,7 +335,7 @@ uint32 Get_PlayKey_State(void)
 {
     uint8 temp;
 
-    temp = Gpio_GetPinLevel(GPIO_CH2,GPIOPortA_Pin5);
+    temp = Gpio_GetPinLevel(GPIO_CH2,GPIOPortA_Pin5);//PLAYON KEY jjjhhh
 
     return (temp);
 }

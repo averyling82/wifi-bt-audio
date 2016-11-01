@@ -1503,6 +1503,7 @@ SHELL FUN rk_err_t FmDevShellTest(HDC dev, uint8 * pstr)
     if((hFmDev == NULL) || (hFmDev == (HDC)RK_ERROR) || (hFmDev == (HDC)RK_PARA_ERR))
     {
         rk_print_string("FmDev open failure");
+		rk_printf("hFmDev=%d\n",(int)hFmDev);
          return RK_SUCCESS;
     }
 

@@ -43,6 +43,7 @@
 #include "FwAnalysis.h"
 #include "airplay.h"
 #include "lwipopts.h"
+#include "shell_switch_player.h"//jjjhhh 20161016
 
 
 /*
@@ -409,6 +410,9 @@ const static SHELL_CMD_INFO ShellRegisterName1[] =
 #endif
 #ifdef __WIFI_XXX_C__
     "XXX", SEGMENT_ID_XXX_SHELL, XXX_shell,"XXX player cmd package","NULL",
+#endif
+#ifdef __SHELL_SWITCH_PLAYER_C__//JJJHHH 20161016
+	"switch", SEGMENT_ID_SWITCHPLAYER_SHELL, SwitchPlayer_shell,"switch player cmd package","NULL",
 #endif
 
     "\b", NULL, NULL, NULL

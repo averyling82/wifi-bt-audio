@@ -149,7 +149,7 @@
 
 #define _SPI_BOOT_                            /* Enable SPI Flash                  */
 #ifdef _SPI_BOOT_                               /* -----SPI Flash config-------------*/
-#define SPI_LUN0_SIZE       6                  /* SPI Firmware area: 6MB           */
+#define SPI_LUN0_SIZE       6                  /* SPI Firmware area: 6MB=x*512 */
 #define SPI_LUN1_SIZE       2                   /* SPI Database area: 2MB            */
 #define SPI_PAGE_SIZE       1                   /* Page size: 1 sector               */
 #define SPI_BLOCK_SIZE      64                  /* Block size: 64 KB                 */
@@ -173,22 +173,26 @@
 //#define _USE_GUI_                               /* Enable GUI                        */
 #ifndef _USE_GUI_
     //#define NOSCREEN_USE_LED                    /* Enable LED in no screen mode      */
+    //#define __ENABLE_POWERMANAGER         /*Enable PowerManager*/
 #endif
 
 
+#define _ENABLE_WIFI_BLUETOOTH
+
 #define _WIFI_                                  /* Enable WIFI                       */
-#ifdef _WIFI_                                   /* -----WIFI config------------------*/
-#define WIFI_AP_COUNT 5   //(545)
+#if defined(_WIFI_) || defined(_ENABLE_WIFI_BLUETOOTH)                                   /* -----WIFI config------------------*/
+#define WIFI_AP_COUNT 3   //(545)
 #define _WIFI_OB                                /* Enable WIFI IO interrupt          */
 #define _WIFI_FOR_SYSTEM_                       /* Enable save WIFI information      */
 //#define _WIFI_5G_AP6234                       /* Enable WIFI 5G Module             */
-#define _WIFI_AP6181
-//#define _WIFI_AP6212
+//#define _WIFI_AP6181
+#define _WIFI_AP6212
 //#define _WIFI_5G_AP6255
 #endif
 
-
-//#define _BLUETOOTH_                             /* Enable Bluetooth                  */
+#if !defined(_WIFI_) || defined(_ENABLE_WIFI_BLUETOOTH)
+	#define _BLUETOOTH_                             /* Enable Bluetooth                  */
+#endif
 
 #define _USB_                                   /* Enable USB                        */
 #ifdef _USB_
@@ -270,7 +274,7 @@
 
 #endif
 
-#define _LINEIN_
+//#define _LINEIN_//jjjhhh
 
 #define _RADIO_                                 /* Enable Radio                      */
 #ifdef _RADIO_                                  /* -----Radio config-----------------*/
@@ -347,7 +351,10 @@
 #define _BEEP_NOT_MIXED_                       /* Enable beep and no mixed           */
 #endif
 
-//#define HP_DET_CONFIG                        /* Reserved                           */
+#define HP_DET_CONFIG                        /* Reserved                           */
+#ifdef HP_DET_CONFIG
+	#define HP_DET GPIOPortB_Pin3
+#endif
 #define _Vol_Tab_General                       /* Enable volume table                */
 
 //#define SUPPORT_YUV                          /* Enable YUV                         */

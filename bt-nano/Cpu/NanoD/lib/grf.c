@@ -571,7 +571,9 @@ uint32 Grf_Get_Cpu_ID(void)
 */
 uint32 Grf_CheckVbus(void)
 {
-    //return 0;
+#ifndef __ENABLE_POWERMANAGER
+    return 0;//JJJHHH 20161013 don't enter charge...
+#endif
 #ifndef _BROAD_LINE_OUT_
     //return Grf->GRF_SOC_USB_STATUS;
     return ((Grf->GRF_SOC_USB_STATUS & 0x2)==0x2)? TRUE : FALSE;

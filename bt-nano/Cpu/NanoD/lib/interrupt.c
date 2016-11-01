@@ -28,7 +28,11 @@ extern UINT32 Image$$AP_MAIN_STACK$$ZI$$Limit;
 
 #if defined(__arm__) && defined(__ARMCC_VERSION)
 __attribute__((used,section("APMainStack"))) __align(4) uint32 MainStack[512];
+#ifdef _ENABLE_WIFI_BLUETOOTH
+__attribute__((used,section("IdleStack"))) __align(4) uint32 IdleStack[230];//JJJHHH 20161019 //IdleStack[250];
+#else
 __attribute__((used,section("IdleStack"))) __align(4) uint32 IdleStack[250];
+#endif//_ENABLE_WIFI_BLUETOOTH
 #elif defined(__arm__) && defined(__GNUC__)
 __attribute__((section("APMainStack"))) uint32 MainStack[512] __attribute__((align(4)));
 __attribute__((section("IdleStack"))) uint32 Stack[512] __attribute__((align(4)));

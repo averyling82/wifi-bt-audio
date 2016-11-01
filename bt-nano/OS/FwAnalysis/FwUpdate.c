@@ -50,7 +50,7 @@
 #define FW_CHECK_LEN        (8*1024)
 
 #ifdef _SPI_BOOT_
-#define FW_BUF_LEN          (FW_CHECK_LEN*8)
+#define FW_BUF_LEN          (FW_CHECK_LEN*8)//64K?
 #else
 #define FW_BUF_LEN          (FW_CHECK_LEN*1)
 #endif
@@ -192,6 +192,7 @@ COMMON API rk_err_t FwRecovery(void)
     uint32 FwSize;
     uint8 *pUBuf = (uint8 *)rkos_memory_malloc(FW_BUF_LEN);
 
+	printf("\nFwRecovery Start\n");
     if(pUBuf == NULL)
     {
         printf("memory maloc fail");
@@ -203,12 +204,12 @@ COMMON API rk_err_t FwRecovery(void)
 
     FwSize = SysProgRawDiskCapacity<<9;
 
-    if(0==FW2Valid)
+    if(0==FW2Valid)//copy fw1 to fw2 
     {
        SrcAddr =  0;
        DstAddr =  SysProgRawDiskCapacity;
     }
-    else if(0==FW1Valid)
+    else if(0==FW1Valid)//copy fw2 to fw1 
     {
        SrcAddr =  SysProgRawDiskCapacity;
        DstAddr =  0;
@@ -259,9 +260,8 @@ COMMON API rk_err_t FwRecovery(void)
     RKDev_Close(hLunFW);
     rkos_memory_free(pUBuf);
 
-    return RK_SUCCESS;
-
     printf("\nFwRecovery Exit");
+	return RK_SUCCESS;
 }
 
 
@@ -371,7 +371,7 @@ COMMON API rk_err_t FwUpdate(uint16 * path, uint32 ForceUpate)
     #endif
 
 
-    rk_printf("Fw2 Update Start");
+    rk_printf("Fw2 Update Start SysProgRawDiskCapacity=%d",SysProgRawDiskCapacity);
 
     LunDev_GetSize(hLunFW, &LunSize);
 
@@ -588,7 +588,7 @@ COMMON API void FwCheck(void)
         FW2Valid = 0;
     }
 
-    if (0==FW1Valid && 0==FW2Valid)    //两份都错了
+    if (0==FW1Valid && 0==FW2Valid)    //两份都错了,表示机器变砖了
     {
         printf("fw1 && fw2 error!\n");
         while(1);
@@ -596,7 +596,7 @@ COMMON API void FwCheck(void)
 
     if (0==FW2Valid) //第二份有出错
     {
-        SysProgRawDiskCapacity = ((((Fw1Size + 16*1024 + FW_ALIGN_SIZE)/FW_ALIGN_SIZE)*FW_ALIGN_SIZE)>>9);    //以M对齐,以sec为单位
+        SysProgRawDiskCapacity = ((((Fw1Size + 16*1024 + FW_ALIGN_SIZE)/FW_ALIGN_SIZE)*FW_ALIGN_SIZE)>>9); //FW_ALIGN_SIZE=64K   //以M对齐,以sec为单位
     }
     else
     {
@@ -617,7 +617,7 @@ COMMON API void FwCheck(void)
         FwSysOffset = FW_SYS_OFFSET + SysProgRawDiskCapacity;
     }
 
-    printf("FwSysOffset = %d", FwSysOffset);
+    printf("FwSysOffset = %d\nFW_SYS_OFFSET=%d\nSysProgRawDiskCapacity=%d\nSysProgRawDiskCapacity=%d\n", FwSysOffset,FW_SYS_OFFSET,SysProgRawDiskCapacity,SysProgRawDiskCapacity);//FwSysOffset以好的fw为基准。
 
     RKDev_Close(hLunFW);
 

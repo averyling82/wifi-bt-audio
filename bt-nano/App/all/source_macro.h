@@ -66,6 +66,9 @@
 #define __WIFI_DLNA_C__
 #define __WIFI_XXX_C__
 #define __WIFI_AIRPLAY_C__
+#define __SHELL_SWITCH_PLAYER_C__
+//jjjhhh
+
 
 #ifdef __WIFI_DLNA_C__
 #define __DLNA_PLAYER_C__
@@ -186,7 +189,7 @@
 #define __BBSYSTEM_PCODECS_C__
 #define __BBSYSTEM_CODECS_AUDIO_DECODE_APE_PAPE_C__
 #define __DRIVER_MSG_MSGDEVICE_C__
-#define __SYSTEM_SYSSEVER_POWERMANAGER_C__
+#define __SYSTEM_SYSSEVER_POWERMANAGER_C__/**/
 
 
 #ifdef B_CORE_DECODE

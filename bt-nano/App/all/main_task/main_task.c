@@ -95,7 +95,7 @@ typedef  struct _MAIN_TASK_DATA_BLOCK
     TASK_SWTICH_ARG  stSwtichs;
 
 }MAIN_TASK_DATA_BLOCK;
-
+#ifndef _ENABLE_WIFI_BLUETOOTH
 typedef enum _MAIN_TASK_SUB_THREAD
 {
     MUSIC_SUB_THREAD,
@@ -110,10 +110,14 @@ typedef enum _MAIN_TASK_SUB_THREAD
     SUB_THREAD_MAX
 
 }MAIN_TASK_SUB_THREAD;
+#endif//_ENABLE_WIFI_BLUETOOTH
 
-
-//#define MAINTASK_DEBUG(format,...) printf("\n[Main_task.c]:(Line=%d)--------"format, __LINE__, ##__VA_ARGS__)
+//JJJHHH
+#ifdef _LOG_DEBUG_
+#define MAINTASK_DEBUG(format,...) printf("\n[Main_task.c]:(Line=%d)--------"format, __LINE__, ##__VA_ARGS__)
+#else
 #define MAINTASK_DEBUG(format,...)
+#endif
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *
@@ -144,12 +148,17 @@ rk_err_t  MainTask_Resume(HTC hTask);
 rk_err_t  MainTask_Suspend(HTC hTask, uint32 Level);
 rk_err_t MainTaskCheckIdle(HTC hTask);
 #if 1
+
+#ifndef _ENABLE_WIFI_BLUETOOTH
 int32 MainTask_StartSubThread (uint32 MenuId);
+int32 MainTask_DeleteAllApp(void);
+#endif//_ENABLE_WIFI_BLUETOOTH
 int32 MainTask_SetWindow (int32 MenuId);
 int32 MainTask_SetName (int32 MenuId);
-int32 MainTask_DeleteAllApp(void);
+
 int32 MainTask_DiaplayElectricPower (int flag);
 int32 MainTask_ShutDown (int flag);
+
 int32 MainTask_GuiInit(void);
 int32 MainTask_GuiDeInit(void);
 int32 MainTask_Animation ();
@@ -1084,6 +1093,7 @@ COMMON API void MainTask_Enter(void)
 #ifndef _USE_GUI_
     if (Grf_CheckVbus()==0)
     {
+#ifndef _ENABLE_WIFI_BLUETOOTH
         #ifdef _BLUETOOTH_
             MainTask_StartSubThread(FM_SUB_THREAD); //打开音乐线程
         #endif
@@ -1091,6 +1101,13 @@ COMMON API void MainTask_Enter(void)
         #ifdef _DRIVER_WIFI__
             MainTask_StartSubThread(VEDIO_SUB_THREAD); //打开WIFI音乐线程
         #endif
+#else
+		printf("jjjhhh current gSysConfig.PlayerType=%d\n",gSysConfig.PlayerType);
+		if(gSysConfig.PlayerType == SOURCE_FROM_BT)
+			MainTask_StartSubThread(FM_SUB_THREAD);
+		else
+			MainTask_StartSubThread(VEDIO_SUB_THREAD);
+#endif
     }
 #endif
 
@@ -1869,7 +1886,7 @@ COMMON FUN int32 MainTask_DeleteAllApp (void)
     }
 
 #else
-    #ifdef _BLUETOOTH_
+    #if defined(_BLUETOOTH_) && !defined(_ENABLE_WIFI_BLUETOOTH)
     {
         //if (gSysConfig.BtOpened==1)
         if (gSysConfig.BtControl==1)
