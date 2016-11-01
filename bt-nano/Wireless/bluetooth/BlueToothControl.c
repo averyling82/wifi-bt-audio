@@ -1442,7 +1442,7 @@ void BlueToothControlService(void *arg)
 
     if(BlueToothControlInit(NULL, NULL) != RK_SUCCESS)
     {
-        BT_DEBUG("BlueToothControlInit fail\n");
+        BT_DEBUG("\n\n!!!!!BlueToothControlInit fail!!!!\n");
         gSysConfig.BtOpened = -1;
         bt_ctrl_task_exit = 1;
         while(1)

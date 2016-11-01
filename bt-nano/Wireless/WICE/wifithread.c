@@ -246,9 +246,16 @@ rk_err_t rk_wifi_relink_sysinfo(int flag)
      }
 
      ret = LUNReadDB(gSysConfig.WifiSSIDStartLBA, WIFI_LEN, mwifi_buf);
+     if(mwifi_buf->Totalnum == 0xff)//JJJHHH 20161014-----Flash¿Õ°×Î»ÖÃÊÇff
+     {
+        rk_printf("mwifi_buf->Totalnum == 0xff\n");
+        mwifi_buf->Totalnum = 0;
+        return RK_SUCCESS;
+     }
+
      if(mwifi_buf->Totalnum > 5)
      {
-        rk_printf("read db tot num is error");
+        rk_printf("read db tot num is error mwifi_buf->Totalnum=%d",mwifi_buf->Totalnum);
         rkos_memory_free(mwifi_buf);
         mwifi_buf = NULL;
         wifi_join = WICED_ERR;
@@ -1363,9 +1370,9 @@ COMMON API void wifi_applicationTask_Enter(void)
         struct ip_addr ipaddr;
         struct ip_addr netmask;
         struct ip_addr gw;
-        WICED_IP4_ADDR(&ipaddr, 192, 168, 237, 1);
+        WICED_IP4_ADDR(&ipaddr, 192, 168, 1, 1);//JJJHHH
         WICED_IP4_ADDR(&netmask, 255, 255, 255, 0);
-        WICED_IP4_ADDR(&gw, 192, 168, 237, 1);
+        WICED_IP4_ADDR(&gw, 192, 168, 1, 1);
         memset(&ip_settings, 0 , sizeof(wiced_ip_setting_t));
         ip_settings.ip_address.ip.v4 = ipaddr.addr;
     ip_settings.gateway.ip.v4 = gw.addr;

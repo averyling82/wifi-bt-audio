@@ -73,7 +73,11 @@ typedef unsigned int        uint32_t;
 #define BT_CHIP_RTL8761ATV  3
 #define BT_CHIP_AP6212      4
 
+#ifdef _WIFI_AP6212
+#define BT_CHIP_CONFIG    BT_CHIP_AP6212
+#else
 #define BT_CHIP_CONFIG    BT_CHIP_RTL8761ATV
+#endif
 #define BT_ENABLE_SET_MAC
 #define BT_UART_INTERFACE_H4   1
 #define BT_UART_INTERFACE_H5   2
