@@ -121,8 +121,8 @@
  *                        External memory and boot config
  *************************************************************************************/
 //#define DISK_VOLUME                           /* Enable disk volume                */
-#define _HIDDEN_DISK1_                          /* Enable hidden disk(A:)            */
-#define _HIDDEN_DISK2_                          /* Enable hidden disk(B:)            */
+//#define _HIDDEN_DISK1_                          /* Enable hidden disk(A:)            */
+//#define _HIDDEN_DISK2_                          /* Enable hidden disk(B:)            */
 //#define ENABLE_MBR                            /* Enable MBR                        */
 
 //#define _EMMC_BOOT_                             /* Enable eMMC Flash                 */
@@ -149,6 +149,7 @@
 
 #define _SPI_BOOT_                            /* Enable SPI Flash                  */
 #ifdef _SPI_BOOT_                               /* -----SPI Flash config-------------*/
+#define _OTA_UPDATEFW_SPI
 #define SPI_LUN0_SIZE       6                  /* SPI Firmware area: 6MB=x*512 */
 #define SPI_LUN1_SIZE       2                   /* SPI Database area: 2MB            */
 #define SPI_PAGE_SIZE       1                   /* Page size: 1 sector               */

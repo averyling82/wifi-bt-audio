@@ -430,7 +430,7 @@ int easy_setup_start()
     wiced_rtos_init_semaphore( &ws->scan_complete );
 
     result_ptr = &scan_result[0];
-    printf("scan_result[0] = 0x%4x", result_ptr);
+    printf("scan_result[0] = 0x%4x   ssid=%s", result_ptr,result_ptr->SSID);
     /* we need to scan and get security & channel, will retry several times */
     retry_times = 3;
     do {

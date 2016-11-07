@@ -177,6 +177,9 @@ FONT_CODEPAGE_TYPE U2CodePage[] =
 *---------------------------------------------------------------------------------------------------------------------
 */
 rk_err_t FWShellUpdate(HDC dev,  uint8 * pstr);
+#ifdef _OTA_UPDATEFW_SPI
+rk_err_t FWShellOTAUpdate(HDC dev,  uint8 * pstr);
+#endif
 rk_err_t FWShellSn(HDC dev, uint8 * pstr);
 rk_err_t LUNWriteDB(uint32 offset, uint32 len, void *buf);
 rk_err_t LUNReadDB(uint32 offset, uint32 len, void *buf);
@@ -1082,7 +1085,7 @@ COMMON API rk_err_t FW_LoadSegment(uint32 SegmentID, uint8 Type)
     uint32 ImageLength;
     CodeLogicAddress = gstFwInf.CodeLogicAddress;
     LoadStartBase = gstFwInf.LoadStartBase;
-    FlashBuf = rkos_memory_malloc(512);
+    FlashBuf = rkos_memory_malloc(sizeof(SEGMENT_INFO_T));//512 //jjjhhh 20161104
 
 
     CodeInfoAddr  = CodeLogicAddress + sizeof(pFirmwareModuleInfo -> LoadStartBase);
@@ -1093,7 +1096,7 @@ COMMON API rk_err_t FW_LoadSegment(uint32 SegmentID, uint8 Type)
     pSegment = (SEGMENT_INFO_T *)FlashBuf;
 
 
-    //rk_printf("SegmentID = %d", SegmentID);
+    //rk_printf("SegmentID = %d\n", SegmentID);
 retry:
     ret = FW_SegmentAdd(SegmentID, pSegment);
 
@@ -1603,8 +1606,73 @@ INIT API void FW_Resource_Init(void)
 
 }
 
+#ifdef _OTA_UPDATEFW_SPI
+/*******************************************************************************
+** Name: FW_GetOTAParameter
+** Input:void *dat, Ucs2 * buf,uint8 EncodeMode
+** Return: rk_err_t
+** Owner:hu.jiang
+** Date: 2016.11.04
+** Time: 10:42:22
+*******************************************************************************/
+_OS_FWANALYSIS_FWANALYSIS_COMMON_
+rk_err_t FW_GetOTAParameter(uint8 *product_cu,uint8 *product_vc,uint8 *product_sn,uint8 *product_id)
+{
+	uint8 size;
+	uint8 point = 0;
+	HDC hLunFW;
+	uint8 DataBuf[512] = {0};
+	PFIRMWARE_HEADER pFWHead = NULL;
 
+	
+	size = FW_GetProductSn(product_sn);//get sn
+	if(size > 0)
+	{
+		product_sn[size] = 0;
+		printf("\nproduct sn: %s", product_sn);
+	}
+	else
+	{
+		printf("\nnot find sn");
+		memcpy(product_sn, "EL0000001",10);//memcpy(product_sn, "unknow",7);
+	}
+	
+	*(product_vc + 0) = (uint8)((gstFwInf.MasterVersion >> 4) & 0x0f) + '0';//get fw version
+	*(product_vc + 1) = (uint8)((gstFwInf.MasterVersion >> 0) & 0x0f) + '0';
+	*(product_vc + 2) = '.';
+	*(product_vc + 3) = (uint8)((gstFwInf.SlaveVersion >> 4) & 0x0f) + '0';
+	*(product_vc + 4) = (uint8)((gstFwInf.SlaveVersion >> 0) & 0x0f) + '0';
+	*(product_vc + 5) = '.';
+	*(product_vc + 6) = ((gstFwInf.SmallVersion >> 12) & 0x0f) + '0';
+	*(product_vc + 7) = ((gstFwInf.SmallVersion >> 8)  & 0x0f) + '0';
+	*(product_vc + 8) = ((gstFwInf.SmallVersion >> 4)  & 0x0f) + '0';
+	*(product_vc + 9) = ((gstFwInf.SmallVersion >> 0)  & 0x0f) + '0';
 
+	/*****************GET FIRMWARE_HEADER**********************/
+	hLunFW = RKDev_Open(DEV_CLASS_LUN,0,NOT_CARE);
+	if (RK_ERROR == (rk_err_t)hLunFW)
+	{
+		printf("ERROR,RKDev_Open failed in fun FW_GetOTAParameter\n");
+		return RK_ERROR;
+	}
+	
+	if(RK_ERROR == LunDev_Read(hLunFW, FW_SYS_OFFSET, DataBuf, 1))
+	{
+		printf("ERROR,LunDev_Read failed in fun FW_GetOTAParameter\n");
+		RKDev_Close(hLunFW);
+	}
+	else
+	{
+		pFWHead = (PFIRMWARE_HEADER)DataBuf;
+		memcpy(product_cu, pFWHead->ModelName,32);
+		memcpy(product_id, pFWHead->MachineID,4);
+		RKDev_Close(hLunFW);
+		return RK_SUCCESS;
+	}
+	/****************************************/
+	return RK_ERROR;
+}
+#endif//#ifdef _OTA_UPDATEFW_SPI
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *
@@ -1620,6 +1688,9 @@ static SHELL_CMD ShellFWName[] =
 {
     "inf",FWShellSn,"get fw inf","fw.inf",
     "update",FWShellUpdate,"up date fw","fw.update",
+#ifdef _OTA_UPDATEFW_SPI
+    "ota",FWShellOTAUpdate,"ota update fw","fw.ota",
+#endif
     "pcb", FWShellPcb, "get firmwave some information", "fw.pcb",
     "list", NULL, "get all segment information", "fw.list",
     "\b", NULL,"NULL","NULL",                         // the end
@@ -1707,6 +1778,22 @@ SHELL FUN rk_err_t FWShellUpdate(HDC dev,  uint8 * pstr)
     FwUpdate(L"C:\\RKNANOFW.IMG", 0);
     return RK_SUCCESS;
 }
+
+/*******************************************************************************
+** Name: FWShellOTAUpdate
+** Input:HDC dev,  uint8 * pstr
+** Return: rk_err_t
+** Owner:hu.jiang
+** Date: 2016.11.01
+** Time: 23:25:44
+*******************************************************************************/
+#ifdef _OTA_UPDATEFW_SPI
+_OS_FWANALYSIS_FWANALYSIS_SHELL_
+SHELL FUN rk_err_t FWShellOTAUpdate(HDC dev,  uint8 * pstr)
+{
+	return CheckOTAandUpdateFw();
+}
+#endif// #ifdef _OTA_UPDATEFW_SPI end
 /*******************************************************************************
 ** Name: FWShellSn
 ** Input:HDC dev, uint8 * pstr

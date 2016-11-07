@@ -401,7 +401,7 @@ COMMON API rk_err_t FileDev_FileSeek(HDC dev, uint32 pos, uint32 Offset)
        return RK_PARA_ERR;
     }
 
-    //rk_printf("pos = %d, Offset = %d", pos, Offset);
+    //rk_printf("pos = %d, Offset = %d pstVolume->VolumeType=%d\n", pos, Offset,pstVolume->VolumeType);
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {

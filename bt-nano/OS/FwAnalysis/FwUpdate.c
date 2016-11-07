@@ -37,6 +37,9 @@
 #include "Bsp.h"
 #include "pmc.h"
 
+#include "http.h"
+#include <string.h>
+
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -62,6 +65,34 @@
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+#ifdef _OTA_UPDATEFW_SPI
+#define MAX_URL_LEN 512
+#define OTA_URL_HEADER "http://120.24.12.226:8800/otaUpgrade?"
+
+#define OTA_FIRMWARE_PATH L"C:\\"
+#define OTA_FIRMWARE_FILENAME L"NEWESTOTAFW.IMG";
+#define OTA_FIRMWARE_FILE L"C:\\NEWESTOTAFW.IMG"
+
+typedef enum __OTA_DOWNLOAD_STATUS
+{
+	OTA_DOWNLOAD_STATUS_UNKNOW = 0,
+	OTA_DOWNLOAD_STATUS_SUCCESS,
+	OTA_DOWNLOAD_STATUS_ERROR,
+	OTA_DOWNLOAD_STATUS_SAVING,
+	OTA_DOWNLOAD_STATUS_NUM
+}OTA_DOWNLOAD_STATUS;
+
+typedef struct __OTAINFOR
+{
+	int8 *url;
+	OTA_DOWNLOAD_STATUS download_status;
+	uint32 total_size;
+	uint32 download_size;
+	HDC hFile;
+}OTAINFOR;
+OTAINFOR g_OTAINFOR;
+
+#endif//_OTA_UPDATEFW_SPI
 #ifdef _FW_CRC_
 _OS_FWANALYSIS_FWUPDATE_COMMON_
 unsigned long gTable_Crc32[256]={
@@ -218,9 +249,9 @@ COMMON API rk_err_t FwRecovery(void)
     printf("\nFwRecovery Enter: src = %d, dst = %d, size = %d",SrcAddr, DstAddr, FwSize);
 
     memset (pUBuf, 0xFF, FW_BUF_LEN);
-    LunDev_Write(hLunFW, DstAddr + FW_SYS_OFFSET, pUBuf, FW_BUF_LEN>>9);  //œ»«Â≥˝πÃº˛Õ∑
+    LunDev_Write(hLunFW, DstAddr + FW_SYS_OFFSET, pUBuf, FW_BUF_LEN>>9);  //ÂÖàÊ∏ÖÈô§Âõ∫‰ª∂Â§¥
 
-    SrcAddr += (FW_BUF_LEN>>9);                                //¥”πÃº˛µƒFW_BUF_LENŒª÷√ø™ º…˝º∂
+    SrcAddr += (FW_BUF_LEN>>9);                                //‰ªéÂõ∫‰ª∂ÁöÑFW_BUF_LEN‰ΩçÁΩÆÂºÄÂßãÂçáÁ∫ß
     DstAddr += (FW_BUF_LEN>>9);
 
     for(i = 0; i<(FwSize-FW_BUF_LEN); i+=FW_BUF_LEN)
@@ -238,7 +269,7 @@ COMMON API rk_err_t FwRecovery(void)
             while(1);
         }
 
-        SrcAddr += (FW_BUF_LEN>>9);                                //¥”πÃº˛µƒFW_BUF_LENŒª÷√ø™ º…˝º∂
+        SrcAddr += (FW_BUF_LEN>>9);                                //‰ªéÂõ∫‰ª∂ÁöÑFW_BUF_LEN‰ΩçÁΩÆÂºÄÂßãÂçáÁ∫ß
         DstAddr += (FW_BUF_LEN>>9);
     }
 
@@ -384,7 +415,7 @@ COMMON API rk_err_t FwUpdate(uint16 * path, uint32 ForceUpate)
         }
     }
 
-    addr2 = SysProgRawDiskCapacity;                     //ªÒ»°µ⁄∂˛∑›πÃº˛µÿ÷∑
+    addr2 = SysProgRawDiskCapacity;                     //Ëé∑ÂèñÁ¨¨‰∫å‰ªΩÂõ∫‰ª∂Âú∞ÂùÄ
     memset (pUBuf, 0xFF, FW_BUF_LEN);
 
     if (LunDev_Write(hLunFW, addr2 + FW_SYS_OFFSET, pUBuf, FW_BUF_LEN>>9) != (FW_BUF_LEN>>9))
@@ -393,13 +424,13 @@ COMMON API rk_err_t FwUpdate(uint16 * path, uint32 ForceUpate)
         goto UPDATE_ERROR;
     }
 
-    if (FwSize > (SysProgRawDiskCapacity<<9))      //πÃº˛¥Û–°”–±‰¥Û
+    if (FwSize > (SysProgRawDiskCapacity<<9))      //Âõ∫‰ª∂Â§ßÂ∞èÊúâÂèòÂ§ß
     {
-        addr2 = FwSize>>9;                          //µ⁄∂˛∑›πÃº˛–¬µƒ∆ ºµÿ÷∑
+        addr2 = FwSize>>9;                          //Á¨¨‰∫å‰ªΩÂõ∫‰ª∂Êñ∞ÁöÑËµ∑ÂßãÂú∞ÂùÄ
         rk_printf("FwSize = %d",FwSize);
     }
 
-    FileDev_FileSeek(hFile, SEEK_SET, FW_BUF_LEN);  //¥”πÃº˛µƒFW_BUF_LENŒª÷√ø™ º…˝º∂
+    FileDev_FileSeek(hFile, SEEK_SET, FW_BUF_LEN);  //‰ªéÂõ∫‰ª∂ÁöÑFW_BUF_LEN‰ΩçÁΩÆÂºÄÂßãÂçáÁ∫ß
 
     addr2 += (FW_BUF_LEN>>9);
 
@@ -421,7 +452,7 @@ COMMON API rk_err_t FwUpdate(uint16 * path, uint32 ForceUpate)
         addr2 += (FW_BUF_LEN>>9);
     }
 
-    FileDev_FileSeek(hFile,SEEK_SET, 0);                       //‘Ÿ–¥µ⁄∂˛∑›πÃº˛Õ∑
+    FileDev_FileSeek(hFile,SEEK_SET, 0);                       //ÂÜçÂÜôÁ¨¨‰∫å‰ªΩÂõ∫‰ª∂Â§¥
     if (FW_BUF_LEN != FileDev_ReadFile(hFile, pUBuf, FW_BUF_LEN))
     {
         rk_printf("Read FW Error!");
@@ -472,6 +503,10 @@ COMMON API void FwCheck(void)
     pIDSEC0 IdSec0;
     pIDSEC1 IdSec1;
 
+#ifdef _OTA_UPDATEFW_SPI
+	memset(&g_OTAINFOR,0x0,sizeof(OTAINFOR));//init g_OTAINFOR----jjjjhhhh20161105
+#endif
+	printf("FwCheck start\n");
     hLunFW = RKDev_Open(DEV_CLASS_LUN,0,NOT_CARE);
 
 
@@ -482,7 +517,7 @@ COMMON API void FwCheck(void)
     TmpBuf2  = DataBuf + 512;
 
     //check id block
-    for (i=0; i<FW_IDB_NUM; i++)  //‘⁄2∏ˆBLOCK¿Ô≤È’“ID PAGE
+    for (i=0; i<FW_IDB_NUM; i++)  //Âú®2‰∏™BLOCKÈáåÊü•ÊâæID PAGE
     {
         if (2 != LunDev_Read(hLunFW, (i*FW_IDB_SIZE), DataBuf, 2))
         {
@@ -551,7 +586,7 @@ COMMON API void FwCheck(void)
         addr += SysProgRawDiskCapacity;
     }
 
-    for(i = 0; (i < 32) && (addr > FW_SYS_OFFSET); i++) //≤È’“µ⁄∂˛∑›πÃº˛,πÃº˛ø…ƒ‹±‰¥Û
+    for(i = 0; (i < 32) && (addr > FW_SYS_OFFSET); i++) //Êü•ÊâæÁ¨¨‰∫å‰ªΩÂõ∫‰ª∂,Âõ∫‰ª∂ÂèØËÉΩÂèòÂ§ß
     {
         printf("\ni = %d addr = %d, SPI_FW_OFFSET = %d", i, addr, FW_SYS_OFFSET);
         LunDev_Read(hLunFW, addr, TmpBuf2, 1);
@@ -588,15 +623,15 @@ COMMON API void FwCheck(void)
         FW2Valid = 0;
     }
 
-    if (0==FW1Valid && 0==FW2Valid)    //¡Ω∑›∂º¥Ì¡À,±Ì æª˙∆˜±‰◊©¡À
+    if (0==FW1Valid && 0==FW2Valid)    //‰∏§‰ªΩÈÉΩÈîô‰∫Ü,Ë°®Á§∫Êú∫Âô®ÂèòÁ†ñ‰∫Ü
     {
         printf("fw1 && fw2 error!\n");
         while(1);
     }
 
-    if (0==FW2Valid) //µ⁄∂˛∑›”–≥ˆ¥Ì
+    if (0==FW2Valid) //Á¨¨‰∫å‰ªΩÊúâÂá∫Èîô
     {
-        SysProgRawDiskCapacity = ((((Fw1Size + 16*1024 + FW_ALIGN_SIZE)/FW_ALIGN_SIZE)*FW_ALIGN_SIZE)>>9); //FW_ALIGN_SIZE=64K   //“‘M∂‘∆Î,“‘secŒ™µ•Œª
+        SysProgRawDiskCapacity = ((((Fw1Size + 16*1024 + FW_ALIGN_SIZE)/FW_ALIGN_SIZE)*FW_ALIGN_SIZE)>>9); //FW_ALIGN_SIZE=64K   //‰ª•MÂØπÈΩê,‰ª•sec‰∏∫Âçï‰Ωç
     }
     else
     {
@@ -617,7 +652,7 @@ COMMON API void FwCheck(void)
         FwSysOffset = FW_SYS_OFFSET + SysProgRawDiskCapacity;
     }
 
-    printf("FwSysOffset = %d\nFW_SYS_OFFSET=%d\nSysProgRawDiskCapacity=%d\nSysProgRawDiskCapacity=%d\n", FwSysOffset,FW_SYS_OFFSET,SysProgRawDiskCapacity,SysProgRawDiskCapacity);//FwSysOffset“‘∫√µƒfwŒ™ª˘◊º°£
+    printf("FwSysOffset = %d\nFW_SYS_OFFSET=%d\nSysProgRawDiskCapacity=%d\nSysProgRawDiskCapacity=%d\n", FwSysOffset,FW_SYS_OFFSET,SysProgRawDiskCapacity,SysProgRawDiskCapacity);//FwSysOffset‰ª•Â•ΩÁöÑfw‰∏∫Âü∫ÂáÜ„ÄÇ
 
     RKDev_Close(hLunFW);
 
@@ -630,10 +665,337 @@ COMMON API void FwCheck(void)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+#ifdef _OTA_UPDATEFW_SPI
+_OS_FWANALYSIS_FWUPDATE_COMMON_
+static COMMON FUN rk_err_t OTAFwUpdate(void)
+{
+	if(OTA_DOWNLOAD_STATUS_SUCCESS == g_OTAINFOR.download_status)
+	{
+		return FwUpdate(OTA_FIRMWARE_FILE, 0);
+	}
+	rk_printf("ERROR,can't update ota fw now:\ng_OTAINFOR.download_status=%d\n",g_OTAINFOR.download_status);
+	return RK_ERROR;
+}
+
+_OS_FWANALYSIS_FWUPDATE_COMMON_
+static COMMON FUN void DownloadStatusCallback(int status, void *httppcb)
+{
+    if((status == TCP_RECIVER_ERR) || (status == READ_DATA_ERR))
+    {
+        g_OTAINFOR.download_status= OTA_DOWNLOAD_STATUS_ERROR;
+		if(g_OTAINFOR.hFile)
+		{
+			FileDev_CloseFile(g_OTAINFOR.hFile);
+			g_OTAINFOR.hFile = NULL;
+		}
+    }/**/
+    rk_printf("http status = %d", status);
+}
+
+_OS_FWANALYSIS_FWUPDATE_COMMON_
+static COMMON FUN void DownloadFirmwareData(char *buf, uint16 write_len, uint32 mlen)//mlen:leavelength
+{
+	int ret = 0;
+	FILE_ATTR stFileAttr;
+
+	if(OTA_DOWNLOAD_STATUS_UNKNOW == g_OTAINFOR.download_status)
+	{
+		stFileAttr.Path = stFileAttr.Path = OTA_FIRMWARE_PATH;
+    	stFileAttr.FileName = OTA_FIRMWARE_FILENAME;
+
+    	g_OTAINFOR.hFile = FileDev_OpenFile(FileSysHDC, NULL, READ_WRITE, &stFileAttr);
+		if((rk_err_t)g_OTAINFOR.hFile > 0)//delete the old file
+		{
+			FileDev_CloseFile(g_OTAINFOR.hFile);
+			g_OTAINFOR.hFile = NULL;
+			if (FileDev_DeleteFile(FileSysHDC, NULL, &stFileAttr) != RK_SUCCESS)
+			{
+				rk_print_string("file delete failure");
+				g_OTAINFOR.download_status = OTA_DOWNLOAD_STATUS_ERROR;
+				return;
+			}
+		}
+
+		ret = FileDev_CreateFile(FileSysHDC, NULL, &stFileAttr);//create a new one
+		if (ret != RK_SUCCESS)
+		{
+			rk_print_string("file create failure\n");
+			g_OTAINFOR.download_status = OTA_DOWNLOAD_STATUS_ERROR;
+			g_OTAINFOR.hFile = NULL;
+			return;
+		}
+		g_OTAINFOR.hFile = FileDev_OpenFile(FileSysHDC, NULL, READ_WRITE, &stFileAttr);
+		if ((rk_err_t)g_OTAINFOR.hFile <= 0)
+		{
+			rk_printf("FileOpen FILE Failed!\n");
+			g_OTAINFOR.download_status = OTA_DOWNLOAD_STATUS_ERROR;
+			g_OTAINFOR.hFile = NULL;
+			return;
+		}
+		g_OTAINFOR.download_status = OTA_DOWNLOAD_STATUS_SAVING;
+		rk_printf("\n\n   DownloadOTAFirmware start ...********************\n");
+	}
+
+	if(OTA_DOWNLOAD_STATUS_SAVING == g_OTAINFOR.download_status)
+	{
+		FileDev_FileSeek(g_OTAINFOR.hFile, SEEK_SET, g_OTAINFOR.download_size);
+		/*ret = FileDev_FileSeek(g_OTAINFOR.hFile, SEEK_SET, g_OTAINFOR.download_size);
+		if(ret < 0)
+		{
+			rk_printf("FileDev_FileSeek Failed!!!g_OTAINFOR.download_size=%d********************\n\n",g_OTAINFOR.download_size);
+			g_OTAINFOR.download_status = OTA_DOWNLOAD_STATUS_ERROR;
+			FileDev_CloseFile(g_OTAINFOR.hFile);
+			g_OTAINFOR.hFile = NULL;
+			return;
+		}*/
+
+		ret = FileDev_WriteFile(g_OTAINFOR.hFile, buf, write_len);
+		if(ret != write_len)
+		{
+			rk_printf("FileDev_WriteFile Failed!!!********************\n\n");
+			g_OTAINFOR.download_status = OTA_DOWNLOAD_STATUS_ERROR;
+			FileDev_CloseFile(g_OTAINFOR.hFile);
+			g_OTAINFOR.hFile = NULL;
+			return;
+		}
+		
+		g_OTAINFOR.download_size += write_len;
+		rk_printf("download_size=%ld,total_size=%ld,complete percent=%d%%!",g_OTAINFOR.download_size,
+			g_OTAINFOR.total_size,((g_OTAINFOR.download_size*100)/g_OTAINFOR.total_size));
+		//rk_printf("\r\033[k"); 
+		if((0 == mlen) && (g_OTAINFOR.total_size == g_OTAINFOR.download_size))
+		{
+			rk_printf("\n   DownloadOTAFirmware success ...********************\n\n");
+			g_OTAINFOR.download_status = OTA_DOWNLOAD_STATUS_SUCCESS;
+			FileDev_CloseFile(g_OTAINFOR.hFile);
+			g_OTAINFOR.hFile = NULL;
+		}
+	}//if(OTA_DOWNLOAD_STATUS_SAVING == g_OTAINFOR.download_status)
+}
+
+_OS_FWANALYSIS_FWUPDATE_COMMON_
+static COMMON FUN rk_err_t DownLoadOTAFirmware(void)
+{
+	uint8 dwRet = 0;
+	void *httptestpcb = NULL;
+	
+	//init g_OTAINFOR
+	g_OTAINFOR.download_status = OTA_DOWNLOAD_STATUS_UNKNOW;
+
+	httptestpcb = HttpPcb_New(DownloadStatusCallback, DownloadFirmwareData, FILEWRITE);
+	dwRet = HttpGet_Url(httptestpcb, g_OTAINFOR.url, 0);
+
+	if(dwRet == RK_SUCCESS)
+	{
+		rk_printf("\nhttp ok\n");
+	}
+	else
+	{
+		rk_printf("\nhttp error\n");
+	}
+	
+	while((g_OTAINFOR.download_status != OTA_DOWNLOAD_STATUS_SUCCESS) &&
+		   (g_OTAINFOR.download_status != OTA_DOWNLOAD_STATUS_ERROR))// wait download result
+		rkos_sleep(1000);//sleep 1S
+	Http_Close(httptestpcb);
+	return (g_OTAINFOR.download_status == OTA_DOWNLOAD_STATUS_SUCCESS)?(RK_SUCCESS):(RK_ERROR);
+
+}
+
+/*{"ST":"success","URL":"http://120.24.12.226/ota/FW/xx.bin","VS":"2.0.00.26","SIZE":14804938,"COMMENT":""}*/
+_OS_FWANALYSIS_FWUPDATE_COMMON_
+static COMMON FUN void GetNewFirmwareUrl(char *buf, uint16 write_len, uint32 mlen)//mlen:leavelength
+{	
+	//int8 *g_ota_newfw_url = NULL;
+	int8 *p_start = NULL;
+	int8 *p_end = NULL;
+	
+    if(NULL == buf || (mlen))//!!!
+		return;
+	rk_printf("\n===============\n buf=%s  \n\n write_len=%d\n mlen=%d\n================\n\n",buf,write_len,mlen);
+	
+	p_start = strstr(buf,"ST");
+	if(p_start && (write_len - (p_start - buf) > 3))
+	{	
+		/****************get ST value start*****************/
+		p_start += 3;
+		while(p_start && (*p_start != '"'))
+			p_start++;
+		if(p_start)
+			p_start += 1;
+		else
+		{
+			rk_printf("ERROR:invalid ST json result:\nresult=%s",buf);
+			return;
+		}
+
+		if(write_len - (p_start - buf) > 7)
+		{	
+		/****************get ST value end*****************/
+			if(!StrCmpA(p_start,"success",7))
+			{
+				/****************get URL value start*****************/
+            	p_start = strstr(buf,"URL");
+				if(p_start && (write_len - (p_start - buf) > 4))
+				{	
+					p_start += 4;
+					while(p_start && (*p_start != '"'))
+						p_start++;
+					if(p_start)
+						p_start += 1;
+					else
+					{
+						rk_printf("ERROR:invalid URL json result:\nresult=%s",buf);
+						return;
+					}
+					p_end = p_start;
+					while(p_end && (*p_end != '"'))
+						p_end++;
+					if(p_end && (*p_end == '"'))//get URL success
+					{
+						if(g_OTAINFOR.url)
+						{
+							rkos_memory_free(g_OTAINFOR.url);//free the old space
+							g_OTAINFOR.url = NULL;
+						}
+						g_OTAINFOR.url = (char *)rkos_memory_malloc((p_end - p_start) + 1);
+						if(g_OTAINFOR.url)
+						{
+							rkos_memcpy(g_OTAINFOR.url, p_start, (p_end - p_start));
+							rk_printf("SUCCESS: get URL value success!!!\g_OTAINFOR.url=%s",g_OTAINFOR.url);
+							/****************get SIZE value start*****************/
+			            	p_start = strstr(buf,"SIZE");
+							while(p_start && ((*p_start > '9') || (*p_start < '0')))
+								p_start++;
+							if(p_start)
+								p_end = p_start;
+							else
+							{
+								rk_printf("ERROR:invalid SIZE json result:\nresult=%s",buf);
+								return;
+							}
+							while(p_end && (*p_end <= '9') && (*p_end >= '0'))
+								p_end++;
+							*p_end = 0;
+							g_OTAINFOR.total_size = atoi(p_start);
+							/****************get SIZE value end*****************/
+							rk_printf("SUCCESS: get SIZE value success!!!\np_start=%s,g_OTAINFOR.size=%ld",p_start,g_OTAINFOR.total_size);
+							return;							
+						}
+						else
+						{
+							rk_printf("ERROR:A...A..A..rkos_memory_malloc FAILED!\nresult=%s",buf);
+							return;
+						}
+					}
+				/****************get URL value end*****************/
+				}//if(p_start && (write_len - (p_start - buf) > 4))
+				else
+				{
+					rk_printf("ERROR:invalid URL json result:\nresult=%s",buf);
+					return;
+				}
+		
+			}
+			else
+			{
+				rk_printf("ERROR:ST is not success:\nresult=%s",buf);
+				return;
+			}
+		}//if(write_len - (p_start - buf) > 7)
+		else
+		{
+			rk_printf("ERROR:invalid json result:\nresult=%s",buf);
+			return;
+		}
+	}//if(p_start && (write_len - (p_start - buf) > 3))
+	else
+	{
+	    rk_printf("ERROR:invalid json result:\nresult=%s",buf);
+	}
+}
+
+
+/*http://120.24.12.226:8800/otaUpgrade?CU=EL-WM1M01-001&VC=1.0.01&SN=EL00E04D000003&ID=EL0000001&RL=1*/
+_OS_FWANALYSIS_FWUPDATE_COMMON_
+static COMMON FUN rk_err_t CheckOTAServer(uint8 *cu,uint8 *vc,uint8 *sn,int relase)
+{
+	uint8 dwRet = 0;
+	void *httptestpcb = NULL;
+	uint8 ota_url[MAX_URL_LEN] = {0};
+
+	if(('0' == *vc) && ('.' != *(vc+1)))//ignore '0'
+		vc += 1;
+	dwRet = snprintf(ota_url,MAX_URL_LEN,"%sCU=%s&VC=%s&SN=%s&ID=%s&RL=%d",
+		OTA_URL_HEADER,cu,vc,sn,sn,relase);/**/
+
+	printf("\n   CheckOTAServer http start********************\nota_url=%s\n\n",ota_url);
+
+	//init g_OTAINFOR
+	g_OTAINFOR.url = NULL;
+	g_OTAINFOR.total_size = 0;
+	g_OTAINFOR.download_size= 0;
+
+	httptestpcb = HttpPcb_New(NULL, GetNewFirmwareUrl, FILEWRITE);
+	dwRet = HttpGet_Url(httptestpcb,ota_url, 0);//"http://192.168.169.5/index.asp?mac=DDDD"
+
+	if(dwRet == RK_SUCCESS)
+	{
+		printf("\nhttp ok\n");
+	}
+	else
+	{
+		printf("\nhttp error\n");
+	}
+	
+	printf("\n\n  http close********************\n\n");
+	
+	rkos_sleep(2000);//sleep 2S
+	Http_Close(httptestpcb);
+	return (g_OTAINFOR.url)?(RK_SUCCESS):(RK_ERROR);
+}
+
+_OS_FWANALYSIS_FWUPDATE_COMMON_
+COMMON API rk_err_t CheckOTAandUpdateFw(void)//check only once
+{
+	rk_err_t ret = 0;
+	uint8 ota_cu[64] = {0};
+	uint8 ota_vc[16] = {0};
+	uint8 ota_sn[128] = {0};
+	uint8 ota_id[16] = {0};
+
+	if((0 == FW1Valid) || 
+		OTA_DOWNLOAD_STATUS_ERROR == g_OTAINFOR.download_status || 
+		OTA_DOWNLOAD_STATUS_SUCCESS== g_OTAINFOR.download_status)
+	{
+		rk_printf("Already checked or FW1Valid=%d\n",FW1Valid);
+		return RK_ERROR;
+	}
+
+
+	if(RK_SUCCESS != FW_GetOTAParameter(ota_cu,ota_vc,ota_sn,ota_id))
+	{
+		rk_printf("FW_GetOTAParameter falid=\n");
+		return RK_ERROR;
+	}
+	else
+		printf("ota_cu:%s\nota_vc:%s\nota_sn:%s\nota_id:%s  \n",ota_cu,ota_vc,ota_sn,ota_id);
+
+	ret = CheckOTAServer(ota_cu,ota_vc,ota_sn,1);//check server if there has new fw
+	if(RK_SUCCESS == ret)
+	{	
+		ret = DownLoadOTAFirmware();//download fw
+		if(RK_SUCCESS == ret)
+			return OTAFwUpdate();//check the fw which download and update fw
+	}
+	else
+		rk_printf("CheckOTAServer failed\n");
+	return RK_ERROR;
+}
 
 
 
-
+#endif // #ifdef _OTA_UPDATEFW_SPI end
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *

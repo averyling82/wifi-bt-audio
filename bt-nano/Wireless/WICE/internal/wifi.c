@@ -847,11 +847,12 @@ wiced_result_t wiced_join_ap( void )
     {
 
         /* If join-specific failed, try scan and join AP */
-        WPRINT_NETWORK_INFO(("wwd_wifi_join start\r\n"));
+        WPRINT_NETWORK_INFO(("1wwd_wifi_join start\r\n"));
 
         if(easy_setup_flag == WICED_BUSY)
         {
             wifi_network_up_flag = 0;
+			WPRINT_NETWORK_INFO(("jjjhhh easy_setup_flag busy\r\n"));
             return WICED_ERROR;
         }
         //wifi_network_up_flag = 1;
@@ -1004,7 +1005,7 @@ wiced_result_t wiced_wifi_scan_networks( wiced_scan_result_handler_t results_han
     memset( scan_result_ptr, 0, sizeof( wiced_scan_handler_result_t ) );
     scan_result_ptr->status    = WICED_SCAN_INCOMPLETE;
     scan_result_ptr->user_data = user_data;
-
+	rk_printf("jjjhhh 2222 wwd_wifi_scan\n");
     if ( wwd_wifi_scan( WICED_SCAN_TYPE_ACTIVE, WICED_BSS_TYPE_ANY, NULL, NULL, chlist, &extparam, wiced_scan_result_handler, (wiced_scan_result_t**) &scan_result_ptr, &scan_handler, WWD_STA_INTERFACE ) != WWD_SUCCESS )
     {
         goto error_with_result_ptr;
@@ -1236,7 +1237,7 @@ void* wiced_link_events_handler( const wwd_event_header_t* event_header, const u
         return handler_user_data;
     }
 
-    rk_printf("event_header->event_type = %d",event_header->event_type);
+    rk_printf("event_header->event_type = %d",event_header->event_type);//jjjhhh
 
     switch ( event_header->event_type )
     {
@@ -1305,8 +1306,8 @@ void* wiced_link_events_handler( const wwd_event_header_t* event_header, const u
             break;
 
         case WLC_E_DEAUTH_IND:
-            rk_printf("link down2");
-            link_down( );
+            rk_printf("link down2");//jjjhhh
+            link_down();
             break;
 
         case WLC_E_PSK_SUP:

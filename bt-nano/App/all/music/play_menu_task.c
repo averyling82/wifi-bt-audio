@@ -35,7 +35,7 @@
 #include "..\Resource\MenuResourceID.h"
 
 #ifdef _ENABLE_WIFI_BLUETOOTH
-static char gFirstEnterMusicPlayMenuTask = 1;
+//static char gFirstEnterMusicPlayMenuTask = 1;
 #endif
 
 /*
@@ -1044,14 +1044,15 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 				}
 				if(RKTaskFind(TASK_ID_WIFI_APPLICATION, 0) != NULL)//STOP WIFI
 				{
+					//rk_printf ("Delete wifi 111\n");
 					MainTask_SetStatus(MAINTASK_WIFI_OPEN_OK, 0);
-					MainTask_SetStatus(MAINTASK_WIFI_SUSPEND, 1);
-					rk_wifi_deinit();
+					rk_wifi_deinit();//rk_printf ("Delete wifi 222\n");
 					RKTaskDelete(TASK_ID_WIFI_APPLICATION, 0, SYNC_MODE);
+					
+					//MainTask_SetStatus(MAINTASK_WIFI_SUSPEND, 1);
 					rk_printf ("Delete wifi OK\n");
 				}
-
-
+				//MainTask_SetStatus(MAINTASK_WIFI_SUSPEND, 0);//just for stoping wifi timer
 				MusicPlay_StartPlayer(SOURCE_FROM_FILE_BROWSER);//START SD PLAYER
 				#ifdef NOSCREEN_USE_LED
 				{
@@ -1121,6 +1122,9 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 				rk_printf("switch to DLNA,sleep 2S......\n");
 				rkos_sleep(2000);//wait 2S ???
 
+				//reinit WIFI
+				MainTask_SetStatus(MAINTASK_WIFI_OPEN_OK, 1);
+				MainTask_SetStatus(MAINTASK_WIFI_SUSPEND, 0);
 				//gpstPlayMenuData->smartconfig=1; //WIFI 还在配置状态标志
 				MainTask_SetStatus(MAINTASK_WIFICONFIG,1);
 				//启动WIFI
@@ -1134,7 +1138,7 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 				MusicPlayMenuTask_StartTimer();
 
                 gSysConfig.PlayerType = SOURCE_FROM_DLNA;//start DLNA
-				MusicPlay_StartPlayer(SOURCE_FROM_DLNA);
+				//MusicPlay_StartPlayer(SOURCE_FROM_DLNA);
 				#ifdef NOSCREEN_USE_LED
 				{
 					MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
@@ -1342,7 +1346,7 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 #else
             MainTask_UnRegisterKey();
             MainTask_SetStatus(MAINTASK_APP_PLAYMENU,0);
-            //SaveSysInformation(0);
+            SaveSysInformation(0);//----jjjhhh 20161105
 #endif
             MainTask_SysEventCallBack(MAINTASK_SHUTDOWN, NULL);
             break;
@@ -3095,7 +3099,8 @@ COMMON API void MusicPlayMenuTask_Timer(void * handle)
 {
 #ifdef _WIFI_
     //如果WIFI休眠，侧关闭定时器(停止WIFI 配置)
-    if (MainTask_GetStatus(MAINTASK_WIFI_SUSPEND)==1)
+    if (MainTask_GetStatus(MAINTASK_WIFI_SUSPEND)==1 ||
+		(NULL == RKTaskFind(TASK_ID_WIFI_APPLICATION, 0)))
     {
         rk_printf ("PlayMenuTask_Timer---WIFI suspend");
         gpstPlayMenuData->smartconfig=0;
@@ -3176,8 +3181,9 @@ COMMON FUN int MusicPlayMenuTask_NoScreenEvent(uint32 cmd, int type)
     {
         case 0:
 #ifdef _WIFI_
-            rk_printf("1.wifi connect ok:start palyer=0x%x",gSysConfig.PlayerType);
-            MusicPlay_StartPlayer(gSysConfig.PlayerType);
+			rk_printf("1.wifi connect ok:start palyer=0x%x",gSysConfig.PlayerType);
+			MusicPlay_StartPlayer(gSysConfig.PlayerType);
+			CheckOTAandUpdateFw();//check ota and update fw //jjjhhh 20161105 must place here
 #endif
             break;
         default:
@@ -3926,7 +3932,7 @@ COMMON API void MusicPlayMenuTask_Enter(void)
 		
     }
 #ifdef _ENABLE_WIFI_BLUETOOTH
-	gFirstEnterMusicPlayMenuTask = 1;
+	//gFirstEnterMusicPlayMenuTask = 1;
 #endif
 }
 

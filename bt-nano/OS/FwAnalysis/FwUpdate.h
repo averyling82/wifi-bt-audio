@@ -62,4 +62,6 @@ extern rk_err_t FwRecovery(void);
 extern rk_err_t FwUpdate(uint16 * path, uint32 ForceUpate);
 extern void FwCheck(void);
 
+extern rk_err_t CheckOTAandUpdateFw(void);
+
 #endif

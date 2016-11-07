@@ -253,7 +253,7 @@ rk_err_t rk_wifi_relink_sysinfo(int flag)
         return RK_SUCCESS;
      }
 
-     if(mwifi_buf->Totalnum > 5)
+     if(mwifi_buf->Totalnum > WIFI_AP_COUNT)//JJJHHH 20161103
      {
         rk_printf("read db tot num is error mwifi_buf->Totalnum=%d",mwifi_buf->Totalnum);
         rkos_memory_free(mwifi_buf);
@@ -262,7 +262,7 @@ rk_err_t rk_wifi_relink_sysinfo(int flag)
         return RK_ERROR;
      }
 
-     rk_printf("re wifi_buf %d totalnum = %d = %x = %d",ret ,mwifi_buf->Totalnum, mwifi_buf, sizeof(WIFI_INFO));
+     rk_printf("re wifi_buf %d totalnum = %d = 0x%x = %d",ret ,mwifi_buf->Totalnum, mwifi_buf, sizeof(WIFI_INFO));
 
 //扫描之前初始化内部数据，scan_flag connect_flag = 0;
      for(i=0; i<mwifi_buf->Totalnum; i++)
@@ -1009,7 +1009,7 @@ rk_err_t rk_wifi_downrelink_sys(uint8 count_flag)
     for(retries = 0; retries <WICED_JOIN_RETRY_ATTEMPTS; retries++)
     {
        /* If join-specific failed, try scan and join AP */
-       WPRINT_NETWORK_INFO(("wwd_wifi_join start\r\n"));
+       WPRINT_NETWORK_INFO(("2wwd_wifi_join start\r\n"));
 
        if(easy_setup_flag == WICED_BUSY)
        {

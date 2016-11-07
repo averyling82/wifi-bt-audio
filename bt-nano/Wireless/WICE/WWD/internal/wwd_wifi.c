@@ -228,6 +228,10 @@ wwd_result_t wwd_wifi_scan( wiced_scan_type_t                              scan_
     uint16_t           param_size        = offsetof( wl_escan_params_t, params ) + WL_SCAN_PARAMS_FIXED_SIZE;
     uint16_t           channel_list_size = 0;
 
+	if((NULL == optional_ssid) || (NULL == optional_ssid->value))//JJJHHH 20161103
+		return WWD_TIMEOUT;
+	else
+		rk_printf("jjjhhh wwd_wifi_scan ssid=%s\n",optional_ssid->value);
 
     wiced_assert("Bad args", callback != NULL);
 

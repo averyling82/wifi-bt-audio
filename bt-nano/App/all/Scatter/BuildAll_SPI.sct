@@ -15,27 +15,34 @@
 #define BOOT_ROM_BASE       0x00000000
 
 #define HRAM_CODE_BASE      0x01000000
+;HIGHRAM0 128KB
 #define HRAM_CODE_SIZE      0x00020000
 
 #define HRAM_DATA_BASE      0x01020000
+;HIGHRAM1 256KB
 #define HRAM_DATA_SIZE      0x00040000
 
 #define LOADER_DATA_BASE    0x0304A000
 #define LOADER_CODE_BASE    0x03088000
 
 #define SYS_DATA_BASE       0x03000000
+;SYSRAM0 320KB
 #define SYS_DATA_SIZE       0x00050000
 
 #define SYS_CODE_BASE       0x03050000
+;SYSRAM1 240KB
 #define SYS_CODE_SIZE       0x0003c000
 #define SYS_HEAP_BASE       0x0308c000
+;SYSRAM1 16KB
 #define SYS_HEAP_SIZE       0x00004000
 
 #define DEV_CODE_START      0x0306D000
 
 #define PMU_DATA_BASE       0x00000000
+;bank clock-gate control for reduce power consumption 4KB
 #define PMU_DATA_SIZE       0x00001000
 #define PMU_CODE_BASE       0x00001000
+;bank clock-gate control for reduce power consumption 60KB
 #define PMU_CODE_SIZE       0x0000F000
 #define SHELL_CODE_START    0x0000C800
 

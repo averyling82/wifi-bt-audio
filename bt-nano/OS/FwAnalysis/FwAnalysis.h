@@ -497,5 +497,6 @@ extern uint16 FW_Ansi2Unicode(uint16 ansi, uint8 EncodeMode);
 extern uint16 FW_Unicode2Ansi(uint16 unicode, uint8 EncodeMode);
 extern rk_err_t FW_Unicode2AnsiStr(uint16 *unicode, void * ansi,uint8 EncodeMode);
 extern uint32 FW_Unicode2AnsiN(uint16 *unicode, void * ansi,int byteN, uint8 EncodeMode);
+extern rk_err_t FW_GetOTAParameter(uint8 *product_cu,uint8 *product_vc,uint8 *product_sn,uint8 *product_id);
 
 #endif

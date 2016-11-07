@@ -988,7 +988,7 @@ static void GetFile(HTTPPCB * httppcb)
 
     RKTaskDelete(task_id, object_id, ASYNC_MODE);
 
-    while(1)
+    while(1)//??? jjjhhh
     {
         rkos_sleep(1000);
         rk_printf(" OK HTTP task delete ASYNC_MODE");

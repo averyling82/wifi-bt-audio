@@ -614,7 +614,7 @@ COMMON API void GetBtAudioDeviceName(uint8 * name)
 #ifdef ENABLE_NFC
     strcpy(name,"nft_test");
 #else
-    strcpy(name,"RKNanoD_Bt");
+    strcpy(name,"RK-BT");
 #endif
 }
 
@@ -629,7 +629,7 @@ COMMON API void GetBtAudioDeviceName(uint8 * name)
 _BSP_EVK_V20_BSP_COMMON_
 COMMON API void GetAirplayDeviceName(uint8  * name)
 {
-    strcpy(name, "RK-NANOD-IOT");
+    strcpy(name, "RK-AIRPLAY");
 }
 /*******************************************************************************
 ** Name: GetDlnaDeviceName
@@ -642,7 +642,7 @@ COMMON API void GetAirplayDeviceName(uint8  * name)
 _BSP_EVK_V20_BSP_COMMON_
 COMMON API void GetDlnaDeviceName(uint8 * name)
 {
-    strcpy(name, "Rockchip Media Renderer [SPEAKER 1314520]");
+    strcpy(name, "RK-DLNA");
 }
 
 /*******************************************************************************
@@ -1957,7 +1957,7 @@ COMMON API int32 StrCmpA(uint8 * pstr1, uint8 * pstr2, uint32 len)
 ** Time: 16:04:53
 *******************************************************************************/
 _BSP_EVK_V20_BSP_COMMON_
-COMMON API int32 StrCmpW(uint16 * pstr1, uint16 * pstr2, uint32 len)
+COMMON API int32 StrCmpW(uint16 * pstr1, uint16 * pstr2, uint32 len)//include '0'
 {
     uint32 len1, len2;
 
@@ -2586,7 +2586,7 @@ INIT API void SystemInit(void)
 
     if((FW1Valid == 0) || (FW2Valid == 0))
     {
-        FwRecovery();
+        FwRecovery();//recovery the fw which was broken
     }
 
     PmuSetSysRegister(3, 0);

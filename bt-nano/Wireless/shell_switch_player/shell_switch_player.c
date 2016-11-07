@@ -56,10 +56,10 @@ _SWITCH_PLAYER_SHELL_
 static SHELL_CMD ShellSwitchPlayerName[] =
 {
     "sd",NULL,"NULL","NULL",
-	"dlna",NULL,"NULL","NULL",
+	/*"dlna",NULL,"NULL","NULL",
 	"bt",NULL,"NULL","NULL",
 	"airplay",NULL,"NULL","NULL",
-    "delete",NULL,"NULL","NULL",
+    "delete",NULL,"NULL","NULL",*/
     "\b",NULL,"NULL","NULL",
 };
 
