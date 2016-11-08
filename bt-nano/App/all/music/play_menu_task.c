@@ -477,7 +477,8 @@ int SwitchToPlayer(uint32 PlayerType)
 	}
 #endif
     return RK_SUCCESS;
-#else
+#endif
+#if defined(_ENABLE_WIFI_BLUETOOTH)
 
 		if (gpstPlayMenuData->startplayer == 1)//It is screen player now.
         {   
@@ -670,7 +671,7 @@ int SwitchToPlayer(uint32 PlayerType)
 			}
 
 
-#ifdef NOSCREEN_USE_LED//update led
+	#ifdef NOSCREEN_USE_LED//update led
 		{
 			if (MainTask_GetStatus(MAINTASK_WIFI_CONNECT_OK)!=1)
 			{
@@ -696,11 +697,12 @@ int SwitchToPlayer(uint32 PlayerType)
 				}
 			}
 		}
-#endif
-
-		
-        return 0;
-#endif//#if 1 SwitchToPlayer
+	#endif
+	return 0;
+#else
+	return 0;
+#endif//#if define(_ENABLE_WIFI_BLUETOOTH) SwitchToPlayer
+	
 }
 #endif //__SHELL_SWITCH_PLAYER_C__
 
@@ -963,7 +965,7 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
                 }
             }
 	/****************_ENABLE_WIFI_BLUETOOTH start**********************/
-	#else//#endif //_WIFI_ end    //defined(_WIFI_) && !defined(_ENABLE_WIFI_BLUETOOTH) else
+	#elif defined(_ENABLE_WIFI_BLUETOOTH)
 		if (gpstPlayMenuData->startplayer == 1)//It is screen player now.
 		{
 			break;

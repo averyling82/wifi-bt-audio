@@ -454,7 +454,7 @@ COMMON FUN rk_err_t UsbOtgDevCheckIdle(HTC hTask)
 ** Time: 14:04:23
 *******************************************************************************/
 _DRIVER_USB_USBOTGDEV_COMMON_
-COMMON FUN rk_err_t UsbOtgHostCheckIdle(hTask)
+COMMON FUN rk_err_t UsbOtgHostCheckIdle(HTC hTask)
 {
     RK_TASK_CLASS*   pTask = (RK_TASK_CLASS*)hTask;
 
