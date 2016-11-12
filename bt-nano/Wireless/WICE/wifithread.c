@@ -506,9 +506,9 @@ rk_err_t rk_wifi_connect_smartconfig(void)
     MainTask_SetStatus(MAINTASK_WIFI_CONNECT_OK, 0);
     wifi_ask.cmd = LINK_SMARTCONFIG;
     wifi_join = WICED_FALSE;
-    rk_printf("wifi_relink_smartconfig = %d", LINKDOWN_SYS);
+    rk_printf("wifi_relink_smartconfig = %d", LINK_SMARTCONFIG);
     rkos_queue_send(gWifiBackgroundData->WIFIAPPAskQueue, &wifi_ask, MAX_DELAY);
-
+	MainTask_SetStatus(MAINTASK_WIFICONFIG,0);//jjjhhh 20161110
     return RK_SUCCESS;
 }
 
@@ -1406,7 +1406,15 @@ COMMON API void wifi_applicationTask_Enter(void)
             wiced_wlan_initialised = WICED_TRUE;
 
 #ifdef _WIFI_FOR_SYSTEM_
-            rk_wifiinfo_start();
+            if(RK_SUCCESS != rk_wifiinfo_start())//wifi link failed   jjjhhh 20161110
+            {
+				#ifdef EASY_SETUP_ENABLE
+					rk_printf ("wificonfig----wifi_applicationTask_Enter---on");
+					MainTask_SetStatus(MAINTASK_WIFICONFIG,1);
+					MainTask_SetStatus(MAINTASK_WIFI_CONNECT_OK, 0);
+					ret = wiced_smartconfig_event(WICED_NETWORKING_WORKER_THREAD, rk_wifi_connect_smartconfig,  NULL);
+                #endif		
+			}
 #endif
         }
         else

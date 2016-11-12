@@ -258,6 +258,7 @@ COMMON FUN int UsbMscDeviceServer(void)
         UsbService_DeleteUsb(3);
         while(1)
         {
+        	ChargeEnable();//jjjhhh 20161110
             rkos_sleep(1000);
         }
     }

@@ -429,12 +429,13 @@ NEXT:
 _APP_MAIN_TASK_MAIN_TASK_COMMON_
 COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
 {
+
     if (led == MAINTASK_LED1)//red led
     {
         switch (led_state)
         {
             case MAINTASK_LED_ENABLE:
-                #if 1
+                #if (DEBUG_UART_ADDR != 0x400a0000)
                 Grf_GpioMuxSet(GPIO_CH2, GPIOPortB_Pin5, 0); // led 1(ºìµÆ)
                 Gpio_SetPinDirection(GPIO_CH2, GPIOPortB_Pin5, GPIO_OUT);
                 Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin5, GPIO_HIGH); //red off
@@ -446,7 +447,7 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
             case MAINTASK_LED_ON:
                 if (gpstMainData->redled_state != 1)
                 {
-                    #if 1
+                    #if (DEBUG_UART_ADDR != 0x400a0000)
                     Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin5, GPIO_LOW); //red on
                     Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin5, DISABLE);
                     #else
@@ -459,7 +460,7 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
             case MAINTASK_LED_OFF:
                 if (gpstMainData->redled_state != 0)
                 {
-                    #if 1
+                    #if (DEBUG_UART_ADDR != 0x400a0000)
                     Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin5, GPIO_HIGH); //red off
                     Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin5, DISABLE);
                     #else
@@ -479,10 +480,10 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
         switch (led_state)
         {
             case MAINTASK_LED_ENABLE:
-                #if 1
+                #if (DEBUG_UART_ADDR != 0x400a0000)
                 Grf_GpioMuxSet(GPIO_CH2, GPIOPortB_Pin4, 0); // led 2(ÂÌµÆµÆ)
                 Gpio_SetPinDirection(GPIO_CH2, GPIOPortB_Pin4, GPIO_OUT);
-                Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin4, GPIO_LOW); //green off
+                Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin4, GPIO_HIGH); //green off
                 Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin4, DISABLE);
                 #else
                 printf ("<-----------------green led init-------------->\n");
@@ -491,8 +492,8 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
             case MAINTASK_LED_ON:
                 if (gpstMainData->greenled_state != 1)
                 {
-                    #if 1
-                    Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin4, GPIO_HIGH); //green off
+                    #if (DEBUG_UART_ADDR != 0x400a0000)
+                    Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin4, GPIO_LOW); //green off
                     Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin4, DISABLE);
                     #else
                     printf ("<-----------------green led on-------------->\n");
@@ -504,8 +505,8 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
             case MAINTASK_LED_OFF:
                 if (gpstMainData->greenled_state != 0)
                 {
-                    #if 1
-                    Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin4, GPIO_LOW); //green off
+                    #if (DEBUG_UART_ADDR != 0x400a0000)
+                    Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin4, GPIO_HIGH); //green off
                     Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin4, DISABLE);
                     #else
                     printf ("<-----------------green led off-------------->\n");
@@ -1387,6 +1388,7 @@ int32 MainTask_HandleSysEvent(uint32 event)
                 if(RKTaskFind(TASK_ID_MUSIC_PLAY_MENU, 0) != NULL)
                 {
                     //RKTaskDelete(TASK_ID_MUSIC_PLAY_MENU, 0, SYNC_MODE);
+                    MAINTASK_DEBUG ("Create Usb Server---\n");
                     MainTask_SetStatus(MAINTASK_APP_PLAYMENU,0);
                     //SaveSysInformation(1);
                     DeviceTask_SystemReset();

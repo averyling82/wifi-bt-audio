@@ -84,6 +84,11 @@ typedef enum
 #define BATTERY_VALUE_SETP          20
 /************************/
 
+#ifdef NOSCREEN_USE_LED //led display
+extern int8 redLed_state;
+//extern int8 greenled_state;
+#endif
+
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *
@@ -400,6 +405,49 @@ COMMON API void ChargeEnable(void)
 }
 
 /*******************************************************************************
+** Name: BatteryUpdateLed
+** Input:void
+** Return: CHARGE_STATE_t
+** Owner:hu.jiang
+** Date: 2016.11.10
+** Time: 20:50:09
+*******************************************************************************/
+_SYSTEM_SYSSEVER_POWERMANAGER_COMMON_
+COMMON API void BatteryUpdateLed(CHARGE_STATE_t state)
+{
+#ifdef NOSCREEN_USE_LED
+	int8 led_flash = MAINTASK_LED1;
+	int8 led_off = MAINTASK_LED2;
+	
+	if(state == CHARGE_BATT)//charging
+	{
+		led_flash = MAINTASK_LED2;
+		led_off = MAINTASK_LED1;
+	}
+	else if(state == CHARGE_NO)//low power
+	{
+		led_flash = MAINTASK_LED1;
+		led_off = MAINTASK_LED2;
+	}
+	MainTask_SetLED (led_off,MAINTASK_LED_OFF);//led off
+	
+	redLed_state++;
+	if ((redLed_state == 1)||(redLed_state == 3))//led flash
+	{
+		MainTask_SetLED (led_flash,MAINTASK_LED_OFF);
+	}
+	if ((redLed_state == 2)||(redLed_state == 4))
+	{
+		MainTask_SetLED (led_flash,MAINTASK_LED_ON);
+		if (redLed_state == 4)
+		{
+			redLed_state = 0;
+		}
+	}
+#endif
+}
+
+/*******************************************************************************
 ** Name: Battery_GetLevel
 ** Input:void
 ** Return: uint32
@@ -414,6 +462,7 @@ COMMON API uint32 Battery_GetLevel(void)
     UINT32 ChargeState;
     UINT32 i, alarm_state;
     uint16 ADCVal;
+	uint8 battery_update_led = 0;
 
     ADCDev_Read(ADCHandler,ADC_CHANEL_BATTERY, 1, 1);
 
@@ -423,7 +472,7 @@ COMMON API uint32 Battery_GetLevel(void)
     //printf ("\n------batt_adcval=%d\n",batt_adcval);
     gBattery.Batt_Value   = (UINT32)RealBattValue(batt_adcval);
     ChargeState = Battery_GetChargeState();
-    //printf ("\n------Batt_Value=%d\n",gBattery.Batt_Value);
+    //printf ("\n------Batt_Value=%d  ChargeState=%d\n",gBattery.Batt_Value,ChargeState);
     switch (ChargeState)
     {
         case CHARGE_BATT: //³äµç
@@ -444,12 +493,14 @@ COMMON API uint32 Battery_GetLevel(void)
             {
                 gBattery.Batt_Level = i-1;
             }
+			battery_update_led = 1;
+			BatteryUpdateLed(CHARGE_BATT);
         }
         break;
 
         case CHARGE_FULL: //Âúµç
         {
-            //printf ("CHARGE_FULL = %d\n",ChargeState);
+            printf ("CHARGE_FULL = %d\n",ChargeState);
             gBattery.Batt_Level = (BATT_TOTAL_STEPS - 1);
         }
         break;
@@ -457,7 +508,7 @@ COMMON API uint32 Battery_GetLevel(void)
         case CHARGE_NO:  //Î´³äµç
         {
             //printf ("CHARGE_NO = %d\n",ChargeState);
-            if (gBattery.Batt_Value < BATT_POWEROFF_VALUE)
+            if (gBattery.Batt_Value < BATT_POWEROFF_VALUE)//low power
             {
                 gBattery.Batt_LowCnt++;
 
@@ -465,9 +516,10 @@ COMMON API uint32 Battery_GetLevel(void)
                 {
                     if(FALSE==gBattery.Batt_LowPower)
                     {
-                        MainTask_SysEventCallBack(MAINTASK_SHUTDOWN, NULL);
+                        MainTask_SysEventCallBack(MAINTASK_SHUTDOWN, NULL);//low power
                         gBattery.Batt_LowPower = TRUE;
                         gBattery.Batt_Level = 0;
+						BatteryUpdateLed(CHARGE_NO);
                     }
                 }
 
@@ -498,6 +550,8 @@ COMMON API uint32 Battery_GetLevel(void)
             break;
     }
 
+	if(0 == battery_update_led)
+		PnPSever();
     return gBattery.Batt_Level;
 }
 
@@ -708,6 +762,8 @@ COMMON FUN void PowerTimerIsr(void)
     gSysConfig.PMTime += PM_TIME;
 
     rkos_start_timer(PowerTimer);
+	
+#ifndef _DISABLE_ENTER_IDLEMODE//jjjhhh 20161109
     {
         if(gSysConfig.PMTime == gSysConfig.SysIdle1EventTime)
         {
@@ -719,7 +775,7 @@ COMMON FUN void PowerTimerIsr(void)
             gSysConfig.SysIdle = 1;
         }
         else if((gSysConfig.SysIdleStatus)
-            &&(gSysConfig.SysIdle == 0))
+            &&(gSysConfig.SysIdle == 0))//SYSTEM RESUME
         {
             FREQ_EnterModule(FREQ_BLON);
 
@@ -818,17 +874,19 @@ COMMON FUN void PowerTimerIsr(void)
             rk_printf("system enter idle2");
         }
     }
+	
 
     if(gSysConfig.SysIdleStatus < 3)
     {
         battery_level = Battery_GetLevel();
-        if (gSysConfig.battery_level != battery_level)
+        if (gSysConfig.battery_level != battery_level)//update battery level
         {
             gSysConfig.battery_level = battery_level;
             MainTask_SetTopIcon(MAINTASK_BATTERY);
         }
-
-        PnPSever();
+		
+		PnPSever(); //called in Battery_GetLevel() jjjhhh----20161110
+        
     }
     else if(((gSysConfig.PMTime % 10000) == 0) && (gSysConfig.SysIdleStatus == 3))
     {
@@ -854,6 +912,15 @@ COMMON FUN void PowerTimerIsr(void)
         FwSuspend();
         #endif
     }
+#else//#ifndef _DISABLE_ENTER_IDLEMODE
+	battery_level = Battery_GetLevel();
+	if (gSysConfig.battery_level != battery_level)//update battery level
+	{
+		gSysConfig.battery_level = battery_level;
+		MainTask_SetTopIcon(MAINTASK_BATTERY);
+	}
+	//PnPSever(); //called in Battery_GetLevel() jjjhhh----20161110
+#endif
 }
 /*******************************************************************************
 ** Name: PmuSuspend

@@ -770,6 +770,7 @@ void RK_ChannelTask_Enter(void)
     {
         rkos_sleep(1000);
         rk_wifi_smartconfig();
+		MainTask_SetStatus(MAINTASK_WIFICONFIG,1);//jjjhhh 20161110
     }
 //   调用接口提示音当前进入smartconfig模式
      //        MusicEnter_smartconfig();

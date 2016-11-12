@@ -125,6 +125,7 @@ void fputc_hook(char ch);
 _BSP_EVK_V20_BSP_COMMON_
 COMMON API void PnPSever(void)
 {
+	//rk_printf("\nenter PnPSever...\n");
 #ifndef _USE_GUI_
 #ifndef _ENABLE_WIFI_BLUETOOTH
     #ifdef _BLUETOOTH_
@@ -248,20 +249,39 @@ COMMON API void PnPSever(void)
         #endif //NOSCREEN_USE_LED end
     }
     #endif //_WIFI_ end
-#else
+#else//#ifndef _ENABLE_WIFI_BLUETOOTH
    {
         #ifdef NOSCREEN_USE_LED //led display
         {
-            if (MainTask_GetStatus(MAINTASK_WIFICONFIG)==1)
+            if(MainTask_GetStatus(MAINTASK_SYS_UPDATE_FW)==1)//updating fw----LED1:FLASH; LED2:OFF
             {
+				MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);//led off
+					
+				redLed_state++;
+				if ((redLed_state == 1)||(redLed_state == 3))//led flash
+				{
+					MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
+				}
+				if ((redLed_state == 2)||(redLed_state == 4))
+				{
+					MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
+					if (redLed_state == 4)
+					{
+						redLed_state = 0;
+					}
+				}
+			}
+            else if(MainTask_GetStatus(MAINTASK_WIFICONFIG)==1)
+            {	
+            	//rk_printf(">>>>>>>1111111\n");
                 greenled_state++;
-                if ((greenled_state == 1)||(greenled_state == 2))
+                if ((greenled_state == 1)||(greenled_state == 3))
                 {
                     MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
                     MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
 
                 }
-                if ((greenled_state == 3)||(greenled_state == 4))
+                if ((greenled_state == 2)||(greenled_state == 4))
                 {
                     MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
                     MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
@@ -272,45 +292,28 @@ COMMON API void PnPSever(void)
                 }
             }
             else
-            {
-				if ((gSysConfig.BtOpened == 1)&&(gSysConfig.BtControl == 1))
-				{
+            {	//rk_printf(">>>>>>>222222222\n");
+				if ((gSysConfig.BtOpened == 1)&&(gSysConfig.BtControl == 1) ||
+					(MainTask_GetStatus(MAINTASK_APP_BT_PLAYER) == 1))//BT MODE----LED1:OFF; LED2:ON
+				{//rk_printf(">>>>>>>3333333344444\n");
+					MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
 					MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
 				}
-				if ((gSysConfig.BtControl == 1)&&(gSysConfig.BtOpened != 1))
-				{
-					redLed_state++;
-					if ((redLed_state == 1)||(redLed_state == 2))
-					{
-						MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
-					}
-					if ((redLed_state == 3)||(redLed_state == 4))
-					{
-						MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
-						if (redLed_state == 4)
-						{
-							redLed_state = 0;
-						}
-					}
-				}
-                if ((MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER) != 1)
+				else if ((MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER) != 1)
                     &&(MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) != 1)
-                    &&(MainTask_GetStatus(MAINTASK_APP_LOCAL_PLAYER) != 1))
+                    &&(MainTask_GetStatus(MAINTASK_APP_LOCAL_PLAYER) != 1)
+                    &&(MainTask_GetStatus(MAINTASK_APP_BT_PLAYER) != 1))//NO PLAYER or switching Player----LED1:ON; LED2:FLASH
                 {
-                    MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
-                    MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
-                }
-                if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER_START) == 1)
-                {
+                	//rk_printf(">>>>>>>444444444444\n");
                     greenled_state++;
-                    if ((greenled_state == 1)||(greenled_state == 2))
+                    if ((greenled_state == 1)||(greenled_state == 3))
                     {
                         MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
                         MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
 
                     }
-                    if ((greenled_state == 3)||(greenled_state == 4))
-                    {
+                    if ((greenled_state == 2)||(greenled_state == 4))
+                    {	
                         MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
                         MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
                         if (greenled_state == 4)
@@ -319,43 +322,21 @@ COMMON API void PnPSever(void)
                         }
                     }
                 }
-                if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER) == 1)
-                {
+                else if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER) == 1 ||
+					(MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) == 1))//DLNA/AIRPLAY MODE----LED1:ON; LED2:ON
+                {	//rk_printf(">>>>>>>5555555555\n");
                     MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
                     MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
                 }
 
-                if (MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER_START) == 1)
-                {
-                    greenled_state++;
-                    if ((greenled_state == 1)||(greenled_state == 2))
-                    {
-                        MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
-                        MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
-
-                    }
-                    if ((greenled_state == 3)||(greenled_state == 4))
-                    {
-                        MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
-                        MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
-                        if (greenled_state == 4)
-                        {
-                            greenled_state = 0;
-                        }
-                    }
-                }
-                if (MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) == 1)
-                {
-                    MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
-                    MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
-                }
-
-                if (MainTask_GetStatus(MAINTASK_APP_LOCAL_PLAYER) == 1)
-                {
+				else if (MainTask_GetStatus(MAINTASK_APP_LOCAL_PLAYER) == 1)//MP3/±¾µØ²¥·Å MODE----LED1:ON; LED2:OFF
+                {	//rk_printf(">>>>>>>6666666666\n");
                     MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
                     MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
                 }
-            }
+
+				/*LOW POWER and CHARGING led state implemented in Battery_GetLevel*/
+            }//if (MainTask_GetStatus(MAINTASK_WIFICONFIG)==1)
         }
         #endif //NOSCREEN_USE_LED end
     }
@@ -565,7 +546,7 @@ COMMON API rk_err_t CreateDeviceListUsbHostMsc(uint32 * list)
             hLun[i] = RKDev_Open(DEV_CLASS_LUN, gLun[i], NOT_CARE);
             if (hLun[i] == NULL)
             {
-                printf("\nLun%d device open failure(i=%d)",gLun[i],i);
+                printf("\n11Lun%d device open failure(i=%d)",gLun[i],i);
                 return RK_SUCCESS;
             }
         }
@@ -1531,7 +1512,7 @@ COMMON API rk_err_t CreateDeviceListUsbDeviceMsc(uint32 * list)
             hLun[i] = RKDev_Open(DEV_CLASS_LUN, gLun[i], NOT_CARE);
             if (hLun[i] == NULL)
             {
-                printf("\nLun%d device open failure(i=%d)",gLun[i],i);
+                printf("\n22Lun%d device open failure(i=%d)",gLun[i],i);
                 goto USB_ERROR2;
             }
         }
@@ -2385,7 +2366,9 @@ COMMON FUN void CpuIdle(void)
 _BSP_EVK_V20_BSP_COMMON_
 COMMON FUN void fputc_hook(char ch)
 {
+#ifdef DEBUG_UART_PORT//jjjhhh 20161109
     while (UARTWriteByte(DEBUG_UART_PORT,(uint8*)&ch, 1) == 0);
+#endif
 }
 
 /*
@@ -2603,7 +2586,7 @@ INIT API void SystemInit(void)
 #endif
 
     FW_DBInit();
-
+#ifdef DEBUG_UART_PORT//jjjhhh 20161109
     stUartArg.dwBitWidth = UART_DATA_8B;
     stUartArg.dwBitRate = UART_BR_115200;
 #ifndef _BROAD_LINE_OUT_
@@ -2621,6 +2604,7 @@ INIT API void SystemInit(void)
          UartHDC = RKDev_Open(DEV_CLASS_UART, DEBUG_UART_PORT, NOT_CARE);
     }
     else
+#endif
     {
          UartHDC = NULL;
     }
@@ -2716,9 +2700,9 @@ INIT API void SystemInit(void)
 #endif
 
     if(Grf_CheckVbus())
-    {
+    {	
         if(PmuGetSysRegister(0) == 0x55aa55aa)
-        {
+        {	
             #ifdef _USE_GUI_
             {
                 RKGUI_ICON_ARG pGcArg;
@@ -2732,18 +2716,19 @@ INIT API void SystemInit(void)
                 GuiTask_DeleteWidget(pGc);
             }
             #endif
-
+			
             LoadSysInformation();
+			
 
             CreateDeviceList(DEVICE_LIST_ADUIO_PLAY, NULL);
-
+			
             //Create BcoreDev...
             ret = RKDev_Create(DEV_CLASS_BCORE, 0, NULL);
             if (ret != RK_SUCCESS)
             {
                 rk_print_string("\nBcoreDev create failure");
             }
-
+			
             CreateDeviceList(DEVICE_LIST_DIR, NULL);
 
             RKTaskCreate(TASK_ID_MAIN,0, NULL, SYNC_MODE);
@@ -2763,7 +2748,7 @@ INIT API void SystemInit(void)
 
     }
     else
-    {
+    {	
          #ifdef _USE_GUI_
          {
             RKGUI_ICON_ARG pGcArg;

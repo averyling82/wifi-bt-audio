@@ -37,6 +37,9 @@
 #include "Bsp.h"
 #include "pmc.h"
 
+#include "AudioControlTask.h"
+
+#include "MsgDevice.h"
 #include "http.h"
 #include <string.h>
 
@@ -333,6 +336,7 @@ COMMON API rk_err_t FwUpdate(uint16 * path, uint32 ForceUpate)
     stFileAttr.Path = path;
     stFileAttr.FileName = NULL;
 
+	MainTask_SetStatus(MAINTASK_SYS_UPDATE_FW, 1);
     hFile = FileDev_OpenFile(FileSysHDC, NULL, NOT_CARE, &stFileAttr);
     if ((rk_err_t)hFile <= 0)
     {
@@ -411,7 +415,8 @@ COMMON API rk_err_t FwUpdate(uint16 * path, uint32 ForceUpate)
         if(!ForceUpate)
         {
             rk_printf("data maybe loss FwSize = %d, LunSize = %d", (FwSize / 256 + FW_SYS_OFFSET), LunSize);
-            return DATA_LOSS;
+            //return DATA_LOSS;
+			goto UPDATE_ERROR;//jjjhhh 20161110
         }
     }
 
@@ -472,6 +477,7 @@ COMMON API rk_err_t FwUpdate(uint16 * path, uint32 ForceUpate)
     ret = RK_SUCCESS;
 
 UPDATE_ERROR:
+	MainTask_SetStatus(MAINTASK_SYS_UPDATE_FW, 0);
     rkos_memory_free(pUBuf);
     FileDev_CloseFile(hFile);
     RKDev_Close(hLunFW);
@@ -930,7 +936,7 @@ static COMMON FUN rk_err_t CheckOTAServer(uint8 *cu,uint8 *vc,uint8 *sn,int rela
 		OTA_URL_HEADER,cu,vc,sn,sn,relase);/**/
 
 	printf("\n   CheckOTAServer http start********************\nota_url=%s\n\n",ota_url);
-
+	//rkos_sleep(2000);//sleep 2S
 	//init g_OTAINFOR
 	g_OTAINFOR.url = NULL;
 	g_OTAINFOR.total_size = 0;
@@ -965,8 +971,9 @@ COMMON API rk_err_t CheckOTAandUpdateFw(void)//check only once
 	uint8 ota_id[16] = {0};
 
 	if((0 == FW1Valid) || 
-		OTA_DOWNLOAD_STATUS_ERROR == g_OTAINFOR.download_status || 
-		OTA_DOWNLOAD_STATUS_SUCCESS== g_OTAINFOR.download_status)
+		(OTA_DOWNLOAD_STATUS_ERROR == g_OTAINFOR.download_status) || 
+		(OTA_DOWNLOAD_STATUS_SUCCESS== g_OTAINFOR.download_status) ||
+		(gSysConfig.PlayerType != SOURCE_FROM_DLNA))
 	{
 		rk_printf("Already checked or FW1Valid=%d\n",FW1Valid);
 		return RK_ERROR;
@@ -981,9 +988,11 @@ COMMON API rk_err_t CheckOTAandUpdateFw(void)//check only once
 	else
 		printf("ota_cu:%s\nota_vc:%s\nota_sn:%s\nota_id:%s  \n",ota_cu,ota_vc,ota_sn,ota_id);
 
+	rkos_sleep(2000);//sleep 10S
 	ret = CheckOTAServer(ota_cu,ota_vc,ota_sn,1);//check server if there has new fw
 	if(RK_SUCCESS == ret)
 	{	
+		MainTask_SetStatus(MAINTASK_APP_DLNA_PLAYER, 0);
 		ret = DownLoadOTAFirmware();//download fw
 		if(RK_SUCCESS == ret)
 			return OTAFwUpdate();//check the fw which download and update fw

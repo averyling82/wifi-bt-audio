@@ -1054,7 +1054,7 @@ COMMON API rk_err_t FatDev_DeleteDir(HDC dev, HDC hFather, FILE_ATTR * pstFileAt
         {
             if (FindFDTInfoLong(pstFatDev, &temp, Clus, &Index, pPath + 1) != RK_SUCCESS)
             {
-                rk_printf("no find file");
+                rk_printf("no find file\n");
                 goto ERROR1;
             }
 
@@ -1240,7 +1240,7 @@ COMMON API rk_err_t FatDev_DeleteFile(HDC dev, HDC hFather, FILE_ATTR * pstFileA
         {
             if (FindFDTInfoLong(pstFatDev, &temp, Clus, &Index, pPath + 1) != RK_SUCCESS)
             {
-                rk_printf("no find file");
+                rk_printf("no find file\n");
                 goto ERROR1;
             }
 
@@ -2055,7 +2055,7 @@ COMMON API HDC FatDev_OpenFile(HDC dev, HDC hFather, FILE_ATTR * pstFileAttr)
         {
             if (FindFDTInfoLong(pstFatDev, &temp, Clus, &Index, pPath + 1) != RK_SUCCESS)
             {
-                rk_printf("no find file");
+                rk_printf("no find file\n");
                 goto ERROR1;
             }
 

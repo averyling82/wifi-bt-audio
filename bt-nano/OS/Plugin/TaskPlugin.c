@@ -1977,10 +1977,11 @@ COMMON API rk_err_t RKTaskCreate(uint32 TaskClassID, uint32 TaskObjectID, void *
 
     if (pstNewTask == NULL)
         return RK_ERROR;
+	//rk_printf(">>>>>>>RKTaskCreate 111\n");
 
     RKGetTaskMsg(TaskClassID, pstNewTask);
 
-    FW_GetSegmentInfo(SEGMENT_ID_TASK_INF,&Segment);
+    FW_GetSegmentInfo(SEGMENT_ID_TASK_INF,&Segment);//rk_printf(">>>>>>>RKTaskCreate 222\n");
 
     LBA = ((uint32)pstNewTask->taskname - Segment.CodeImageBase - sizeof(InitTaskItem)) / 512;
     offset = ((uint32)pstNewTask->taskname - Segment.CodeImageBase - sizeof(InitTaskItem)) % 512;
@@ -2034,7 +2035,7 @@ COMMON API rk_err_t RKTaskCreate(uint32 TaskClassID, uint32 TaskObjectID, void *
             return RK_SUCCESS;
         }
         else if(Mode == SYNC_MODE)
-        {
+        {//rk_printf(">>>>>>>RKTaskCreate 333\n");
             TaskItem.TaskHandler = pstNewTask;
             TaskItem.RkTaskEvent = RK_TASK_EVENT_CREATE;
             TaskItem.Mode = Mode;

@@ -645,7 +645,7 @@ int SwitchToPlayer(uint32 PlayerType)
 					rkos_sleep(2000);//wait 2S ???
 			
 					//gpstPlayMenuData->smartconfig=1; //WIFI 还在配置状态标志
-					MainTask_SetStatus(MAINTASK_WIFICONFIG,1);
+					//MainTask_SetStatus(MAINTASK_WIFICONFIG,1);
 					//启动WIFI
 					RKTaskCreate(TASK_ID_WIFI_APPLICATION, 0, (void *)WLAN_MODE_STA, SYNC_MODE);
 					while (wifi_init_flag() == WICED_FALSE)
@@ -791,6 +791,7 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 {
     if(gpstPlayMenuData->hMsgBox != NULL)
     {
+    	printf("!!!!!!!!!!!!!!!!gpstPlayMenuData->hMsgBox != NULL!!!!!!!!!!!!!\n");
         return RK_SUCCESS;
     }
     //printf("MusicPlayMenuTask_KeyEvent KeyVal=0x%x\n",KeyVal);
@@ -975,18 +976,9 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
         |                                                                              |
         <---------------------<----------------------------<-------------------<----<-
 		*/
-		
 		switch (gSysConfig.PlayerType)
 		{
 			case SOURCE_FROM_DLNA:
-				#ifdef NOSCREEN_USE_LED
-				{
-					MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
-					MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
-					//test
-					MainTask_SetStatus(MAINTASK_APP_XXX_PLAYER_START, 1);
-				}
-				#endif
 				if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER)==1)//STOP DLNA
 				{
 					if(MainTask_GetStatus(MAINTASK_WIFI_CONNECT_OK)==1)
@@ -1014,20 +1006,8 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 					}
 				}
 				#endif
-				#ifdef NOSCREEN_USE_LED
-				{
-					MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
-					MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
-				}
-				#endif
 				break;
 			case SOURCE_FROM_XXX:
-				#ifdef NOSCREEN_USE_LED
-				{
-					MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
-					MainTask_SetStatus(MAINTASK_APP_DLNA_PLAYER_START, 0);
-				}
-				#endif
 				if (MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER)==1)//STOP XXX
 				{
 					if(MainTask_GetStatus(MAINTASK_WIFI_CONNECT_OK)==1)
@@ -1056,31 +1036,17 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 				}
 				//MainTask_SetStatus(MAINTASK_WIFI_SUSPEND, 0);//just for stoping wifi timer
 				MusicPlay_StartPlayer(SOURCE_FROM_FILE_BROWSER);//START SD PLAYER
-				#ifdef NOSCREEN_USE_LED
-				{
-					MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
-					MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
-				}
-				#endif
 				break;
 			case SOURCE_FROM_FILE_BROWSER:
-				#ifdef NOSCREEN_USE_LED
-				{
-					MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
-					//test
-					/*MainTask_SetStatus(MAINTASK_APP_XXX_PLAYER_START, 0);
-					MainTask_SetStatus(MAINTASK_APP_DLNA_PLAYER_START, 0);*/
-					MainTask_SetStatus(MAINTASK_BT_START, 1);
-				}
-				#endif
-				rk_printf("11111111111111 -------------------------\n");
+				//rk_printf("11111111111111 -------------------------\n");
 				if(RKTaskFind(TASK_ID_AUDIOCONTROL, 0) != NULL)//STOP SD PLAYER
 				{
 					AudioControlTask_SetStateChangeFunc(MusicPlay_AudioCallBack, NULL);
 					RKTaskDelete(TASK_ID_AUDIOCONTROL, 0, SYNC_MODE);
 					//等待本地Audio删除
 				}
-				MainTask_SetStatus(MAINTASK_APP_LOCAL_PLAYER, 0);rk_printf("3333333333 -------------------------\n");
+				MainTask_SetStatus(MAINTASK_APP_LOCAL_PLAYER, 0);//rk_printf("3333333333 -------------------------\n");
+				MainTask_SetStatus(MAINTASK_BT_START, 1);
 				
 				//MainTask_DeleteAllApp();//enable BT
 				if(RKTaskFind(TASK_ID_AUDIOCONTROL, 0) != NULL)
@@ -1091,23 +1057,14 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 				rk_printf("switch BT,sleep 2S......\n");
 				rkos_sleep(2000);
 
-				rk_printf("44444444444 -------------------------\n");
+				//rk_printf("44444444444 -------------------------\n");
 				MainTask_StartSubThread(FM_SUB_THREAD); //打开BT音乐线程
-				rk_printf("55555555555555 -------------------------\n");
+				//rk_printf("55555555555555 -------------------------\n");
 
 				//START BT
 				gSysConfig.PlayerType = SOURCE_FROM_BT;
 				MusicPlay_StartPlayer(SOURCE_FROM_BT);
-				rk_printf("66666666666666 -------------------------\n");
-				#ifdef NOSCREEN_USE_LED
-				{
-					//LED Display
-					MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
-					MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
-					rkos_sleep(1000);
-				}
-				#endif
-
+				//rk_printf("66666666666666 -------------------------\n");
 				break;
 			case SOURCE_FROM_BT:
 				if (gSysConfig.BtControl==1)//STOP BT
@@ -1116,6 +1073,7 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 					FW_RemoveSegment(SEGMENT_ID_BLUETOOTH);
 					gSysConfig.BtControl = 0;
 				}
+				MainTask_SetStatus(MAINTASK_APP_BT_PLAYER, 0);
 				if(RKTaskFind(TASK_ID_AUDIOCONTROL, 0) != NULL)//DELETE AUDIOCONTROL
 				{
 					RKTaskDelete(TASK_ID_AUDIOCONTROL, 0, SYNC_MODE);
@@ -1128,7 +1086,7 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 				MainTask_SetStatus(MAINTASK_WIFI_OPEN_OK, 1);
 				MainTask_SetStatus(MAINTASK_WIFI_SUSPEND, 0);
 				//gpstPlayMenuData->smartconfig=1; //WIFI 还在配置状态标志
-				MainTask_SetStatus(MAINTASK_WIFICONFIG,1);
+				//MainTask_SetStatus(MAINTASK_WIFICONFIG,1);
 				//启动WIFI
 				RKTaskCreate(TASK_ID_WIFI_APPLICATION, 0, (void *)WLAN_MODE_STA, SYNC_MODE);
 				while (wifi_init_flag() == WICED_FALSE)
@@ -1140,14 +1098,6 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 				MusicPlayMenuTask_StartTimer();
 
                 gSysConfig.PlayerType = SOURCE_FROM_DLNA;//start DLNA
-				//MusicPlay_StartPlayer(SOURCE_FROM_DLNA);
-				#ifdef NOSCREEN_USE_LED
-				{
-					MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
-					MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
-				}
-				#endif
-
 				break;
 			default:
 				break;
@@ -2924,14 +2874,14 @@ COMMON FUN rk_err_t MusicPlay_StartPlayer(uint32 SourecePlayer)
     if((SourecePlayer == SOURCE_FROM_FILE_BROWSER)
         &&(MainTask_GetStatus(MAINTASK_APP_LOCAL_PLAYER)!=1))
 
-    {
+    {//PLAYMENU_DEBUG("Music start22222222\n");
         Arg.ucSelPlayType = SOURCE_FROM_FILE_BROWSER;
         Arg.FileNum = 0;
         Arg.TotalFiles = 0;
         Arg.pfAudioState = MusicPlay_AudioCallBack;
         //Arg.pfAudioState = NULL;
         memcpy(Arg.filepath, L"C:\\", 8);
-
+		//PLAYMENU_DEBUG("Music start33333333\n");
         if(RKTaskCreate(TASK_ID_AUDIOCONTROL, 0, &Arg, SYNC_MODE) != RK_SUCCESS)
         {
              rk_printf("Audio control task create failure");
@@ -3007,6 +2957,7 @@ COMMON FUN rk_err_t MusicPlay_StartPlayer(uint32 SourecePlayer)
                 gpstPlayMenuData->Arg.ucSelPlayType = SOURCE_FROM_BT;
                 rk_printf ("BT Success....\n");
             }
+			MainTask_SetStatus(MAINTASK_APP_BT_PLAYER, 1);
         }
 #endif//_ENABLE_WIFI_BLUETOOTH
 		
@@ -3818,7 +3769,7 @@ COMMON API void MusicPlayMenuTask_Enter(void)
 	else
 #endif//_ENABLE_WIFI_BLUETOOTH
     {
-        #ifdef NOSCREEN_USE_LED
+        /*#ifdef NOSCREEN_USE_LED
         {
             if (MainTask_GetStatus(MAINTASK_WIFI_CONNECT_OK)!=1)
             {
@@ -3844,7 +3795,7 @@ COMMON API void MusicPlayMenuTask_Enter(void)
                 }
             }
         }
-        #endif
+        #endif*/
         if (gpstPlayMenuData->Arg.ucSelPlayType == SOURCE_FROM_FILE_BROWSER)
             MusicPlay_StartPlayer(gpstPlayMenuData->Arg.ucSelPlayType);
         else

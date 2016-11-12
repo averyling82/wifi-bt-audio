@@ -36,8 +36,8 @@
         #else
         //#define _BROAD_LINE_OUT_               /* Enable LINE OUT for audio        */
         #ifndef _BROAD_LINE_OUT_                 /*-LINE OUT & UART Debug Mixconfig--*/
-        #define DEBUG_UART_PORT  UART_DEV0       /* Enable Uart0 Debug               */
-        #define DEBUG_UART_ADDR  0x400a0000      /* Set UART0 address                */
+        #define DEBUG_UART_PORT  UART_DEV2       /* Enable Uart0 Debug          UART_DEV0     */
+        #define DEBUG_UART_ADDR  0x400c0000      /* Set UART0 address           0x400a0000     */
         #else
         #define DEBUG_UART_PORT  UART_DEV2       /* Enable UART2 Debug               */
         #define DEBUG_UART_ADDR  0x400c0000      /* Set UART2 address                */
@@ -173,12 +173,13 @@
  *************************************************************************************/
 //#define _USE_GUI_                               /* Enable GUI                        */
 #ifndef _USE_GUI_
-    //#define NOSCREEN_USE_LED                    /* Enable LED in no screen mode      */
-    //#define __ENABLE_POWERMANAGER         /*Enable PowerManager*/
+    #define NOSCREEN_USE_LED                    /* Enable LED in no screen mode      */
+    #define __ENABLE_POWERMANAGER         /*Enable PowerManager*/
 #endif
 
 
 #define _ENABLE_WIFI_BLUETOOTH
+#define _DISABLE_ENTER_IDLEMODE
 
 #define _WIFI_                                  /* Enable WIFI                       */
 #if defined(_WIFI_) || defined(_ENABLE_WIFI_BLUETOOTH)                                   /* -----WIFI config------------------*/
