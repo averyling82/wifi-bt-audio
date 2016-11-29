@@ -36,11 +36,19 @@
 #include "RockCodecDevice.h"
 #include "audio_globals.h"
 #include "AudioDevice.h"
+
+#ifdef _RK_EQ_
 #include "effect.h"
+#endif
+
+#ifdef _FADE_PROCESS_
 #include "fade.h"
+#endif
 #include "global.h"
 #include "SysInfoSave.h"
+#ifdef _RECORD_
 #include "record_globals.h"
+#endif
 #include "FwAnalysis.h"
 #include "ShellTask.h"
 #include "TaskPlugin.h"
@@ -129,7 +137,8 @@ typedef struct _AUDIO_DEVICE_CLASS
     HDC hCodec;
 
     uint32 TrackLen;
-    uint32 SampleRate;
+    uint32 TxSampleRate;
+    uint32 RxSampleRate;
     uint32 Channel;
     uint32 Bit;
     uint8 * Track;
@@ -142,7 +151,9 @@ typedef struct _AUDIO_DEVICE_CLASS
 
     uint32  playVolume;
 
+    #ifdef _RK_EQ_
     RKEffect    UserEQ;
+    #endif
 
     uint32 RecordType;
     P_PCM_CALLBACK pfPcmCallBack;
@@ -157,6 +168,9 @@ typedef struct _AUDIO_DEVICE_CLASS
     uint32 FadeType;
     #endif
 
+    uint32 bypass;
+
+
 }AUDIO_DEVICE_CLASS;
 
 /*
@@ -170,7 +184,9 @@ static AUDIODEVPLAYSERVICE_TASK_DATA_BLOCK * gpstAudioDevPlayServiceData;
 
 static AUDIO_DEVICE_CLASS * gpstAudioDevInf;
 //static AUDIO_DEVICE_DATA_BLOCK * gpstAudioDeviceData;
+#ifdef _RK_EQ_
 static uint8 EqMode[8] = {EQ_HEAVY,EQ_POP,EQ_JAZZ,EQ_UNIQUE,EQ_USER,EQ_USER,EQ_NOR,EQ_BASS};
+#endif
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -179,51 +195,6 @@ static uint8 EqMode[8] = {EQ_HEAVY,EQ_POP,EQ_JAZZ,EQ_UNIQUE,EQ_USER,EQ_USER,EQ_N
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-
-#ifdef CODEC_24BIT //24bit
-
-#if 1 //16bit
-_DRIVER_AUDIO_AUDIODEVICE_SHELL_
-uint8 Audiooutptr[1][16*(48*4+48*4)] =
-{
-    //0
-    {
-        #include "test01_1K0_48_16bit_16.data"
-    },
-};
-
-_DRIVER_AUDIO_AUDIODEVICE_SHELL_
-uint32 Audiolength = 16*(48*4);//176 * 32/4; 32bit
-
-#else
-
-_DRIVER_AUDIO_AUDIODEVICE_COMMON_
-uint8 __align(4) Audiooutptr[1][16*(48*6+48*6/3)] =
-{
-    //0
-    {
-        #include "test01_1K0_48_24bit_16.data"
-    },
-};
-_DRIVER_AUDIO_AUDIODEVICE_COMMON_
-uint32 Audiolength = 16*(48*6+48*6/3);
-#endif
-
-#else //16bit
-_DRIVER_AUDIO_AUDIODEVICE_SHELL_
-uint8 Audiooutptr[1][16*(48*4)] =
-{
-    //0
-    {
-        #include "test01_1K0_48_16bit_16.data"
-    },
-};
-
-_DRIVER_AUDIO_AUDIODEVICE_SHELL_
-uint32 Audiolength = 16*(48*4);//176 * 32/4; 32bit
-
-#endif
-
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -264,6 +235,21 @@ CodecMode_en_t RecordTypeTransform(uint8 recordType);
 *---------------------------------------------------------------------------------------------------------------------
 */
 /*******************************************************************************
+** Name: AudioDev_SetByPass
+** Input:HDC dev, uint32 bypass
+** Return: void
+** Owner:aaron.sun
+** Date: 2016.11.14
+** Time: 18:56:14
+*******************************************************************************/
+_DRIVER_AUDIO_AUDIODEVICE_COMMON_
+COMMON API void AudioDev_SetByPass(HDC dev, uint32 bypass)
+{
+    AUDIO_DEVICE_CLASS * pstAudioDev = (AUDIO_DEVICE_CLASS *)dev;
+    pstAudioDev->bypass = bypass;
+}
+
+/*******************************************************************************
 ** Name: AudioDev_ReadEnable
 ** Input:HDC dev, uint32 Flag
 ** Return: rk_err_t
@@ -290,7 +276,6 @@ COMMON FUN void AudioDevExitType(UINT32 Type)
 {
     if(Type > Codec_Standby)
     {
-        rk_printf("ERROR: type");
         return;
     }
     if(gpstAudioDevInf->hCodec != NULL)
@@ -298,6 +283,7 @@ COMMON FUN void AudioDevExitType(UINT32 Type)
         RockCodecDev_ExitMode(gpstAudioDevInf->hCodec, Type);
     }
 }
+
 
 /*******************************************************************************
 ** Name: AudioDevPlayServiceTask_Resume
@@ -336,6 +322,7 @@ COMMON API rk_err_t AudioDevPlayServiceTask_Suspend(uint32 ObjectID)
 _DRIVER_AUDIO_AUDIODEVICE_COMMON_
 COMMON API void AudioDevPlayServiceTask_Enter(void * arg)
 {
+    #if 0
     AUDIODEVPLAYSERVICE_ASK_QUEUE AudioDevAskQue;
     AUDIODEVPLAYSERVICE_RESP_QUEUE AudioDevResQue;
 
@@ -356,7 +343,10 @@ COMMON API void AudioDevPlayServiceTask_Enter(void * arg)
     {
         rkos_sleep(10000);
     }
+    #endif
 }
+
+
 /*******************************************************************************
 ** Name: AudioDev_FadeOk
 ** Input:HDC dev
@@ -539,12 +529,16 @@ rk_err_t AudioDev_SetVol(HDC dev, uint32 vol)
     AUDIO_DEVICE_CLASS * pstAudioDev = (AUDIO_DEVICE_CLASS * )dev;
     if(pstAudioDev == NULL)
     {
-        printf("\n AudioDev_SetVol HDC dev == NULL \n");
         return RK_ERROR;
     }
     //printf("\n AudioDev vol=%d \n", vol);
     pstAudioDev->playVolume = vol;
+
+    #ifdef _RK_EQ_
     RockcodecDev_SetVol(pstAudioDev->hCodec, pstAudioDev->UserEQ.Mode, vol);
+    #else
+    RockcodecDev_SetVol(pstAudioDev->hCodec, 0, vol);
+    #endif
     return RK_SUCCESS;
 }
 
@@ -769,21 +763,6 @@ COMMON API rk_err_t AudioDev_SetBit(HDC dev, uint32 TrackNo, uint32 Bit)
         pstAudioDev->Bit = Bit;
     }
 
-#if 0
-    stAudioDevArg.stI2sDevArg.i2smode = I2S_SLAVE_MODE;//;I2S_SLAVE_MODE
-    stAudioDevArg.stI2sDevArg.i2sCS = I2S_IN; //I2S_EXT
-    stAudioDevArg.stI2sDevArg.I2S_FS = pstAudioDev->SampleRate;
-    stAudioDevArg.stI2sDevArg.BUS_FORMAT = I2S_FORMAT;//I2S_FORMAT;
-
-    stAudioDevArg.stI2sDevArg.Data_width = Bit;
-
-    stAudioDevArg.stI2sDevArg.I2S_Bus_mode = I2S_NORMAL_MODE;
-
-    stAudioDevArg.stCodecArg.SampleRate = pstAudioDev->SampleRate;
-    stAudioDevArg.stCodecArg.Codecmode = Codec_DACoutHP;
-    AudioDev_I2S_Acodec_Mode(pstAudioDev, &stAudioDevArg);
-#endif
-
     return RK_SUCCESS;
 }
 
@@ -822,7 +801,7 @@ COMMON API rk_err_t AudioDev_SetChannel(HDC dev, uint32 TrackNo, uint32 Channel)
 }
 
 /*******************************************************************************
-** Name: AudioDev_SetSampleRate
+** Name: AudioDev_SetTxSampleRate
 ** Input:HDC dev, uint32 SamleRate
 ** Return: rk_err_t
 ** Owner:Aaron.sun
@@ -850,15 +829,18 @@ COMMON API rk_err_t AudioDev_SetRxSampleRate(HDC dev, uint32 TrackNo, uint32 Sam
     }
     else
     {
-        RockcodecDev_RxSetRate(pstAudioDev->hCodec, SamleRate);//codec SampleRate
-        pstAudioDev->SampleRate = SamleRate;
+        if(pstAudioDev->RxSampleRate !=  SamleRate)
+        {
+            RockcodecDev_SetAdcRate(pstAudioDev->hCodec, SamleRate);//codec SampleRate
+            pstAudioDev->RxSampleRate = SamleRate;
+        }
     }
     return RK_SUCCESS;
 }
 
 
 /*******************************************************************************
-** Name: AudioDev_SetSampleRate
+** Name: AudioDev_SetTxSampleRate
 ** Input:HDC dev, uint32 SamleRate
 ** Return: rk_err_t
 ** Owner:Aaron.sun
@@ -866,7 +848,7 @@ COMMON API rk_err_t AudioDev_SetRxSampleRate(HDC dev, uint32 TrackNo, uint32 Sam
 ** Time: 13:43:09
 *******************************************************************************/
 _DRIVER_AUDIO_AUDIODEVICE_COMMON_
-COMMON API rk_err_t AudioDev_SetSampleRate(HDC dev, uint32 TrackNo, uint32 SamleRate)
+COMMON API rk_err_t AudioDev_SetTxSampleRate(HDC dev, uint32 TrackNo, uint32 SamleRate)
 {
     AUDIO_DEVICE_CLASS * pstAudioDev = (AUDIO_DEVICE_CLASS *)dev;
 
@@ -886,8 +868,11 @@ COMMON API rk_err_t AudioDev_SetSampleRate(HDC dev, uint32 TrackNo, uint32 Samle
     }
     else
     {
-        RockcodecDev_SetRate(pstAudioDev->hCodec, SamleRate);//codec SampleRate
-        pstAudioDev->SampleRate = SamleRate;
+        if(pstAudioDev->TxSampleRate != SamleRate)
+        {
+            RockcodecDev_SetDacRate(pstAudioDev->hCodec, SamleRate);//codec SampleRate
+            pstAudioDev->TxSampleRate = SamleRate;
+        }
     }
     return RK_SUCCESS;
 }
@@ -959,22 +944,6 @@ COMMON FUN rk_err_t AudioDevCheckHandler(HDC dev)
     return RK_ERROR;
 }
 
-
-/*******************************************************************************
-** Name: AudioSetVolume
-** Input:void
-** Return: void
-** Owner:aaron.sun
-** Date: 2015.6.24
-** Time: 11:46:40
-*******************************************************************************/
-_DRIVER_AUDIO_AUDIODEVICE_COMMON_
-COMMON FUN void AudioDev_SetVolume(void)
-{
-    RockcodecDev_SetVol(gpstAudioDevInf->hCodec,
-        gpstAudioDevInf->UserEQ.Mode, gpstAudioDevInf->playVolume);
-}
-
 /*******************************************************************************
 ** Name: AudioDev_SetEQ
 ** Input:HDC dev, uint32 userEQMod, uint32 vol
@@ -988,10 +957,12 @@ COMMON API void AudioDev_SetEQ(HDC dev, uint32 userEQMod)
 {
     AUDIO_EQ_ARG eqARG;
     AUDIO_DEVICE_CLASS *  hAudio = (AUDIO_DEVICE_CLASS * )dev;
+
+#ifdef  _RK_EQ_
     RKEffect *pEffect;
     if(hAudio == NULL)
     {
-        printf("ERROR:##hAudio NULL\n");
+
     }
     pEffect = (RKEffect *)(&(hAudio->UserEQ));
 
@@ -1000,7 +971,7 @@ COMMON API void AudioDev_SetEQ(HDC dev, uint32 userEQMod)
     eqARG.audioLen = &hAudio->TrackLen;
     eqARG.playVolume = &hAudio->playVolume;
 
-#ifdef  _RK_EQ_
+
     if (pEffect->Mode == EQ_BASS)
     {
         if (*(eqARG.playVolume) <= 27 )
@@ -1034,7 +1005,7 @@ COMMON API void AudioDev_SetEQ(HDC dev, uint32 userEQMod)
 
     }
     //printf("max_DbGain = %d userEQMod=%d playVolume=%d\n",pEffect->max_DbGain,userEQMod, *(eqARG.playVolume));
-    EffectAdjust(pEffect, &eqARG ,hAudio->SampleRate);
+    EffectAdjust(pEffect, &eqARG ,hAudio->TxSampleRate);
     //printf("EQ set EffectAdjust over\n");
     AudioDev_SetVol(dev, hAudio->playVolume);
     //printf("EQ set volume over\n");
@@ -1063,7 +1034,6 @@ COMMON API rk_err_t AudioDev_Write(HDC dev , uint32 TrackNo, uint8 * buf)
 
     if (pstWriteAudioDev == NULL)
     {
-        printf("pstWriteAudioDev == NULL\n");
         return RK_PARA_ERR;
     }
 
@@ -1085,193 +1055,153 @@ COMMON API rk_err_t AudioDev_Write(HDC dev , uint32 TrackNo, uint8 * buf)
     {
         return RK_PARA_ERR;
     }
+
     if (TrackNo == TRACK_NO_MAIN)
     {
         //call hCode and suspend
         pstWriteAudioDev->Track = buf;
-#if 0
-        pMainTrack = pstWriteAudioDev->Track;
-        for (i = pstWriteAudioDev->TrackLen/3*2; i < pstWriteAudioDev->TrackLen; i++)//pstWriteAudioDev->TrackLen
-        {
-            rk_printf("##send for printf Track NO.%d = 0x%x \n", i, *pMainTrack);
-            pMainTrack++;
-        }
 
-#endif
-
-#if 0
-        pMainTrack = pstWriteAudioDev->Track;
-        for (i = 0; i < 10; i++)//pstWriteAudioDev->TrackLen
+        if(pstWriteAudioDev->bypass == 0)
         {
-            rk_printf("!#!#send for printf Track NO.%d = 0x%x \n", i, *pMainTrack);
-            pMainTrack++;
-        }
-
-#endif
-
-        //AudioDev_SetEQ(pstWriteAudioDev, EQ_HEAVY); //SET EQ befor set vol
-        //AudioDev_SetVol(pstWriteAudioDev, 25);
-        //printf("16bit or 24bit Convertor %d\n",pstWriteAudioDev->Bit);
-        if (pstWriteAudioDev->Bit == (I2S_DATA_WIDTH24+1))
-        {
-            //printf("\nWIDTH24 Convertor_DEC len=%d len/6=%d\n",pstWriteAudioDev->TrackLen,pstWriteAudioDev->TrackLen/(3*2));
-            Bit_Convertor_DEC((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/6, 24);//pstWriteAudioDev->Channel
-        }
-        else if(pstWriteAudioDev->Bit == (I2S_DATA_WIDTH16+1))
-        {
-            Bit_Convertor_DEC((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(2*2), 16);//pstWriteAudioDev->Channel
-        }
-        else if(pstWriteAudioDev->Bit == 32)
-        {
-            Bit_Convertor_DEC((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(4*2), 32);//pstWriteAudioDev->Channel
-        }
-        else
-        {
-            //printf("ERROR:sour music no 16bit or 24bit \n");
-        }
-        //printf("~~~len= %d \n",gpstAudioDevInf->TrackLen);
+            //AudioDev_SetEQ(pstWriteAudioDev, EQ_HEAVY); //SET EQ befor set vol
+            //AudioDev_SetVol(pstWriteAudioDev, 25);
+            //printf("16bit or 24bit Convertor %d\n",pstWriteAudioDev->Bit);
+            if (pstWriteAudioDev->Bit == (I2S_DATA_WIDTH24+1))
+            {
+                //printf("\nWIDTH24 Convertor_DEC len=%d len/6=%d\n",pstWriteAudioDev->TrackLen,pstWriteAudioDev->TrackLen/(3*2));
+                Bit_Convertor_DEC((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/6, 24);//pstWriteAudioDev->Channel
+            }
+            else if(pstWriteAudioDev->Bit == (I2S_DATA_WIDTH16+1))
+            {
+                Bit_Convertor_DEC((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(2*2), 16);//pstWriteAudioDev->Channel
+            }
+            else if(pstWriteAudioDev->Bit == 32)
+            {
+                Bit_Convertor_DEC((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(4*2), 32);//pstWriteAudioDev->Channel
+            }
+            else
+            {
+                //printf("ERROR:sour music no 16bit or 24bit \n");
+            }
+            //printf("~~~len= %d \n",gpstAudioDevInf->TrackLen);
 
 #ifdef _RK_EQ_
-        if(EQ_NOR != pstWriteAudioDev->UserEQ.Mode)
-        {
-            /*audio effect process.*/
-            #ifdef CODEC_24BIT
-            //if(gpstAudioDevInf->SampleRate <= 96000)
-            if (pstWriteAudioDev->Bit == (I2S_DATA_WIDTH24+1))
+            if(EQ_NOR != pstWriteAudioDev->UserEQ.Mode)
             {
-                EffectProcess((long*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(3*2),\
-                              &(pstWriteAudioDev->UserEQ));
+                /*audio effect process.*/
+                #ifdef CODEC_24BIT
+                //if(gpstAudioDevInf->SampleRate <= 96000)
+                if (pstWriteAudioDev->Bit == (I2S_DATA_WIDTH24+1))
+                {
+                    EffectProcess((long*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(3*2),\
+                                  &(pstWriteAudioDev->UserEQ));
+                }
+                else if(pstWriteAudioDev->Bit == (I2S_DATA_WIDTH16+1))
+                {
+                    //printf("16BIT TrackLen=%d\n",gpstAudioDevInf->TrackLen);
+                    EffectProcess((long*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(2*2),\
+                                  &(pstWriteAudioDev->UserEQ));
+                }
+                else if(pstWriteAudioDev->Bit == 32)
+                {
+                    //printf("32BIT TrackLen=%d\n",gpstAudioDevInf->TrackLen);
+                    EffectProcess((long*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(4*2),\
+                                  &(pstWriteAudioDev->UserEQ));
+                }
+                #else
+                    EffectProcess((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(2*2),\
+                                  &(pstWriteAudioDev->UserEQ));
+                #endif
             }
-            else if(pstWriteAudioDev->Bit == (I2S_DATA_WIDTH16+1))
-            {
-                //printf("16BIT TrackLen=%d\n",gpstAudioDevInf->TrackLen);
-                EffectProcess((long*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(2*2),\
-                              &(pstWriteAudioDev->UserEQ));
-            }
-            else if(pstWriteAudioDev->Bit == 32)
-            {
-                //printf("32BIT TrackLen=%d\n",gpstAudioDevInf->TrackLen);
-                EffectProcess((long*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(4*2),\
-                              &(pstWriteAudioDev->UserEQ));
-            }
-            #else
-                EffectProcess((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(2*2),\
-                              &(pstWriteAudioDev->UserEQ));
-            #endif
-        }
 #endif //end #ifdef _RK_EQ_
 
-        if (pstWriteAudioDev->Bit == (I2S_DATA_WIDTH24+1))
-        {
-            //printf("\nWIDTH24 Convertor_shift\n");
-            Bit_Convertor_shift((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(3*2), 24);
-        }
-        else if(pstWriteAudioDev->Bit == (I2S_DATA_WIDTH16+1))
-        {
-            //printf("@@@@convertor 16bit len=%d\n",pstWriteAudioDev->TrackLen/(2*2));
-            Bit_Convertor_shift((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(2*2), 16);
-        }
-        else if(pstWriteAudioDev->Bit == 32)
-        {
-            //printf("@@@@convertor 32bit len=%d\n",pstWriteAudioDev->TrackLen/(4*2));
-            Bit_Convertor_shift((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(4*2), 32);
-        }
-        else
-        {
-            //printf("ERROR3:sour music no 16bit or 24bit or 32bit\n");
-        }
-        //AudioDev_SetTrackLen(pstWriteAudioDev, pstWriteAudioDev->TrackLen*4);
-        //printf("@@@@3sour 16bit len=%d\n",pstWriteAudioDev->TrackLen);
-
-#if 0
-        p32MainTrack = (uint32 *)pstWriteAudioDev->Track;
-        for (i = 16300/4 ; i < pstWriteAudioDev->TrackLen/4; i++)
-        {
-            rk_printf("******send for printf Track NO.%d = 0x%x \n", i, *p32MainTrack);
-            p32MainTrack++;
-        }
-
-#endif
-
-        for (j=1; j<TRACK_NO_NUM; j++)
-        {
-            if ((pstWriteAudioDev->stSubTrack[j].Status == TRACK_READIED) && (pstWriteAudioDev->Bit == pstWriteAudioDev->stSubTrack[j].Bit))
-            {
-
-                // first / or *
-                sacleMain = pstWriteAudioDev->stSubTrack[j].MixMain  ;
-                scaleSub = pstWriteAudioDev->stSubTrack[j].MixSub  ;
-
-                // To prevent the Sub pointer overflow
-                mixLen = (pstWriteAudioDev->TrackLen < pstWriteAudioDev->stSubTrack[j].TrackLen)\
-                         ? pstWriteAudioDev->TrackLen : pstWriteAudioDev->stSubTrack[j].TrackLen;
-
-                // ++
-                pMainTrack = pstWriteAudioDev->Track;
-                pSubTrack = pstWriteAudioDev->stSubTrack[j].Track;
-                for (i = 0; i < mixLen; i++)
-                {
-#if 0
-                    rk_printf("**************\n");
-                    rk_printf("++++++pMainTrack = 0x%x \n",*pMainTrack);
-                    rk_printf("++++++pSubTrack = 0x%x \n",*pSubTrack);
-                    rk_printf("==sumMainTcak = 0x%x \n",(((*pMainTrack) * sacleMain)>>8));
-                    rk_printf("==sumSubTcak = 0x%x \n",(((*pSubTrack) * scaleSub) >> 8));
-                    rk_printf("**************\n");
-#endif
-                    *pMainTrack =(uint8)((((*pMainTrack) * sacleMain)>>8) + (((*pSubTrack) * scaleSub >> 8)));
-                    //rk_printf("~~~Sum Track NO.%d = 0x%x \n", i, *pMainTrack);
-
-                    i++;
-                    if (i >= pstWriteAudioDev->TrackLen)
-                        break;
-                    pMainTrack++;
-                    pSubTrack++;
-                    *pMainTrack =(uint8)((((*pMainTrack) * sacleMain)>>8) + (((*pSubTrack) * scaleSub >> 8)));
-                    if (i >= pstWriteAudioDev->TrackLen)
-                        break;
-                    pMainTrack++;
-                    pSubTrack++;
-
-                }
-
-                pstWriteAudioDev->stSubTrack[j].Status = TRACK_IDLE; //TRACK_UNUSED for next select
-            }
-
-        }
-
-#if 0
-        pMainTrack = pstWriteAudioDev->Track;
-        for (i = 0; i < pstWriteAudioDev->TrackLen; i++)
-        {
-            rk_printf("~~~send for printf Track NO.%d = 0x%x \n", i, *pMainTrack);
-            pMainTrack++;
-        }
-
-#endif
-
-#ifdef _FADE_PROCESS_
-    #ifdef CODEC_24BIT
-        if (AudioDev_FadeOk(pstWriteAudioDev) != RK_SUCCESS)
-        {
             if (pstWriteAudioDev->Bit == (I2S_DATA_WIDTH24+1))
             {
-                FadeProcess((long*)pstWriteAudioDev->Track,pstWriteAudioDev->TrackLen/(3*2));
+                //printf("\nWIDTH24 Convertor_shift\n");
+                Bit_Convertor_shift((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(3*2), 24);
             }
             else if(pstWriteAudioDev->Bit == (I2S_DATA_WIDTH16+1))
             {
-                FadeProcess((long*)pstWriteAudioDev->Track,pstWriteAudioDev->TrackLen/(2*2));
+                //printf("@@@@convertor 16bit len=%d\n",pstWriteAudioDev->TrackLen/(2*2));
+                Bit_Convertor_shift((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(2*2), 16);
             }
             else if(pstWriteAudioDev->Bit == 32)
             {
-                FadeProcess((long*)pstWriteAudioDev->Track,pstWriteAudioDev->TrackLen/(4*2));
+                //printf("@@@@convertor 32bit len=%d\n",pstWriteAudioDev->TrackLen/(4*2));
+                Bit_Convertor_shift((short*)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen/(4*2), 32);
             }
-        }
-    #else
-        FadeProcess((long*)pstWriteAudioDev->Track,pstWriteAudioDev->TrackLen/(2*2));
-    #endif
+            else
+            {
+                //printf("ERROR3:sour music no 16bit or 24bit or 32bit\n");
+            }
+            //AudioDev_SetTrackLen(pstWriteAudioDev, pstWriteAudioDev->TrackLen*4);
+            //printf("@@@@3sour 16bit len=%d\n",pstWriteAudioDev->TrackLen);
+
+
+            for (j=1; j<TRACK_NO_NUM; j++)
+            {
+                if ((pstWriteAudioDev->stSubTrack[j].Status == TRACK_READIED) && (pstWriteAudioDev->Bit == pstWriteAudioDev->stSubTrack[j].Bit))
+                {
+
+                    // first / or *
+                    sacleMain = pstWriteAudioDev->stSubTrack[j].MixMain  ;
+                    scaleSub = pstWriteAudioDev->stSubTrack[j].MixSub  ;
+
+                    // To prevent the Sub pointer overflow
+                    mixLen = (pstWriteAudioDev->TrackLen < pstWriteAudioDev->stSubTrack[j].TrackLen)\
+                             ? pstWriteAudioDev->TrackLen : pstWriteAudioDev->stSubTrack[j].TrackLen;
+
+                    // ++
+                    pMainTrack = pstWriteAudioDev->Track;
+                    pSubTrack = pstWriteAudioDev->stSubTrack[j].Track;
+                    for (i = 0; i < mixLen; i++)
+                    {
+                        *pMainTrack =(uint8)((((*pMainTrack) * sacleMain)>>8) + (((*pSubTrack) * scaleSub >> 8)));
+                        //rk_printf("~~~Sum Track NO.%d = 0x%x \n", i, *pMainTrack);
+
+                        i++;
+                        if (i >= pstWriteAudioDev->TrackLen)
+                            break;
+                        pMainTrack++;
+                        pSubTrack++;
+                        *pMainTrack =(uint8)((((*pMainTrack) * sacleMain)>>8) + (((*pSubTrack) * scaleSub >> 8)));
+                        if (i >= pstWriteAudioDev->TrackLen)
+                            break;
+                        pMainTrack++;
+                        pSubTrack++;
+
+                    }
+
+                    pstWriteAudioDev->stSubTrack[j].Status = TRACK_IDLE; //TRACK_UNUSED for next select
+                }
+
+            }
+
+
+
+#ifdef _FADE_PROCESS_
+        #ifdef CODEC_24BIT
+            if (AudioDev_FadeOk(pstWriteAudioDev) != RK_SUCCESS)
+            {
+                if (pstWriteAudioDev->Bit == (I2S_DATA_WIDTH24+1))
+                {
+                    FadeProcess((long*)pstWriteAudioDev->Track,pstWriteAudioDev->TrackLen/(3*2));
+                }
+                else if(pstWriteAudioDev->Bit == (I2S_DATA_WIDTH16+1))
+                {
+                    FadeProcess((long*)pstWriteAudioDev->Track,pstWriteAudioDev->TrackLen/(2*2));
+                }
+                else if(pstWriteAudioDev->Bit == 32)
+                {
+                    FadeProcess((long*)pstWriteAudioDev->Track,pstWriteAudioDev->TrackLen/(4*2));
+                }
+            }
+        #else
+            FadeProcess((long*)pstWriteAudioDev->Track,pstWriteAudioDev->TrackLen/(2*2));
+        #endif
 
 #endif
+        }
 
 
 #ifdef CODEC_24BIT
@@ -1297,8 +1227,6 @@ COMMON API rk_err_t AudioDev_Write(HDC dev , uint32 TrackNo, uint8 * buf)
 #else
         RockcodecDev_Write(pstWriteAudioDev->hCodec, (uint8 *)pstWriteAudioDev->Track, pstWriteAudioDev->TrackLen, ASYNC_MODE);
 #endif
-        //printf(" RockcodecDev_Write OK\n");
-
         //WM8987Dev_Write(pstAudioDev->hCodec, pstAudioDev->Track, pstAudioDev->TrackLen, ASYNC_MODE);
         for (i = 0; i < pstWriteAudioDev->SuspendCnt;)
         {
@@ -1308,7 +1236,6 @@ COMMON API rk_err_t AudioDev_Write(HDC dev , uint32 TrackNo, uint8 * buf)
     }
     else
     {
-
         pstWriteAudioDev->stSubTrack[TrackNo].Status = TRACK_READIED;// - 1?
 
         for (i = 0; i < AUDIO_PROCESS_MIX; i++)
@@ -1599,12 +1526,14 @@ INIT API HDC AudioDev_Create(uint32 DevID, void *arg)
     pstDev->SuspendMode = ENABLE_MODE;
 
     pstAudioDev->hCodec = pstAudioArg->hCodec;
-    pstAudioDev->SampleRate = pstAudioArg->SampleRate;
+    pstAudioDev->TxSampleRate = pstAudioArg->SampleRate;
     pstAudioDev->Bit = pstAudioArg->Bit;
     pstAudioDev->playVolume = pstAudioArg->Vol;
 #ifdef _RK_EQ_
     pstAudioDev->UserEQ.Mode = pstAudioArg->EQMode;
 #endif
+
+    pstAudioDev->bypass = 0;
 
 #ifdef __OS_FWANALYSIS_FWANALYSIS_C__
     FW_LoadSegment(SEGMENT_ID_AUDIO_DEV, SEGMENT_OVERLAY_ALL);
@@ -1684,10 +1613,9 @@ INIT FUN rk_err_t AudioDevInit(AUDIO_DEVICE_CLASS * pstAudioDev)
     {
         pstAudioDev->stSubTrack[i].TrackProcess[0] = AUDIO_PROCESS_MIX_0;
     }
-    pstAudioDev->UserEQ.max_DbGain = gSysConfig.MusicConfig.Eq.max_DbGain;
 
     //set codec samplerate
-    RockcodecDev_SetRate(pstAudioDev->hCodec, pstAudioDev->SampleRate);
+    RockcodecDev_SetDacRate(pstAudioDev->hCodec, pstAudioDev->TxSampleRate);
 
 #ifdef _FADE_PROCESS_
 #ifdef __OS_FWANALYSIS_FWANALYSIS_C__
@@ -1695,12 +1623,13 @@ INIT FUN rk_err_t AudioDevInit(AUDIO_DEVICE_CLASS * pstAudioDev)
 #endif
 #endif
 
-    AudioDev_FadeInit((HDC)pstAudioDev, pstAudioDev->SampleRate/2,FADE_IN);
+    AudioDev_FadeInit((HDC)pstAudioDev, pstAudioDev->TxSampleRate/2,FADE_IN);
 
 #ifdef _RK_EQ_
     EffectInit();
     EQ_ClearBuff();
     AudioDev_SetEQ(pstAudioDev, EQ_NOR); //SET EQ befor set vol
+        pstAudioDev->UserEQ.max_DbGain = gSysConfig.MusicConfig.Eq.max_DbGain;
 #endif
 
     //printf("AudioDevInit set vol\n");
@@ -1803,6 +1732,8 @@ COMMON API void AudioDevService_Task_Enter(void)
 
     //AudioDev_FadeInit(gpstAudioDevInf, gpstAudioDevInf->SampleRate/2,FADE_IN);
 
+    #ifdef _RECORD_
+
     while(!gpstAudioDevInf->DeleteAudioServerFlag)
     {
         if(gpstAudioDevInf->ReadEnable)
@@ -1839,6 +1770,7 @@ COMMON API void AudioDevService_Task_Enter(void)
     {
         rkos_sleep(10000);
     }
+    #endif
 }
 
 
@@ -1853,8 +1785,8 @@ COMMON API void AudioDevService_Task_Enter(void)
 _DRIVER_AUDIO_AUDIODEVICE_COMMON_
 COMMON API rk_err_t AudioDevService_Task_DeInit(void *pvParameters)
 {
+    #ifdef _RECORD_
     gpstAudioDevInf->DeleteAudioServerFlag = 1;
-    printf("...audio device ask_DeInit...\n");
     rkos_semaphore_take(gpstAudioDevInf->osAudioReadReqSem, MAX_DELAY);
 
     AudioDevExitType(RecordTypeTransform(gpstAudioDevInf->RecordType));
@@ -1872,12 +1804,12 @@ COMMON API rk_err_t AudioDevService_Task_DeInit(void *pvParameters)
     gpstAudioDevInf->PcmLen = 0;
 
     rkos_semaphore_give(gpstAudioDevInf->osAudioReadReqSem);
-
-    printf("...audio device service delete ok...");
+    #endif
 
     return RK_SUCCESS;
 }
 
+#ifdef _RECORD_
 _DRIVER_AUDIO_AUDIODEVICE_COMMON_
 static CodecMode_en_t RecordTypeTransform(uint8 recordType)
 {
@@ -1886,7 +1818,7 @@ static CodecMode_en_t RecordTypeTransform(uint8 recordType)
     if(recordType < RECORD_TYPE_MIC_STERO
         || recordType > RECORD_TYPE_NULL)
     {
-        printf("Error RecordType %d \n",recordType);
+
     }
 
     switch(recordType)
@@ -1918,6 +1850,7 @@ static CodecMode_en_t RecordTypeTransform(uint8 recordType)
 
     return mode;
 }
+#endif
 
 /*******************************************************************************
 ** Name: AudioDevService_Task_Init
@@ -1932,6 +1865,8 @@ COMMON API rk_err_t AudioDevService_Task_Init(void *pvParameters,void *arg)
 {
     AUDIO_DEV_ARG * pstAudioArg = (AUDIO_DEV_ARG * )arg;
     rk_err_t ret;
+
+    #ifdef _RECORD_
 
     //rk_printf("SampleRare = %d old=%d\n",pstAudioArg->SampleRate, gpstAudioDevInf->SampleRate);
     //rk_printf("DataWidth  = %d\n",pstAudioArg->Bit);
@@ -1957,7 +1892,7 @@ COMMON API rk_err_t AudioDevService_Task_Init(void *pvParameters,void *arg)
     }
 
     AudioDev_SetRxSampleRate(gpstAudioDevInf, 0, pstAudioArg->SampleRate);
-    RockcodecDev_SetAdcInputMode(gpstAudioDevInf->hCodec, RecordTypeTransform(pstAudioArg->RecordType));
+    RockcodecDev_SetAdcMode(gpstAudioDevInf->hCodec, RecordTypeTransform(pstAudioArg->RecordType));
 
     gpstAudioDevInf->PcmIndex = 0;
 
@@ -1985,6 +1920,7 @@ COMMON API rk_err_t AudioDevService_Task_Init(void *pvParameters,void *arg)
     gpstAudioDevInf->ReadEnable = 0;
     //rk_printf("PcmBuf[1]=0x%x , PcmLen=%d\n", gpstAudioDevInf->PcmBuf[1],gpstAudioDevInf->PcmLen);
     return RK_SUCCESS;
+    #endif
 }
 
 
@@ -1996,19 +1932,63 @@ COMMON API rk_err_t AudioDevService_Task_Init(void *pvParameters,void *arg)
 
 
 #ifdef _AUDIO_SHELL_
+
+#ifdef CODEC_24BIT //24bit
+
+#if 1 //16bit
+_DRIVER_AUDIO_AUDIODEVICE_SHELL_
+uint8 Audiooutptr[1][16*(48*4+48*4)] =
+{
+    //0
+    {
+        #include "test01_1K0_48_16bit_16.data"
+    },
+};
+
+_DRIVER_AUDIO_AUDIODEVICE_SHELL_
+uint32 Audiolength = 16*(48*4);//176 * 32/4; 32bit
+
+#else
+
+_DRIVER_AUDIO_AUDIODEVICE_COMMON_
+uint8 __align(4) Audiooutptr[1][16*(48*6+48*6/3)] =
+{
+    //0
+    {
+        #include "test01_1K0_48_24bit_16.data"
+    },
+};
+_DRIVER_AUDIO_AUDIODEVICE_COMMON_
+uint32 Audiolength = 16*(48*6+48*6/3);
+#endif
+
+#else //16bit
+_DRIVER_AUDIO_AUDIODEVICE_SHELL_
+uint8 Audiooutptr[1][16*(48*4)] =
+{
+    //0
+    {
+        #include "test01_1K0_48_16bit_16.data"
+    },
+};
+
+_DRIVER_AUDIO_AUDIODEVICE_SHELL_
+uint32 Audiolength = 16*(48*4);//176 * 32/4; 32bit
+
+#endif
+
 _DRIVER_AUDIO_AUDIODEVICE_DATA_
 static SHELL_CMD ShellAudioName[] =
 {
-    "pcb",AudioShellPcb,"audio.pcb show fm pcb info","NULL",
-    "create",AudioShellCreate,"create audio device","NULL",
-    "delete",AudioShellDelete,"delete audio device","NULL",
-    "test",AudioShellTest,"audio test audio write","NULL",
+    "pcb",AudioShellPcb,"show fm pcb info","audio.pcb [audio device object id]",
+    "create",AudioShellCreate,"create audio device","audio.create",
+    "delete",AudioShellDelete,"delete audio device","audio.delete",
+    "test",AudioShellTest,"audio test audio write","audio.test",
     "txrx",AudioShellCodecI2sTRX,"audio tx rx","NULL",
-    "startrec",AudioShellAudioServerStart,"start audio server when playing","NULL",
-    "stoprec",AudioShellAudioServerStop,"delete audio server when playing","NULL",
-    "play",AudioShellAudioPlay,"start audio write when recoeding","NULL",
-    "stop",AudioShellAudioStop,"stop audio write when recoeding","NULL",
-    "help",NULL,"help cmd","NULL",
+    "startrec",AudioShellAudioServerStart,"start audio server when playing","audio.startrec",
+    "stoprec",AudioShellAudioServerStop,"delete audio server when playing","audio.stoprec",
+    "play",AudioShellAudioPlay,"start audio write when recoeding","audio.play",
+    "stop",AudioShellAudioStop,"stop audio write when recoeding","audio.stop",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -2071,6 +2051,8 @@ SHELL FUN void AudioShellGetPCMAndProcess()
     uint32 encodeDataLen, encodeDataLenlostlen, writeDataLen, encodeDataddr;
     uint32 index, index_old;
 
+    #ifdef _RECORD_
+
     if(gpstAudioDevInf->Channel == RECORD_CHANNEL_MONO)
     {
         if(RECORD_DATAWIDTH_16BIT == gpstAudioDevInf->Bit)
@@ -2111,6 +2093,7 @@ SHELL FUN void AudioShellGetPCMAndProcess()
         memcpy((uint8 *)POutPcmBuf[gpstAudioDevInf->PcmIndex], (uint8 *)gpstAudioDevInf->PcmBuf[gpstAudioDevInf->PcmIndex] ,(gpstAudioDevInf->SamplesPerBlock * gpstAudioDevInf->Bit) / 4);
 
     }
+    #endif
 }
 
 /*******************************************************************************
@@ -2127,14 +2110,18 @@ SHELL API rk_err_t AudioDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
 
-    ShellHelpSampleDesDisplay(dev, ShellAudioName, pstr);
+    if(ShellHelpSampleDesDisplay(dev, ShellAudioName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -2219,6 +2206,16 @@ SHELL FUN void AudioDevShellPlayTask_Enter(void * arg)
 _DRIVER_AUDIO_AUDIODEVICE_SHELL_
 SHELL FUN rk_err_t AudioShellAudioStop(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     DeleteAudioShellPlayFlag = 1;
     if(audio_ctrl_task_handle)
     {
@@ -2264,6 +2261,11 @@ SHELL FUN rk_err_t AudioShellAudioPlay(HDC dev, uint8 * pstr)
         return RK_SUCCESS;
     }
 
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     uint32 bufLen;
 
 #if 1
@@ -2272,11 +2274,11 @@ SHELL FUN rk_err_t AudioShellAudioPlay(HDC dev, uint8 * pstr)
 #if 0
         if(pstAudioArg->Bit == RECORD_DATAWIDTH_16BIT)
         {
-            RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
+            RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
         }
         else if (pstAudioArg->Bit == RECORD_DATAWIDTH_24BIT)
         {
-            RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
+            RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
         }
 #else
         audio_ctrl_queue = rkos_queue_create(1, sizeof(int));
@@ -2291,12 +2293,12 @@ SHELL FUN rk_err_t AudioShellAudioPlay(HDC dev, uint8 * pstr)
         }
 
         #ifdef CODEC_24BIT //24bit
-        RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
+        RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
         #else
-        RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
+        RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
         #endif
 #endif
-        RockcodecDev_SetMode(gpstAudioDevInf->hCodec, Codec_DACoutHP);
+        RockcodecDev_SetDacMode(gpstAudioDevInf->hCodec, Codec_DACoutHP);
         DeleteAudioShellPlayFlag = 0;
         AudioDev_SetChannel(gpstAudioDevInf, 0, 2);
         AudioDev_SetTrackLen(gpstAudioDevInf, Audiolength);
@@ -2304,7 +2306,7 @@ SHELL FUN rk_err_t AudioShellAudioPlay(HDC dev, uint8 * pstr)
         rk_printf("$#Bit =%d\n",gpstAudioDevInf->Bit);
         AudioDev_GetMainTrack(gpstAudioDevInf);
         gpstAudioDevInf->Track = (uint8 *)Audiooutptr;
-        //AudioDev_SetSampleRate(gpstAudioDevInf, 0, CodecFS_44100Hz);//Smaple rate PLL  CodecFS_44100Hz
+        //AudioDev_SetTxSampleRate(gpstAudioDevInf, 0, CodecFS_44100Hz);//Smaple rate PLL  CodecFS_44100Hz
         //stParg.Bit = 16;
         //stParg.RecordType = RECORD_TYPE_LINEIN2;
         //stParg.SampleRate = gpstAudioDevInf->SampleRate;
@@ -2344,6 +2346,16 @@ SHELL FUN rk_err_t AudioShellAudioPlay(HDC dev, uint8 * pstr)
 _DRIVER_AUDIO_AUDIODEVICE_SHELL_
 SHELL FUN rk_err_t AudioShellAudioServerStop(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     if(RKTaskFind(TASK_ID_AUDIODEVICESERVICE, 0) != NULL)
     {
         RKTaskDelete(TASK_ID_AUDIODEVICESERVICE, 0, SYNC_MODE);
@@ -2352,6 +2364,8 @@ SHELL FUN rk_err_t AudioShellAudioServerStop(HDC dev, uint8 * pstr)
     {
         rk_printf("audio server no exist...\n");
     }
+
+    return RK_SUCCESS;
 }
 /*******************************************************************************
 ** Name: AudioShellRecordPcmSend
@@ -2387,14 +2401,20 @@ SHELL FUN rk_err_t AudioShellAudioServerStart(HDC dev, uint8 * pstr)
         return RK_SUCCESS;
     }
 
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     if(RKTaskFind(TASK_ID_AUDIODEVICESERVICE, 0) == NULL)
     {
+        #ifdef _RECORD_
         stParg.Bit = 16;
         stParg.RecordType = RECORD_TYPE_LINEIN2;
         stParg.SampleRate = RECORD_SAMPLE_FREQUENCY_44_1KHZ;
         stParg.pfPcmCallBack = AudioShellRecordPcmSend;
         stParg.SamplesPerBlock = 1024;
         RKTaskCreate(TASK_ID_AUDIODEVICESERVICE, 0, &stParg, SYNC_MODE);
+        #endif
     }
     else
     {
@@ -2424,6 +2444,11 @@ SHELL FUN rk_err_t AudioShellCodecI2sTRX(HDC dev, uint8 * pstr)
         return RK_SUCCESS;
     }
 
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
 #if 1
     uint32 bufLen;
 
@@ -2431,25 +2456,25 @@ SHELL FUN rk_err_t AudioShellCodecI2sTRX(HDC dev, uint8 * pstr)
 #if 0
     if(pstAudioArg->Bit == RECORD_DATAWIDTH_16BIT)
     {
-        RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
+        RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
     }
     else if (pstAudioArg->Bit == RECORD_DATAWIDTH_24BIT)
     {
-        RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
+        RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
     }
 #else
     #ifdef CODEC_24BIT //24bit
-    RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
+    RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
     #else
-    RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
+    RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
     #endif
 #endif
-    RockcodecDev_SetMode(gpstAudioDevInf->hCodec, Codec_DACoutHP);
+    RockcodecDev_SetDacMode(gpstAudioDevInf->hCodec, Codec_DACoutHP);
 
     AudioDev_SetBit(gpstAudioDevInf, 0, 16);
     AudioDev_SetChannel(gpstAudioDevInf, 0, 2);
 
-    //RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
+    //RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
     //AudioDev_SetVol(gpstAudioDevInf->hCodec,25);
 
     if(gpstAudioDevInf->Bit == 16)
@@ -2484,6 +2509,8 @@ SHELL FUN rk_err_t AudioShellCodecI2sTRX(HDC dev, uint8 * pstr)
 
     AudioDev_GetMainTrack(gpstAudioDevInf);
 #endif
+
+    #ifdef _RECORD_
     stParg.Bit = 16;
     stParg.RecordType = RECORD_TYPE_LINEIN1;//,RECORD_TYPE_MIC_STERO
     stParg.SampleRate = RECORD_SAMPLE_FREQUENCY_44_1KHZ;
@@ -2491,6 +2518,8 @@ SHELL FUN rk_err_t AudioShellCodecI2sTRX(HDC dev, uint8 * pstr)
     stParg.SamplesPerBlock = 1024;
 
     RKTaskCreate(TASK_ID_AUDIODEVICESERVICE, 0, &stParg, SYNC_MODE);
+    #endif
+
     return RK_SUCCESS;
 }
 
@@ -2513,6 +2542,11 @@ SHELL FUN rk_err_t AudioShellDelete(HDC dev,  uint8 * pstr)
     if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
         return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
     }
 
 
@@ -2577,6 +2611,11 @@ SHELL FUN rk_err_t AudioShellTest(HDC dev, uint8 * pstr)
         return RK_SUCCESS;
     }
 
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     hAudio = RKDev_Open(DEV_CLASS_AUDIO,0,NOT_CARE);
     if ((hAudio == NULL) || (hAudio == (HDC)RK_ERROR) || (hAudio == (HDC)RK_PARA_ERR))
     {
@@ -2599,7 +2638,7 @@ SHELL FUN rk_err_t AudioShellTest(HDC dev, uint8 * pstr)
     printf("$#Bit =%d\n",gpstAudioDevInf->Bit);
     AudioDev_GetMainTrack(hAudio);
     gpstAudioDevInf->Track = (uint8 *)Audiooutptr;
-    AudioDev_SetSampleRate(pstAudioDev, 0, CodecFS_48KHz);//Smaple rate PLL  CodecFS_44100Hz
+    AudioDev_SetTxSampleRate(pstAudioDev, 0, CodecFS_48KHz);//Smaple rate PLL  CodecFS_44100Hz
 
 #if 0
      for(i=0;i < gpstAudioDevInf->TrackLen;i++)
@@ -2705,6 +2744,11 @@ SHELL FUN rk_err_t AudioShellPlay(HDC dev,  uint8 * pstr)
         return RK_SUCCESS;
     }
 
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
 
     return RK_SUCCESS;
 }
@@ -2729,6 +2773,11 @@ SHELL FUN rk_err_t AudioShellCreate(HDC dev,  uint8 * pstr)
     if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
         return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
     }
 
 #ifdef __DRIVER_AUDIO_AUDIODEVICE_C__
@@ -2786,6 +2835,10 @@ SHELL FUN rk_err_t AudioShellOpen(HDC dev,  uint8 * pstr)
         return RK_SUCCESS;
     }
 
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     SetI2SFreq(I2S_DEV0, I2S_XIN12M, NULL);//²âÊÔÄ¬ÈÏ12M
     //uint32 SetI2SFreq(UINT32 I2sId,Clock_Source_Sel Clk_Source,UINT32 TargetFreqHz)
@@ -2808,11 +2861,11 @@ SHELL FUN rk_err_t AudioShellOpen(HDC dev,  uint8 * pstr)
         stRockCodecDevArg.hI2s = RKDev_Open(DEV_CLASS_I2S, I2S_DEV0, NOT_CARE);
         stRockCodecDevArg.arg.SampleRate = I2S_FS_44100Hz;
 #ifndef _BROAD_LINE_OUT_
-        stRockCodecDevArg.arg.DacOutMode  = Codec_DACoutHP;
+        stRockCodecDevArg.arg.DacMode  = Codec_DACoutHP;
 #else
-        stRockCodecDevArg.arg.DacOutMode  = Codec_DACoutLINE;
+        stRockCodecDevArg.arg.DacMode  = Codec_DACoutLINE;
 #endif
-        stRockCodecDevArg.arg.AdcinMode = Codec_Standby;
+        stRockCodecDevArg.arg.AdcMode = Codec_Standby;
 #ifdef CODEC_24BIT
         stRockCodecDevArg.arg.DataWidth = VDW_TX_WIDTH_24BIT;
 #else
@@ -2871,6 +2924,11 @@ SHELL FUN rk_err_t AudioShellPcb(HDC dev, uint8 * pstr)
         return RK_SUCCESS;
     }
 
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     pstAudioDev = gpstAudioDevInf;
     if(pstAudioDev == NULL)
     {
@@ -2892,7 +2950,8 @@ SHELL FUN rk_err_t AudioShellPcb(HDC dev, uint8 * pstr)
         rk_printf_no_time("    .osFmOperSem = %08x",pstAudioDev->osAudioReadReqSem);
         rk_printf_no_time("    .hControlBus = %08x",pstAudioDev->hCodec);
         rk_printf_no_time("    .TrackLen = %d",pstAudioDev->TrackLen);
-        rk_printf_no_time("    .SampleRate = %d",pstAudioDev->SampleRate);
+        rk_printf_no_time("    .TxSampleRate = %d",pstAudioDev->TxSampleRate);
+        rk_printf_no_time("    .RxSampleRate = %d",pstAudioDev->RxSampleRate);
         rk_printf_no_time("    .Channel = %d",pstAudioDev->Channel);
         rk_printf_no_time("    .Bit = %d",pstAudioDev->Bit);
         rk_printf_no_time("    .Track = %08x",pstAudioDev->Track);
@@ -2903,7 +2962,9 @@ SHELL FUN rk_err_t AudioShellPcb(HDC dev, uint8 * pstr)
         rk_printf_no_time("    .stSubTrack = %08x",pstAudioDev->TrackProcess[0]);
         rk_printf_no_time("    .TrackProcess = %08x",pstAudioDev->TrackProcess[0]);
         rk_printf_no_time("    .playVolume = %08x",pstAudioDev->playVolume);
+        #ifdef _RK_EQ_
         rk_printf_no_time("    .UserEQ = %d",pstAudioDev->UserEQ);
+        #endif
         rk_printf_no_time("    .RecordType = %08x",pstAudioDev->RecordType);
         rk_printf_no_time("    .pfPcmCallBack = %08x",pstAudioDev->pfPcmCallBack);
         rk_printf_no_time("    .PcmBuf[0] = %08x",pstAudioDev->PcmBuf[0]);

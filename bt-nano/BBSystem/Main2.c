@@ -47,7 +47,9 @@
 #include "audio_main.h"
 #include "audio_file_access.h"
 #include "Msg.h"
+#ifdef _RECORD_
 #include "record_globals.h"
+#endif
 
 /*
 *********************************************************************************************************
@@ -72,7 +74,7 @@ _ATTR_BB_SYS_DATA_
 uint8  gFileOpStatus = 0;
 
 _ATTR_BB_SYS_DATA_
-uint32_t airplay_flag = 0;
+uint32 airplay_flag = 0;
 
 extern uint8 gCmdDone;
 extern uint32  CodecBufSize2;
@@ -123,11 +125,13 @@ enum FILE_OPT_STATUS
 };
 
 static BbCore_PCB pcb;
-static MediaBlock gMediaBlockInfo;
+MediaBlock gMediaBlockInfo;
 
 static FILE_HANDLE_t * gFileHandle;
 static RecFileHdl_t  * gRecFileHdl;
+#ifdef _RECORD_
 static RecordBlock     gRecordBlockInfo;
+#endif
 
 /*
 *********************************************************************************************************
@@ -313,13 +317,14 @@ __irq  void MailBoxDecService()
         case MEDIA_MSGBOX_CMD_FILE_CLOSE:
             pcb.audio_decode_status = AUDIO_DECODE_FILE_CLOSE;
             break;
-
+#ifdef _RECORD_
         case MEDIA_MSGBOX_CMD_REC_FILE_CLOSE:
             pcb.audio_decode_status = AUDIO_ENCODE_FILE_CLOSE;
             break;
-
+#endif
         case MEDIA_MSGBOX_CMD_DEC_OPEN:
             pcb.audio_decode_status = AUDIO_DECODE_OPEN;
+            memcpy(&gMediaBlockInfo, (uint8 *)data, sizeof(MediaBlock));
             //bb_printf1("STA = [DEC OPEN]");
             break;
 
@@ -351,11 +356,13 @@ __irq  void MailBoxDecService()
             break;
 
 //------------------------------------------------------------------------------
+#ifdef _RECORD_
         case MEDIA_MSGBOX_CMD_ENCODE_OPEN:
             pcb.audio_decode_status = AUDIO_ENCODE_OPEN;
             pcb.audio_decode_param  = data;
             //bb_printf1("recive MEDIA_MSGBOX_CMD_ENCODE_INIT");
             break;
+
 
      //record file close
         case MEDIA_MSGBOX_CMD_FILE_CREATE:
@@ -374,7 +381,7 @@ __irq  void MailBoxDecService()
             pcb.audio_decode_status = AUDIO_ENCORD_ENCODE;
             pcb.audio_decode_param  = data;
             break;
-
+#endif
         default:
             break;
     }
@@ -457,6 +464,102 @@ void RegHifiFileServer()
     MailBoxEnableA2BInt(MAILBOX_ID_0, MAILBOX_INT_2);
 }
 
+
+void Bit_Convertor_DEC2(short *ppsBuffer, uint32 Length, int16 bitpersample)
+{
+    int16 i = 0;
+    int16 offset = 0 ;
+
+    if(gMediaBlockInfo.CodecDataWidth == 24)
+    {
+        if (bitpersample == 16)
+        {
+            short *pOut = ppsBuffer;
+            long *pOut32 =(long *) ppsBuffer;
+            offset = Length*2;
+            for (i=offset-1; i >= 0 ; i--)
+            {
+                pOut32[i] = (pOut[i]<<16)>>8;
+            }
+        }
+        else if (bitpersample == 24)
+        {
+            char *pOut =(char *) ppsBuffer;
+            long *pOut32 =(long *) ppsBuffer;
+            offset = (Length)*2;
+            for (i=offset; i > 0 ; i--)
+            {
+                pOut32[i-1]  =( pOut[3*i-1]<<24 | pOut[3*i-2]<<16| pOut[3*i-3]<<8)>>8;
+            }
+        }
+        else if (bitpersample == 32)
+        {
+            long *pOut =(long *) ppsBuffer;
+            offset = Length*2;
+            for (i=offset-1; i >= 0 ; i--)
+            {
+                pOut[i] = pOut[i] >> 8;
+            }
+        }
+    }
+    else
+    {
+        if (bitpersample == 16)
+        {
+        }
+        else if (bitpersample == 24)
+        {
+            char *pOut = (char *)ppsBuffer;
+            offset = Length*2;
+            for (i=0; i < offset ; i++)
+            {
+                pOut[2*i]= pOut[3*i+1];
+                pOut[2*i+1]= pOut[3*i+2];
+            }
+        }
+        else if (bitpersample == 32)
+        {
+            char *pOut = (char *)ppsBuffer;
+            offset = Length*2;
+            for (i=0; i < offset ; i--)
+            {
+                pOut[2*i]= pOut[4*i+2];
+                pOut[2*i+1]= pOut[4*i+3];
+            }
+        }
+    }
+}
+
+
+
+API void Bit_Convertor_shift2(short *ppsBuffer, uint32 Length, int16 bitpersample)
+{
+    int16 i = 0;
+    int16 offset = 0 ;
+
+    if(gMediaBlockInfo.CodecDataWidth == 24)
+    {
+        if (bitpersample == 16)
+        {
+            long *pOut =(long *) ppsBuffer;
+            offset = Length*2;
+            for (i=offset-1; i >= 0 ; i--)
+            {
+                pOut[i] = pOut[i] << 8;
+            }
+        }
+        else if ((bitpersample == 24)||(bitpersample == 32))
+        {
+            long *pOut =(long *) ppsBuffer;
+            offset = Length*2;
+            for (i=offset-1; i >= 0 ; i--)
+            {
+                pOut[i] = pOut[i] << 8;
+            }
+        }
+    }
+}
+
 /*
 *********************************************************************************************************
 *                                              Main(void)
@@ -518,7 +621,9 @@ int Main2(void)
     MailBoxWriteB2ACmd(MSGBOX_CMD_SYSTEM_START_OK, MAILBOX_ID_0, MAILBOX_CHANNEL_0);
     MailBoxWriteB2AData(0, MAILBOX_ID_0, MAILBOX_CHANNEL_0);
     MemSet2(&gMediaBlockInfo,  0, sizeof(gMediaBlockInfo));
+#ifdef _RECORD_
     MemSet2(&gRecordBlockInfo, 0, sizeof(gRecordBlockInfo));
+#endif
     //PWM4 (for test)
     //Grf_GpioMuxSet(GPIO_CH2,GPIOPortA_Pin0,IOMUX_GPIO2A0_IO);
     //Gpio_SetPinDirection(GPIO_CH2,GPIOPortA_Pin0,GPIO_OUT);
@@ -558,7 +663,7 @@ int Main2(void)
             {
                 pcb.audio_decode_status = AUDIO_IDLE;
 
-                if (1 != CodecOpenDec2())
+                if (1 != CodecOpenDec2(gMediaBlockInfo.directplay,gMediaBlockInfo.savememory))
                 {
                     bb_printf1("###AUDIO_DECODE_OPEN error!###");
                     gMediaBlockInfo.DecodeErr = 1;
@@ -674,6 +779,38 @@ int Main2(void)
                 //bb_printf1("codec decode over");
                 CodecGetDecBuffer2((short*)&gMediaBlockInfo.Outptr, &gMediaBlockInfo.OutLength);
                 //bb_printf1("codec get buffer ");
+
+                if(gMediaBlockInfo.savememory)
+                {
+                    uint32 tracklen = gMediaBlockInfo.OutLength * 2 * gMediaBlockInfo.BitPerSample / 8;
+
+                    if (gMediaBlockInfo.BitPerSample == 24)
+                    {
+                        Bit_Convertor_DEC2((short*)gMediaBlockInfo.Outptr, tracklen/6, 24);
+                    }
+                    else if(gMediaBlockInfo.BitPerSample == 16)
+                    {
+                        Bit_Convertor_DEC2((short*)gMediaBlockInfo.Outptr, tracklen/(2*2), 16);
+                    }
+                    else if(gMediaBlockInfo.BitPerSample == 32)
+                    {
+                        Bit_Convertor_DEC2((short*)gMediaBlockInfo.Outptr, tracklen/(4*2), 32);
+                    }
+
+                    if (gMediaBlockInfo.BitPerSample == 24)
+                    {
+                        Bit_Convertor_shift2((short*)gMediaBlockInfo.Outptr, tracklen/(3*2), 24);
+                    }
+                    else if(gMediaBlockInfo.BitPerSample == 16)
+                    {
+                        Bit_Convertor_shift2((short*)gMediaBlockInfo.Outptr, tracklen/(2*2), 16);
+                    }
+                    else if(gMediaBlockInfo.BitPerSample == 32)
+                    {
+                        Bit_Convertor_shift2((short*)gMediaBlockInfo.Outptr, tracklen/(4*2), 32);
+                    }
+                }
+
                 gMediaBlockInfo.DecodeErr = 0;
                 MailBoxWriteB2ACmd(MEDIA_MSGBOX_CMD_DECODE_CMPL, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
                 MailBoxWriteB2AData((UINT32)&gMediaBlockInfo, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
@@ -818,6 +955,7 @@ int Main2(void)
              break;
 
 //------------------------------------------------------------------------------
+#ifdef _RECORD_
             case AUDIO_ENCODE_OPEN:
             {
                 pcb.audio_decode_status = AUDIO_IDLE;
@@ -888,6 +1026,7 @@ int Main2(void)
                 MailBoxWriteB2ACmd(MEDIA_MSGBOX_CMD_REC_FILE_CLOSE_CMPL, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
                 MailBoxWriteB2AData(0, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
                 break;
+#endif
 
             default :
                 break;
@@ -900,7 +1039,9 @@ int Main2(void)
 
         if (GetMsg(MSG_AUDIO_ENCODE_CLEAR_BUFFER))
         {
+            #ifdef _RECORD_
             RecordWriteToFile2();
+            #endif
         }
 
         //process hifi file operate

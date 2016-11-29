@@ -109,28 +109,33 @@ LOAD_REGION SYS_CODE_BASE
     {
         *(CG_UPNPAV_DMR_RENDERINGCONTROL_SERVICE_DESCRIPTION)
     }
-
-    DMR_AVTRANSPORT_SERVICE_DATA 0X84000000
+    
+    DMR_QPLAY_SERVICE_DATA 0x84000000
+    {
+        *(CG_QPLAY_SERVICE_DESCRIPTION)
+    }
+    
+    DMR_AVTRANSPORT_SERVICE_DATA 0X85000000
     {
         *(CG_UPNPAV_DMR_AVTRANSPORT_SERVICE_DESCRIPTION)
     }
 
-    DMR_NAMINGBITMAP_DATA  0X85000000
+    DMR_NAMINGBITMAP_DATA  0X86000000
     {
         *(NAMINGBITMAP)
     }
 
-    DMR_NMSTRTPAGES_DATA  0X86000000
+    DMR_NMSTRTPAGES_DATA  0X87000000
     {
         *(NMSTRTPAGES)
     }
 
-    DMR_NAMEPAGES_DATA  0X87000000
+    DMR_NAMEPAGES_DATA  0X88000000
     {
         *(NAMEPAGES)
     }
 
-    SHELL_CMD_NAME_DATA 0x88000000
+    SHELL_CMD_NAME_DATA 0x89000000
     {
         *.o(ShellRegisterName, +First)
         ShellTask.o(.conststrlit)
@@ -176,15 +181,26 @@ LOAD_REGION SYS_CODE_BASE
         watchdogdevice.o(.conststrlit)
         gpio.o(.conststrlit)
         FmDevice.o(.conststrlit)
-        shell_switch_player.o(.conststrlit)
+        wifithread.o(.conststrlit)
+        BlueToothControl.o(.conststrlit)
+        ShellCustomCmd.o(.conststrlit)
+        ShellSysCmd.o(.conststrlit)
+        ShellTaskCmd.o(.conststrlit)
+        ShellDevCmd.o(.conststrlit)
+        record.o(.conststrlit)
+        LCDDriver.o(.conststrlit)
+        SpiFlashDev.o(.conststrlit)
+        GUITask.o(.conststrlit)
+        ip_shell.o(.conststrlit)
+
     }
 
-    TASK_INF_DATA 0x89000000
+    TASK_INF_DATA 0x8a000000
     {
         *.o(InitTaskItem, +First)
         taskplugin.o(.conststrlit)
     }
-
+    
     ;--------------------------------------------------------------
     ;System Section
 
@@ -247,6 +263,7 @@ LOAD_REGION SYS_CODE_BASE
         *(SysInitData)
         *(SysInitBss)
     }
+    ScatterAssert(ImageLimit(INIT_CODE) < DEV_CODE_START)
 
     INIT_DATA (ImageLimit(AP_SYS_DATA)) OVERLAY
     {
@@ -978,6 +995,9 @@ LOAD_REGION SYS_CODE_BASE
         udn.o(+RO,+RW,+ZI)
         dlna-service.o(+RO,+RW,+ZI)
         ;dlna.o(+RO,+RW,+ZI)
+        qplay.o(+RO,+RW,+ZI)
+        cJSON.o(+RO,+RW,+ZI)
+        md5_32.o(+RO,+RW,+ZI)
     }
     ScatterAssert(ImageLimit(DLNA_DEV_CODE) < DEV_CODE_START)
 
@@ -2343,7 +2363,7 @@ LOAD_REGION SYS_CODE_BASE
 
     AP6181WIFI_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
     {
-        *(ap6181wifiShell)
+        *(wice_wifithread_shell)
     }
     ScatterAssert(ImageLimit(AP6181WIFI_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
 
@@ -2359,11 +2379,11 @@ LOAD_REGION SYS_CODE_BASE
     }
     ScatterAssert(ImageLimit(XXX_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
 
-    SHELL_SWITCH_PLAYER_CODE(SHELL_START_CODE_BASE ) OVERLAY
-    {
+    ;SHELL_SWITCH_PLAYER_CODE(SHELL_START_CODE_BASE ) OVERLAY
+    ;{
         ;*(SwitchPlayerShell)
-    }
-    ScatterAssert(ImageLimit(SHELL_SWITCH_PLAYER_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
+    ;}
+    ;ScatterAssert(ImageLimit(SHELL_SWITCH_PLAYER_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
 
     RK903_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
     {

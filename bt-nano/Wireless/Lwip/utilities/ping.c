@@ -1,6 +1,6 @@
 #include "BspConfig.h"
-
-//#ifdef _PING_SHELL_
+#ifdef USE_LWIP
+#ifdef _IP_SHELL_
 #include "RKOS.h"
 
 #include "../lwip-1.4.1/src/include/lwip/sockets.h"
@@ -174,24 +174,21 @@ SHELL API rk_err_t Ping_Shell(HDC dev, uint8 * pstr)
 {
     uint32 i = 0;
     uint8  *pItem;
-    uint16 StrCnt = 0;
     rk_err_t   ret;
     uint8 Space;
     uint8 *psize, *pcount, *pIP_addr;
     uint8 size_len = 0, count_len = 0, ip_addr_len = 0;
     uint8 *size = NULL, *count = NULL, *ip_addr = NULL;
     uint16 size_num = 0, count_num = 0;
+
     if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
         return RK_SUCCESS;
     }
-
-    StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+    if(*(pstr - 1) == '.')
     {
         return RK_ERROR;
     }
-
     while ((*(pstr + i) != NULL))
     {
         if (*(pstr + i) == '-')
@@ -271,4 +268,5 @@ SHELL API rk_err_t Ping_Shell(HDC dev, uint8 * pstr)
     return RK_SUCCESS;
 }
 
-//#endif
+#endif
+#endif

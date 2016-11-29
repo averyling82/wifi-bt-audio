@@ -89,7 +89,7 @@ typedef enum
 }CodecMIX_Mode_t;
 
 void Codec_PowerOnInitial(void);
-void Codec_SetMode(CodecMode_en_t Codecmode,CodecFS_en_t CodecFS);
+void Codec_SetMode(CodecMode_en_t Codecmode);
 void Codec_SetSampleRate(CodecFS_en_t CodecFS);
 void Codec_SetVolumet(unsigned int Volume);
 void Codec_DACMute(void);

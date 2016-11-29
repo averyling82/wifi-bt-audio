@@ -4,12 +4,10 @@
 
 #include "lwip/err.h"
 #include "lwip/netif.h"
-#include "wlan_intf_def.h"
 #include  "source_macro.h"
 
-
 #ifdef   __DRIVER_I6000_WIFI_C__
-
+#include "wlan_intf_def.h"
 struct ethernetif;
 
 typedef unsigned char (*tcpip_wifi_xmit_fn)(TCPIP_PACKET_INFO_T	*packet);

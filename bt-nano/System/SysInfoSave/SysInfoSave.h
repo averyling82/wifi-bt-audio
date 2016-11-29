@@ -27,7 +27,9 @@
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+#ifdef _RK_EQ_
 #include "effect.h"
+#endif
 
 
 /*
@@ -99,8 +101,12 @@ typedef PACK_STRUCT_BEGIN  struct _MUSICCONFIG
     uint8  RepeatModeBak;
     uint8  PlayOrder;               //play order
     uint32 ShuffleSeed;
-    uint8  BassBoost;//PAGE
+    uint8  BassBoost;
+
+    #ifdef  _RK_EQ_
     RKEffect Eq;                    //Eq
+    #endif
+
     UINT32 HoldMusicFullInfoSectorAddr ;
     UINT32 HoldMusicSortInfoSectorAddr;
     UINT16 HoldMusicuiBaseSortId[4];

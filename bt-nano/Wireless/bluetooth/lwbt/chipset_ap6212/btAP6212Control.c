@@ -20,6 +20,7 @@ int32 AP6212HwDownInitScript(void);
 int32 AP6212HwSetChipBaudrate(uint baudrate);
 int32 AP6212HwSetDevMac(struct bd_addr *bdaddr);
 static int32 AP6212SetMacAddr(void);
+static int32 AP6212SetDataUart(void);
 
 #define CMD_HEAD_LEN 4
 
@@ -224,6 +225,16 @@ power_up:
         return TIMEOUT;
     }
     BT_DEBUG("set mac OK");
+
+    AP6212SetDataUart();
+    ret = wait_ap6212_cmd_complete(50);
+    if(ret == TIMEOUT)
+    {
+        BT_DEBUG("set data uart TIMEOUT");
+        return TIMEOUT;
+    }
+    BT_DEBUG("set data uart OK");
+
     hci_cmd_complete(NULL);
     ap6212pcb.PowerStatus = POWER_STATUS_ON;
     return ret;
@@ -509,6 +520,35 @@ static int32 AP6212SetMacAddr(void)
     ((uint8 *)p->payload)[3] = 0x06;
 
     memcpy(((uint8 *)p->payload) + 4, ap6212pcb.bdaddr.addr, 6);
+
+    phybusif_output(p, p->tot_len);
+    pbuf_free(p);
+    return RETURN_OK;
+}
+
+_ATTR_BLUETOOTHCONTROL_CODE_
+static int32 AP6212SetDataUart(void)
+{
+    struct pbuf *p;
+
+    if((p = pbuf_alloc(PBUF_RAW, 9, PBUF_RAM)) == NULL)
+    {
+        LWIP_DEBUGF(HCI_DEBUG, ("AP6212SetDataUart: Could not allocate memory for pbuf\n"));
+        return RETURN_FAIL;
+    }
+
+    /* Assembling command packet */
+    ((uint8 *)p->payload)[0] = 0x01;
+    ((uint8 *)p->payload)[1] = 0x1c;
+    ((uint8 *)p->payload)[2] = 0xfc;
+    ((uint8 *)p->payload)[3] = 0x05;
+    ((uint8 *)p->payload)[4] = 0x01;
+    ((uint8 *)p->payload)[5] = 0x00;
+    ((uint8 *)p->payload)[6] = 0x00;
+    ((uint8 *)p->payload)[7] = 0x00;
+    ((uint8 *)p->payload)[8] = 0x00;
+
+   // memcpy(((uint8 *)p->payload) + 4, ap6212pcb.bdaddr.addr, 6);
 
     phybusif_output(p, p->tot_len);
     pbuf_free(p);

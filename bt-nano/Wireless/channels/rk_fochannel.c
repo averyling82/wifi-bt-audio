@@ -381,10 +381,9 @@ void setVolume(int vol)
 
     }
 #else
-
     mvol = vol*2;
-
 #endif
+    mvol = 31;
     rk_printf("mvol = %d", mvol);
     AudioDev_SetVol(gpstChannelPcb.pAudio, mvol);
     return;
@@ -493,7 +492,7 @@ rk_err_t ConfigServerInit(void)
 
 
       broadrecv_len = sizeof(struct sockaddr_in);
-     return TRUE;
+      return TRUE;
 }
 
 rk_err_t praseConfig(char *mbuf, int len)
@@ -593,7 +592,7 @@ rk_err_t ConfigServer(void)
           }
           else
           {
-                rk_printf("recvfrom timeout");
+                rk_printf("recvfrom timeout11");
           }
        }
         else
@@ -727,7 +726,7 @@ rk_err_t ConfigServer(void)
 
 }
 
-
+extern void SystemReset(void);
 void RK_ChannelTask_Enter(void)
 {
     CHANNEL_ASK_QUEUE Channel_ask;
@@ -802,7 +801,6 @@ void RK_ChannelTask_Enter(void)
 
     rk_printf("get server ip and port ok");
 
-    FREQ_EnterModule(FREQ_5);
 
 //stFifoArg.BlockCnt = 200000;
     stFifoArg.BlockCnt = 50;
@@ -839,6 +837,7 @@ void RK_ChannelTask_Enter(void)
     Channel_ask1.MSG.serverip.s_addr = inet_addr(server_ip);
     memcpy(Channel_ask1.MSG.mac, nanodmac, 17);
 
+    FREQ_EnterModule(FREQ_5);
 
     tcpcontrol_relink(&Channel_ask1);
 
@@ -893,6 +892,8 @@ void RK_ChannelTask_Enter(void)
         {
             case BROAD_CMD:
                 rk_printf("broad_cmd = %d", wifi_connect_flag());
+                rkos_sleep(1000);
+                rkos_sleep(1000);
                 while(wifi_connect_flag() != 1)  //wificonnect ok
                 {
                     rkos_sleep(1000);
@@ -912,7 +913,7 @@ void RK_ChannelTask_Enter(void)
                 rk_printf("reboard");
                 if(gpstChannelPcb.tcpStream_connectflag == CONNECT_SUCCESS)
                 {
-                    shutdown(gpstChannelPcb.tcpStream_sock, 0);
+                    shutdown(gpstChannelPcb.tcpStream_sock, 2);
                     closesocket(gpstChannelPcb.tcpStream_sock);
                     gpstChannelPcb.tcpStream_connectflag = CONNECT_FAIL;
                 }
@@ -924,14 +925,18 @@ void RK_ChannelTask_Enter(void)
                 }
                 if(gpstChannelPcb.tcpHeart_connectflag == CONNECT_SUCCESS)
                 {
-                     shutdown(gpstChannelPcb.tcpHeart_sock, 1);
+                     shutdown(gpstChannelPcb.tcpHeart_sock, 2);
                      closesocket(gpstChannelPcb.tcpHeart_sock);
                      gpstChannelPcb.tcpHeart_connectflag= CONNECT_FAIL;
                 }
                 RKTaskDelete(TASK_ID_TCPSTREAM_TASK, 0, SYNC_MODE);
                 RKTaskDelete(TASK_ID_TCPHEART_TASK, 0, SYNC_MODE);
                 RKTaskDelete(TASK_ID_TCPCONTROL_TASK, 0, SYNC_MODE);
-                rkos_sleep(100);
+                rkos_sleep(1000);
+                rkos_sleep(1000);
+                rkos_sleep(1000);
+                rkos_sleep(1000);
+                rkos_sleep(1000);
                 Channel_ask1.MSG.serverport = server_port;
                 Channel_ask1.MSG.serverip.s_addr = inet_addr(server_ip);
                 memcpy(Channel_ask1.MSG.mac, nanodmac, 17);
@@ -940,7 +945,9 @@ void RK_ChannelTask_Enter(void)
                 break;
 
             case RESTART_WIFI:
-                rk_printf("restart wifi");
+                rk_printf("restart system");
+                SystemReset();
+                /*
                 if(gpstChannelPcb.tcpStream_connectflag == CONNECT_SUCCESS)
                 {
                     shutdown(gpstChannelPcb.tcpStream_sock, 0);
@@ -972,7 +979,7 @@ void RK_ChannelTask_Enter(void)
                 rkos_sleep(1000);
                 rkos_sleep(1000);
                 //rk_wifi5_restart();
-                RKTaskCreate(TASK_ID_WIFI_APPLICATION, 0, (void *)WLAN_MODE_STA, SYNC_MODE);
+                RKTaskCreate(TASK_ID_WIFI_APPLICATION, 0, NULL, SYNC_MODE);
 
                 while(wifi_connect_flag() != 1)  //wificonnect ok
                 {
@@ -983,8 +990,10 @@ void RK_ChannelTask_Enter(void)
                 Channel_ask1.MSG.serverport = server_port;
                 Channel_ask1.MSG.serverip.s_addr = inet_addr(server_ip);
                 memcpy(Channel_ask1.MSG.mac, nanodmac, 17);
+                FREQ_EnterModule(FREQ_5);
 
                 tcpcontrol_relink(&Channel_ask1);
+                */
                 break;
 
             case UDPPACKET_LOSTCMD:
@@ -1309,13 +1318,13 @@ void RK_TcpControlTask_Enter(void)
             {
                 printf("tcpcontrol connect fail\n");
                 closesocket(gpstChannelPcb.tcpControl_sock);
-                if(rkos_GetFreeHeapSize() > 50*1024)
+                if(rkos_GetFreeHeapSize() > 30*1024)
                 {
                     rkos_sleep(1000);
                     n++;
                     continue;
                 }
-                else if(rkos_GetFreeHeapSize() < 50*1024 || wifi_connect_flag() != 1 || (n>10))
+                else if(rkos_GetFreeHeapSize() < 30*1024 || wifi_connect_flag() != 1 || (n>10))
                 {
                     tcpchannel_ask.cmd = RESTART_WIFI;
                     rkos_queue_send(gpstTcpControlTaskData->TcpcontrolRespQueue, &tcpcontrol_resp, MAX_DELAY);
@@ -1389,7 +1398,7 @@ void RK_TcpControlTask_Enter(void)
                          printf("\ncmdMsg.samplerate = %d , %d",cmdMsg.samplerate,rkos_GetFreeHeapSize());
 
                          set_flag = 1;
-                         AudioDev_SetSampleRate(gpstChannelPcb.pAudio, 0, cmdMsg.samplerate);
+                         AudioDev_SetTxSampleRate(gpstChannelPcb.pAudio, 0, cmdMsg.samplerate);
                          cursample = cmdMsg.samplerate;
                          set_flag = 0;
                          AudioDev_SetBit(gpstChannelPcb.pAudio, 0, 16);
@@ -1539,7 +1548,7 @@ void RK_TcpHeartTask_Enter(void)
             //send(gpstChannelPcb.tcpHeart_sock, buf, send_len, 0);
             heartline.seq ++;
             rkos_memcpy(buf+5, (char*)&heartline, sizeof(heartBeat));
-            rkos_sleep(10);
+            rkos_sleep(100);
         }
         else
         {
@@ -1710,11 +1719,12 @@ static void TcpMessage_Parse(char *mbuf, int mbuf_len)
         rk_printf("sp = %d\n",cmdMsg.samplerate);
         //rk_printf("a");
      #if 1
-        AudioDev_SetVol(gpstChannelPcb.pAudio, 0);
+
         if(cursample != cmdMsg.samplerate);
         {
            set_flag = 1;
-           AudioDev_SetSampleRate(gpstChannelPcb.pAudio, 0, cmdMsg.samplerate);
+           AudioDev_SetVol(gpstChannelPcb.pAudio, 0);
+           AudioDev_SetTxSampleRate(gpstChannelPcb.pAudio, 0, cmdMsg.samplerate);
            cursample = cmdMsg.samplerate;
            set_flag = 0;
         }

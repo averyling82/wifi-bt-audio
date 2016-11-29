@@ -255,7 +255,6 @@ COMMON API rk_err_t ADCDev_Read(HDC dev,uint16 channel,uint16 size, uint16 clk)/
     if(ADCDevHandler->ChannelItem[channel].size > 256)
     {
         ADCDevHandler->ChannelItem[channel].size = 256;
-        rk_printf("size > 256");
     }
 
     if(ADCDevHandler->ChannelItem[channel].CurSize < ADCDevHandler->ChannelItem[channel].size)
@@ -452,8 +451,6 @@ INIT API HDC ADCDev_Create(uint32 DevID, void * arg)
         {
             rkos_memory_free(ADCDevHandler->ChannelItem[i].buf);
         }
-
-        printf("init ADCDev fail");
         return (HDC) RK_ERROR;
     }
     //rk_printf("create MainChannel=%d clk=%d\n",ADCDevHandler->MainChannel,ADCDevHandler->ChannelItem[channel].clk);
@@ -609,11 +606,10 @@ INIT API rk_err_t ADCDev_DeInit(ADC_DEVICE_CLASS * ADCDevHandler)
 _DRIVER_AD_ADCDEVICE_DATA_
 static SHELL_CMD ShellADCName[] =
 {
-    "help",ADCDevShellHelp,"NULL","NULL",
-    "create",ADCDevShellCreate,"NULL","NULL",
-    "delete",ADCDevShellDel,"NULL","NULL",
-    "test",ADCDevShellTest,"NULL","NULL",
-    "pcb",ADCDevShellPcb,"NULL","NULL",
+    "create",ADCDevShellCreate,"create a adc device","adc.create </key | /mic0 | /fm1 | /fm0 | /bat>",
+    "delete",ADCDevShellDel,"delete a adc device","adc.delete",
+    "test",ADCDevShellTest,"test adc","adc.test",
+    "pcb",ADCDevShellPcb,"list adc device pcb","ad.pcb [device id]",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -638,10 +634,17 @@ rk_err_t ADCDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellADCName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -653,34 +656,14 @@ rk_err_t ADCDev_Shell(HDC dev, uint8 * pstr)
     i = (uint32)ret;
     pItem += StrCnt;
     pItem++;
-    switch (i)
+
+    ShellHelpDesDisplay(dev, ShellADCName[i].CmdDes, pItem);
+    if(ShellADCName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = ADCDevShellHelp(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = ADCDevShellCreate(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = ADCDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:
-            ret = ADCDevShellTest(dev,pItem);
-            break;
-
-        case 0x04:
-            ret = ADCDevShellPcb(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellADCName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
-    return RK_SUCCESS;
 }
 
 
@@ -691,25 +674,6 @@ rk_err_t ADCDev_Shell(HDC dev, uint8 * pstr)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-_DRIVER_AD_ADCDEVICE_HLP_DATA_
-SHELL FUN rk_err_t ADCDevShellHelp(HDC dev,  uint8 * pstr)
-{
-    pstr--;
-
-    if ( StrLenA((uint8 *) pstr) != 0)
-        return RK_ERROR;
-
-    printf("        Adc命令集提供了一系列的命令对Adc进行操作\r\n");
-    printf("Adc包含的子命令如下:           \r\n");
-    printf("help      显示help信息           \r\n");
-    printf("create    创建adc              \r\n");
-    printf("test      测试adc命令          \r\n");
-    printf("del       删除adc              \r\n");
-    printf("pcb       显示pcb信息  \r\n");
-
-    return RK_SUCCESS;
-}
-
 /*******************************************************************************
 ** Name: WRMDevShellTest
 ** Input:HDC dev, uint8 * pstr
@@ -729,14 +693,24 @@ SHELL FUN rk_err_t ADCDevShellTest(HDC dev, uint8 * pstr)
     ADC_DEV_ARG stADCArg;
     uint8 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     hADCDevHandle = RKDev_Open(DEV_CLASS_ADC, 0, NOT_CARE);
     if (hADCDevHandle == NULL)
     {
-        rk_printf("ADC OPEN FRIL\n");
+        rk_printf("ADC OPEN FRIL");
     }
     else
     {
-        rk_printf("ADC%d OPEN SUCCESS\n",ADC_CHANEL_KEY);
+        rk_printf("ADC%d OPEN SUCCESS",ADC_CHANEL_KEY);
     }
 
     for(temp=0; temp<200; temp++)
@@ -761,7 +735,7 @@ SHELL FUN rk_err_t ADCDevShellTest(HDC dev, uint8 * pstr)
         } */
         //ADCDev_Stop(pstADCPublicHandler);
         //adcVal = (UINT32)(Adc->ADC_DATA);
-        printf("Adc channel %d read value = %d\n", adcChannel, adcVal);
+        rk_printf("Adc channel %d read value = %d", adcChannel, adcVal);
     }
     RKDev_Close(hADCDevHandle);
     return RK_SUCCESS;
@@ -777,49 +751,19 @@ SHELL FUN rk_err_t ADCDevShellTest(HDC dev, uint8 * pstr)
 _DRIVER_AD_ADCDEVICE_SHELL_
 SHELL FUN rk_err_t ADCDevShellDel(HDC dev, uint8 * pstr)
 {
-    ADC_DEV_ARG stADCArg;
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //pstr++;
-        if (StrCmpA((uint8 *) pstr, "/key", 4) == 0)
-        {
-            DevID = 0;
-            stADCArg.channel = ADC_CHANEL_KEY;
-            stADCArg.size = 1;
-        }
-        else if (StrCmpA((uint8 *) pstr, "/mic/0", 4) == 0)
-        {
-            DevID = 0;
-            stADCArg.channel= ADC_MIC;
-            stADCArg.size = 512;
-        }
-        else if (StrCmpA((uint8 *) pstr, "/fm0", 4) == 0)
-        {
-            DevID = 0;
-            stADCArg.channel = ADC_CHANEL_FM0;
-            stADCArg.size = 512;
-        }
-        else if (StrCmpA((uint8 *) pstr, "/fm1", 4) == 0)
-        {
-            DevID = 0;
-            stADCArg.channel = ADC_CHANEL_FM1;
-            stADCArg.size = 512;
-        }
-        else if (StrCmpA((uint8 *) pstr, "/bat", 4) == 0)
-        {
-            DevID = 0;
-            stADCArg.channel = ADC_CHANEL_BATTERY;
-            stADCArg.size = 512;
-        }
-        else
-        {
-            return RK_ERROR;
-        }
+        return RK_SUCCESS;
     }
 
-    rk_printf("id=%d channel=%d opencnt=%d\n",DevID,stADCArg.channel,ADCDevISRHandler->ADCDevice.UseCnt);
-    if (RKDev_Delete(DEV_CLASS_ADC, DevID, &stADCArg) != RK_SUCCESS)
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
+    if (RKDev_Delete(DEV_CLASS_ADC, DevID, NULL) != RK_SUCCESS)
     {
         rk_print_string("ADCDev delete failure");
     }
@@ -843,19 +787,16 @@ SHELL FUN rk_err_t ADCDevShellCreate(HDC dev, uint8 * pstr)
     rk_err_t ret;
     uint8 DevID;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA((uint8 *) pstr, "help", 4) == 0)
-        {
-            rk_print_string("adc.help : adc help help.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     {
         pstr++;
         if (StrCmpA((uint8 *) pstr, "/key", 4) == 0)
@@ -864,7 +805,7 @@ SHELL FUN rk_err_t ADCDevShellCreate(HDC dev, uint8 * pstr)
             stADCArg.channel = ADC_CHANEL_KEY;
             stADCArg.size = 1;
         }
-        else if (StrCmpA((uint8 *) pstr, "/mic/0", 4) == 0)
+        else if (StrCmpA((uint8 *) pstr, "/mic0", 5) == 0)
         {
             DevID = 0;
             stADCArg.channel= ADC_MIC;
@@ -874,11 +815,11 @@ SHELL FUN rk_err_t ADCDevShellCreate(HDC dev, uint8 * pstr)
 
             if (stADCArg.hTimmer == NULL)
             {
-                printf("TIMER0 OPEN fail\n");
+                rk_printf("TIMER0 OPEN fail");
             }
             else
             {
-                printf("TIMER0 OPEN SUCCESS\n");
+                rk_printf("TIMER0 OPEN SUCCESS");
             }
 #endif
         }
@@ -909,11 +850,11 @@ SHELL FUN rk_err_t ADCDevShellCreate(HDC dev, uint8 * pstr)
     ret = RKDev_Create(DEV_CLASS_ADC,DevID, &stADCArg);
     if (ret != RK_SUCCESS)
     {
-        printf("ADC CREATE fail\n");
+        rk_printf("ADC CREATE fail");
     }
     else
     {
-        printf("ADC CREATE SUCCESS\n");
+        rk_printf("ADC CREATE SUCCESS");
     }
 #if 0
     ret = ADCDev_Register(ADCDevISRHandler,stADCArg.channel, stADCArg.size, 1, ADCISRCallBack);
@@ -942,6 +883,17 @@ SHELL FUN rk_err_t ADCDevShellPcb(HDC dev, uint8 * pstr)
 {
     HDC hWRMDev;
     uint32 DevID;
+
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     //Get WRMDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)

@@ -30,16 +30,13 @@ Notes:
 #ifndef __LWIPOPTS_H__
 #define __LWIPOPTS_H__
 #include "BspConfig.h"
-#ifdef _DRIVER_WIFI__
+#ifdef _WICE_
 #include "../../../../WICE/WWD/include/network/wwd_network_constants.h"
 #endif
 
 #include <stdlib.h>
 #include "FreeRTOS.h"
 #include "task.h"
-
-#define USE_LWIP
-
 #define LWIP_NETIF_API              1
 
 /*
@@ -452,10 +449,8 @@ static long xRAND()    {srand(xTaskGetTickCount()); return rand();}
 
 
 
-
-//#define WICED_LWIP_DEBUG
-#ifdef WICED_LWIP_DEBUG
-#define LWIP_DEBUG
+//#define LWIP_DEBUG
+#ifdef LWIP_DEBUG
 #define MEMP_OVERFLOW_CHECK            ( 2 )
 #define MEMP_SANITY_CHECK              ( 1 )
 
@@ -498,12 +493,11 @@ static long xRAND()    {srand(xTaskGetTickCount()); return rand();}
 
 #define LWIP_NOASSERT                  LWIP_DBG_OFF
 
-#ifdef _DRIVER_WIFI__
+#ifdef _WICE_
 //rk add
 #define PBUF_LINK_HLEN                 (WICED_PHYSICAL_HEADER)
 
 #define SUB_ETHERNET_HEADER_SPACE      (WICED_LINK_OVERHEAD_BELOW_ETHERNET_FRAME_MAX)
-
 
 #endif
 /*

@@ -79,7 +79,7 @@ DEV_INFO DevInfo_Table[DEV_CLASS_MAX_NUM] =
     SEGMENT_ID_MAILBOX_INIT,MailBoxDev_Create,MailBoxDev_Delete,"mailbox",
 #endif
 #ifdef __DRIVER_WATCHDOG_WATCHDOGDEVICE_C__
-    SEGMENT_ID_WDOG_INIT,WDTDev_Create,NULL,"wdog",
+    SEGMENT_ID_WDOG_INIT,WDTDev_Create,WDTDev_Delete,"wdog",
 #endif
 
 #ifdef __DRIVER_WM8987_WM8987DEVICE_C__
@@ -620,7 +620,6 @@ COMMON API void  RKDev_IdleCheck(void)
                     }
                 }
 
-                es = 0;
             }
             else if((pDev->IdleTick >= pDev->Idle1EventTime)
                 && (pDev->SuspendMode == FORCE_MODE)

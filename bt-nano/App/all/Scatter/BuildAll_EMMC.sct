@@ -161,7 +161,7 @@ LOAD_REGION SYS_CODE_BASE
         sdiodevice.o(.conststrlit)
         wifi.o(.conststrlit)
         dlna.o(.conststrlit)
-        airplay.o(.conststrlit)
+        
         rk903device.o(.conststrlit)
         wlcdevice.o(.conststrlit)
         uartdevice.o(.conststrlit)
@@ -169,6 +169,18 @@ LOAD_REGION SYS_CODE_BASE
         watchdogdevice.o(.conststrlit)
         gpio.o(.conststrlit)
         FmDevice.o(.conststrlit)
+        wifithread.o(.conststrlit)
+        BlueToothControl.o(.conststrlit)
+        ShellCustomCmd.o(.conststrlit)
+        ShellSysCmd.o(.conststrlit)
+        ShellTaskCmd.o(.conststrlit)
+        ShellDevCmd.o(.conststrlit)
+        record.o(.conststrlit)
+        LCDDriver.o(.conststrlit)
+        SpiFlashDev.o(.conststrlit)
+        GUITask.o(.conststrlit)
+        ip_shell.o(.conststrlit)
+
     }
 
     TASK_INF_DATA 0x89000000
@@ -239,6 +251,7 @@ LOAD_REGION SYS_CODE_BASE
         *(SysInitData)
         *(SysInitBss)
     }
+    ScatterAssert(ImageLimit(INIT_CODE) < DEV_CODE_START)
 
     INIT_DATA (ImageLimit(AP_SYS_DATA)) OVERLAY
     {
@@ -982,27 +995,13 @@ LOAD_REGION SYS_CODE_BASE
     ;XXX
     XXX_DEV_CODE(ImageLimit(ALAC_HDECODE_CODE)) OVERLAY
     {
-        airplay.o(+RO,+RW,+ZI)
-        commons.o(+RO,+RW,+ZI)
-        mdns.o(+RO,+RW,+ZI)
-        mdns_tinysvcmdns.o(+RO,+RW,+ZI)
-        airplay_player.o(+RO,+RW,+ZI)
-        rtp.o(+RO,+RW,+ZI)
-        rtsp.o(+RO,+RW,+ZI)
-        shairport.o(+RO,+RW,+ZI)
-        tinysvcmdns.o(+RO,+RW,+ZI)
-        external.o(+RO,+RW,+ZI)
-        airplay_heap.o(+RO,+RW,+ZI)
-        airplay_mplayer_ctrl.o(+RO,+RW,+ZI)
+       
     }
     ScatterAssert(ImageLimit(XXX_DEV_CODE) < DEV_CODE_START)
 
     SSL_DEV_CODE(ImageLimit(XXX_DEV_CODE)) OVERLAY
     {
-        airplay_md5.o(+RO,+RW,+ZI)
-        airplay_aes.o(+RO,+RW,+ZI)
-        airplay_aes_core.o(+RO,+RW,+ZI)
-        airplay_aes_cbc.o(+RO,+RW,+ZI)
+
         ;mbedtls_*.o(+RO,+RW,+ZI)
 
         asn1parse.o(+RO,+RW,+ZI)
@@ -2336,7 +2335,7 @@ LOAD_REGION SYS_CODE_BASE
 
     AP6181WIFI_SHELL_CODE(SHELL_START_CODE_BASE ) OVERLAY
     {
-        *(ap6181wifiShell)
+        *(wice_wifithread_shell)
     }
     ScatterAssert(ImageLimit(AP6181WIFI_SHELL_CODE) < (PMU_CODE_BASE + PMU_CODE_SIZE))
 

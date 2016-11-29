@@ -48,9 +48,7 @@
 #include "dlna.h"
 #include "Bsp.h"
 
-extern void dlna_main(void const * argument);
-extern void stop_dlna_device(void);
-extern void start_dlna_device(void);
+
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *
@@ -75,6 +73,19 @@ typedef struct _DLNA_TASK_DATA_BLOCK
    pQueue DLNAAPI_RESP;
 }DLNA_TASK_DATA_BLOCK;
 
+/*
+*---------------------------------------------------------------------------------------------------------------------
+*
+*                                                   local function declare
+*
+*---------------------------------------------------------------------------------------------------------------------
+*/
+rk_err_t dlna_shell_end(HDC dev, uint8 * pstr);
+rk_err_t dlna_shell_start(HDC dev, uint8 * pstr);
+extern void dlna_main(void const * argument);
+extern void stop_dlna_device(void);
+extern void start_dlna_device(void);
+
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -93,68 +104,6 @@ static DLNA_TASK_DATA_BLOCK *gpstDLNAData;
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-
-
-
-/*
-*---------------------------------------------------------------------------------------------------------------------
-*
-*                                                   local function declare
-*
-*---------------------------------------------------------------------------------------------------------------------
-*/
-_DLNA_SHELL_
-static SHELL_CMD ShellDLnaName[] =
-{
-    "start",NULL,"NULL","NULL",
-    "delete",NULL,"NULL","NULL",
-    "\b",NULL,"NULL","NULL",
-};
-
-_DLNA_SHELL_
-rk_err_t dlna_shell(HDC dev, uint8 * pstr)
-{
-    uint32 i = 0;
-    uint8  *pItem;
-    uint16 StrCnt = 0;
-    rk_err_t   ret;
-    uint8 Space;
-
-    StrCnt = ShellItemExtract(pstr,&pItem, &Space);
-    if (StrCnt == 0)
-    {
-        printf("\n StrCnt = 0 \n");
-        return RK_ERROR;
-    }
-    ret = ShellCheckCmd(ShellDLnaName, pItem, StrCnt);
-    if (ret < 0)
-    {
-        printf("\n ret < 0 \n");
-        return RK_ERROR;
-    }
-    i = (uint32)ret;
-    pItem += StrCnt;
-    pItem++;         //remove '.',the point is the useful item
-    switch (i)
-    {
-        case 0x00:
-            RKTaskCreate(TASK_ID_DLNA,0, NULL, SYNC_MODE);
-            rk_dlna_start();
-            break;
-
-        case 0x01:
-            rk_dlna_end();
-            RKTaskDelete(TASK_ID_DLNA,0,SYNC_MODE);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
-    }
-    ret = RK_SUCCESS;
-
-    return ret;
-}
 
 
 /*
@@ -339,8 +288,13 @@ rk_err_t Cg_Get_Xml(DEVICE_XML type, char **buf,  uint32 *buf_len)
        case XML_DMR_NAMEPAGES_DATA:
             FW_GetSegmentInfo(SEGMENT_ID_DMR_NAMEPAGES_DATA, &stCodeInfo);
             break;
+	#ifdef _QPLAY_ENABLE
+       case XML_DMR_QPLAY_SERVER_DESCRIPTION:
+            FW_GetSegmentInfo(SEGMENT_ID_DMR_QPLAY_SERVICE_DATA, &stCodeInfo);
+            break;
+	#endif
        default:
-            printf("no xml\n");
+            printf("no xml type=%d\n",type);
             return RK_ERROR;
     }
     page_addr = stCodeInfo.CodeLoadBase;
@@ -454,6 +408,52 @@ INIT API rk_err_t DLNATask_Init(void *pvParameters, void *arg)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+_DLNA_SHELL_
+static SHELL_CMD ShellDLnaName[] =
+{
+    "start",dlna_shell_start,"start dlna player","dlna.start",
+    "stop",dlna_shell_end,"stop dlna player","dlna.stop",
+    "\b",NULL,"NULL","NULL",
+};
+
+_DLNA_SHELL_
+rk_err_t dlna_shell(HDC dev, uint8 * pstr)
+{
+    uint32 i = 0;
+    uint8  *pItem;
+    uint16 StrCnt = 0;
+    rk_err_t   ret = RK_SUCCESS;
+    uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellDLnaName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
+    StrCnt = ShellItemExtract(pstr,&pItem, &Space);
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
+    {
+        return RK_ERROR;
+    }
+
+    ret = ShellCheckCmd(ShellDLnaName, pItem, StrCnt);
+    if (ret < 0)
+    {
+        return RK_ERROR;
+    }
+    i = (uint32)ret;
+    pItem += StrCnt;
+    pItem++;         //remove '.',the point is the useful item
+
+    ShellHelpDesDisplay(dev, ShellDLnaName[i].CmdDes, pItem);
+    if(ShellDLnaName[i].ShellCmdParaseFun != NULL)
+    {
+        ret = ShellDLnaName[i].ShellCmdParaseFun(dev, pItem);
+    }
+
+    return ret;
+}
 
 
 
@@ -464,6 +464,47 @@ INIT API rk_err_t DLNATask_Init(void *pvParameters, void *arg)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+/*******************************************************************************
+** Name: dlna_shell_end
+** Input:HDC dev, uint8 * pstr
+** Return: rk_err_t
+** Owner:aaron.sun
+** Date: 2016.11.8
+** Time: 15:46:22
+*******************************************************************************/
+_DLNA_SHELL_
+SHELL FUN rk_err_t dlna_shell_end(HDC dev, uint8 * pstr)
+{
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    rk_dlna_end();
+    RKTaskDelete(TASK_ID_DLNA,0,SYNC_MODE);
+    return RK_SUCCESS;
+}
+
+/*******************************************************************************
+** Name: dlna_shell_start
+** Input:HDC dev, uint8 * pstr
+** Return: rk_err_t
+** Owner:aaron.sun
+** Date: 2016.11.8
+** Time: 15:38:01
+*******************************************************************************/
+_DLNA_SHELL_
+SHELL FUN rk_err_t dlna_shell_start(HDC dev, uint8 * pstr)
+{
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    RKTaskCreate(TASK_ID_DLNA,0, NULL, SYNC_MODE);
+    rk_dlna_start();
+    return RK_SUCCESS;
+}
 
 
 

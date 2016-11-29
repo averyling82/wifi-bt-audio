@@ -521,7 +521,7 @@ COMMON FUN rk_err_t LineInControlTask_StartAudioServer(void)
     AudioDev_GetMainTrack(gpstLineInControlData->hAudio);
     AudioDev_SetVol(gpstLineInControlData->hAudio, gpstLineInControlData->playVolume);
     AudioDev_SetTrackLen(gpstLineInControlData->hAudio, gpstLineInControlData->OutPcmLen);
-    AudioDev_SetSampleRate(gpstLineInControlData->hAudio, 0, gpstLineInControlData->SampleRate);
+    AudioDev_SetTxSampleRate(gpstLineInControlData->hAudio, 0, gpstLineInControlData->SampleRate);
 
     gpstLineInControlData->POutPcmBuf[0] = rkos_memory_malloc(bufLen);
     if(gpstLineInControlData->POutPcmBuf[0] == NULL)
@@ -629,7 +629,9 @@ COMMON FUN rk_err_t LineIn_Process(UINT32 id, void *msg)
             return RK_SUCCESS;
 
         case LINEIN_CMD_RECORD:
+            #ifdef _RECORD_
             gpstLineInControlData->pfPcmCallBack =  RecordPcmInput;
+            #endif
             gpstLineInControlData->LineInRecordState = LINEIN_CMD_RECORD;
             break;
 
@@ -838,7 +840,9 @@ INIT API rk_err_t LineInControlTask_Init(void *pvParameters, void *arg)
     {
         pLineInControlTaskData->playVolume = 25;
     }
+    #ifdef _RK_EQ_
     pLineInControlTaskData->EqMode = gSysConfig.MusicConfig.Eq.Mode;
+    #endif
     gpstLineInControlData = pLineInControlTaskData;
     gpstLineInControlData->pfPcmCallBack = NULL;
     gpstLineInControlData->LineInPlayerState = LINEIN_PLAYER_STATE_PAUSE;

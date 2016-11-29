@@ -472,6 +472,8 @@ extern uint32 FwSysOffset;
 extern rk_err_t FW_CodePageDeInit(void);
 extern rk_err_t FwResume(void);
 extern rk_err_t FwSuspend(void);
+extern rk_err_t DBResume(void);
+extern rk_err_t DBSuspend(void);
 extern rk_err_t FW_DBInit(void);
 extern rk_err_t FW_CodePageLoad(void);
 extern rk_err_t FW_CodePageUnLoad(void);

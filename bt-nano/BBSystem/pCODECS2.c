@@ -172,14 +172,14 @@ unsigned long CodecOpenEnc2(unsigned long arg, short *ppsBuffer, long *plLength)
 
 
 _BBSYSTEM_PCODECS2_READ_
-unsigned long CodecOpenDec2()
+unsigned long CodecOpenDec2(unsigned long directplay, unsigned long savememory)
 {
     unsigned long ulRet;
 
     if(CurrentDecCodec2 == 0xff)
         return -1;
     // Pass the open request to the entry point for the codec.
-    ulRet = (DecCodecPFn2[CurrentDecCodec2])(SUBFN_CODEC_OPEN_DEC, 0, 0, 0);
+    ulRet = (DecCodecPFn2[CurrentDecCodec2])(SUBFN_CODEC_OPEN_DEC, directplay, savememory, 0);
 
     // Return the result to the caller.
     return(ulRet);

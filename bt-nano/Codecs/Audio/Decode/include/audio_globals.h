@@ -18,7 +18,10 @@
 #define _AUDIO_GLOBALS_H_
 
 #include "audio_main.h"
+
+#ifdef _RK_EQ_
 #include "effect.h"
+#endif
 
 //****************************************************************************
 // The following values are the IOCTLs which are sent to the individual codec
@@ -176,7 +179,7 @@ extern unsigned long XXX_EncFunction2(unsigned long ulIoctl, unsigned long ulPar
 
 // From codec.c
 ///////////////////////////////////////////////////////////////////////////////
-extern unsigned long CodeOpenDec(void);
+extern unsigned long CodeOpenDec(unsigned long directplay, unsigned long savememory);
 extern unsigned long CodeOpenEnc(unsigned long arg, short *ppsBuffer, long *plLength);
 extern unsigned long CodecGetSampleRate(unsigned long *pulSampleRate);
 extern unsigned long CodecGetChannels(unsigned long *pulChannels);
@@ -219,7 +222,9 @@ typedef struct mediaBlock
     unsigned long CurrentPlayTime;
     unsigned long TotalPlayTime;
     unsigned int BitRate;
-    //unsigned int Bps;
+    unsigned int directplay;
+    unsigned int savememory;
+    unsigned int CodecDataWidth;
     unsigned int BitPerSample;
     unsigned int SampleRate;
     unsigned int Channel;
@@ -295,7 +300,10 @@ typedef struct
     short  *pPCMBuf;
     short  *EncOutBuf;
     long   flag;
+
+    #ifdef  _RK_EQ_
     RKEffect EffectCtl;
+    #endif
 
 }AudioInOut_Type;
 

@@ -27,8 +27,6 @@
 #include "RKOS.h"
 #include "BSP.h"
 #include "DeviceInclude.h"
-#include "GUITask.h"
-
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -748,10 +746,9 @@ rk_err_t KeyDev_Delete(uint32 DevID, void * arg)
 _DRIVER_KEY_KEYDEVICE_SHELL_DATA_
 static SHELL_CMD ShellKeyName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "delete",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
+    "pcb",NULL,"list key device pcb inf","key.pcb [key device object id]",
+    "create",KeyDevShellCreate,"create a key device","key.create",
+    "delete",KeyDevShellDelete,"delete a key device","key.delete",
     "\b",NULL,"NULL","NULL",
 };
 /*******************************************************************************
@@ -768,11 +765,18 @@ SHELL API rk_err_t KeyDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
-    printf("KeyDev_Shell\n");
+
+    if(ShellHelpSampleDesDisplay(dev, ShellKeyName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -787,27 +791,11 @@ SHELL API rk_err_t KeyDev_Shell(HDC dev, uint8 * pstr)
 
     pItem += StrCnt;
     pItem++;
-    switch (i)
+
+    ShellHelpDesDisplay(dev, ShellKeyName[i].CmdDes, pItem);
+    if(ShellKeyName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            //ret = ADCDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = KeyDevShellCreate(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = KeyDevShellDelete(dev,pItem);
-            break;
-
-        case 0x03:
-            //ret = ADCDevShellTest(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellKeyName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 
@@ -921,6 +909,16 @@ SHELL FUN rk_err_t KeyDevShellCreate(HDC dev, uint8 * pstr)
     KEY_DEV_ARG stKeyArg;
     rk_err_t ret;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     #ifdef __DRIVER_AD_ADCDEVICE_C__
     stKeyArg.ADCHandler = RKDev_Open(DEV_CLASS_ADC, 0, NOT_CARE);
     if (stKeyArg.ADCHandler == NULL)
@@ -957,19 +955,6 @@ SHELL FUN rk_err_t KeyDevShellCreate(HDC dev, uint8 * pstr)
     {
         printf("key OPEN SUCCESS\n");
     }
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA((uint8 *) pstr, "help", 4) == 0)
-        {
-            rk_print_string("key.help : key help help.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     {
         pstr++;
@@ -1022,6 +1007,16 @@ SHELL FUN rk_err_t KeyDevShellDelete(HDC dev, uint8 * pstr)
     HDC hKey;
     KEY_DEV_ARG stKeyArg;
     rk_err_t ret;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     stKeyArg.ADCHandler = NULL;
     if (RKDev_Delete(DEV_CLASS_KEY, 0, &stKeyArg) != RK_SUCCESS)

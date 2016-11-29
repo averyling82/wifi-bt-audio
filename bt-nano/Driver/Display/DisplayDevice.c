@@ -817,10 +817,10 @@ INIT FUN rk_err_t DisplayDevInit(uint32 DevID, DISPLAY_DEVICE_CLASS * pstDisplay
 _DRIVER_DISPLAY_DISPLAYDEVICE_DATA_
 static SHELL_CMD ShellDisplayName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "mc",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
+    "pcb",DisplayDevShellPcb,"list display device pcb inf","display.pcb [display device object id]",
+    "create",DisplayDevShellCreate,"create a display device","display.create",
+    "delete",DisplayDevShellDel,"delete a display deivce","display.delete",
+    "test",DisplayDevShellTest,"test a display device","display.test",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -845,10 +845,16 @@ SHELL API rk_err_t DisplayDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellDisplayName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -864,28 +870,12 @@ SHELL API rk_err_t DisplayDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellDisplayName[i].CmdDes, pItem);
+    if(ShellDisplayName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = DisplayDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = DisplayDevShellMc(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = DisplayDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:
-            ret = DisplayDevShellTest(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellDisplayName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 
 }
@@ -914,6 +904,11 @@ SHELL FUN rk_err_t DisplayDevShellTest(HDC dev, uint8 * pstr)
 //    uint32 i;
 
 //    DISPLAY_DEVICE_CLASS * p;
+
+//    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+//    {
+//        return RK_SUCCESS;
+//    }
 
 //    hDisplay = RKDev_Open(DEV_CLASS_DISPLAY, 0, NULL);
 //    if (hDisplay == NULL)
@@ -1038,6 +1033,11 @@ SHELL FUN rk_err_t DisplayDevShellTest(HDC dev, uint8 * pstr)
 _DRIVER_DISPLAY_DISPLAYDEVICE_SHELL_
 SHELL FUN rk_err_t DisplayDevShellDel(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     if (RKDev_Delete(DEV_CLASS_DISPLAY, 0, NULL) != RK_SUCCESS)
     {
         rk_print_string("DISPLAYDev delete failure");
@@ -1055,25 +1055,30 @@ SHELL FUN rk_err_t DisplayDevShellDel(HDC dev, uint8 * pstr)
 ** Time: 10:23:49
 *******************************************************************************/
 _DRIVER_DISPLAY_DISPLAYDEVICE_SHELL_
-SHELL FUN rk_err_t DisplayDevShellMc(HDC dev, uint8 * pstr)
+SHELL FUN rk_err_t DisplayDevShellCreate(HDC dev, uint8 * pstr)
 {
     DISPLAY_DEV_ARG stDisplayDevArg;
     rk_err_t ret;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     stDisplayDevArg.hLcd = RKDev_Open(DEV_CLASS_LCD, 0, NOT_CARE);
     if (stDisplayDevArg.hLcd == NULL)
     {
-        printf( "Lcd OPEN fault\n");
+        rk_printf( "Lcd OPEN fault");
         return RK_ERROR;
     }
 
     ret = RKDev_Create(DEV_CLASS_DISPLAY, 0, &stDisplayDevArg);
     if (ret != RK_SUCCESS)
     {
-        printf("DisplayDev create failure\n");
+        rk_printf("DisplayDev create failure");
         return RK_ERROR;
     }
-    printf("\n DisplayDev create success\n");
+    rk_printf("DisplayDev create success");
     return RK_SUCCESS;
 }
 /*******************************************************************************
@@ -1087,8 +1092,12 @@ SHELL FUN rk_err_t DisplayDevShellMc(HDC dev, uint8 * pstr)
 _DRIVER_DISPLAY_DISPLAYDEVICE_SHELL_
 SHELL FUN rk_err_t DisplayDevShellPcb(HDC dev, uint8 * pstr)
 {
-    return RK_SUCCESS;
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
+    return RK_SUCCESS;
 }
 
 

@@ -63,7 +63,6 @@ uint32 Get_PLL_Post_Div(uint32 nHz, PLL_ARG_t *pPLL)
             }
         }
     }
-    DEBUG("ERROR");
     return ERROR;
 }
 
@@ -96,7 +95,6 @@ uint32 Get_PLL_Pre_Div(uint32 VCO, PLL_ARG_t *pPLL)
     }
     if (i >= 5)
     {
-        DEBUG("ERROR");
         return ERROR;
     }
 
@@ -255,6 +253,22 @@ uint32 SetPllFreq(uint32 nHz, PLL_ARG_t *pPllArg)
         }// here is hook for freq change end!!!
     }
 }
+
+
+void SetPllDefault(void)
+{
+    CRU->CRU_MODE_CON = ((DIV_CON_24M_MASK << 16) | 0) << DIV_CON_24M_SHIFT;
+    CRU->CRU_MODE_CON = ((APLL_WORK_MODE_MASK << 16) | APLL_WORK_MODE_SLOW) << APLL_WORK_MODE_SHIFT;
+    CRU->CRU_CLKSEL_CON[0] = ((CLK_SEL_MASK_FFFF << 16) | (0 << 12) | (0 << 8) | (0 << 4) | (0 << 0));       //sys_core & cal_core div
+    CRU->CRU_CLKSEL_CON[1] = ((CLK_SEL_MASK_3 << 16) | 0) << 8;
+    CRU->CRU_MODE_CON = (DIV_CON_24M_MASK << 16 | 0) << DIV_CON_24M_SHIFT;
+
+    //foutvco power up and DA power up
+    CRU->CRU_APLL_CON2 |= APLL_FOUTVCO_PD | APLL_DAC_PD | APLL_FOUTVCO_PD | APLL_FOUT4PHASE_PD;
+    //pll powr_up
+    CRU->CRU_APLL_CON1 = ((APLL_SOFTWARE_PD_MASK << 16) | APLL_SOFTWARE_PD) << APLL_SOFTWARE_PD_SHIFT;
+}
+
 
 
 /*

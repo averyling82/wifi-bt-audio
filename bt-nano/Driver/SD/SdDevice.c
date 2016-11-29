@@ -1388,10 +1388,10 @@ INIT FUN rk_err_t SdDevInit(SD_DEVICE_CLASS * pstSdDev)
 _DRIVER_SD_SDDEVICE_SHELL_DATA_
 static SHELL_CMD ShellSdName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
+    "pcb",SdDevShellPcb,"list sd device pcb inf","sd.pcb [object id]",
+    "create",SdDevShellCreate,"create a sd device","sd.create </0 | /1>",
+    "delete",SdDevShellDel,"delete a sd device","sd.delete",
+    "test",SdDevShellTest,"test sd device","sd.test <0 | 1>",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -1416,11 +1416,18 @@ SHELL API rk_err_t SdDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellSdName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1436,28 +1443,12 @@ SHELL API rk_err_t SdDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellSdName[i].CmdDes, pItem);
+    if(ShellSdName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = SdDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = SdDevShellCreate(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = SdDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:
-            ret = SdDevShellTest(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellSdName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 
 }
@@ -1490,6 +1481,11 @@ SHELL FUN rk_err_t SdDevShellTest(HDC dev, uint8 * pstr)
     uint32 i, j;
     rk_err_t ret;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     //Get SdDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -1515,19 +1511,6 @@ SHELL FUN rk_err_t SdDevShellTest(HDC dev, uint8 * pstr)
     //do test....
 
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("sd.test : sd test cmd.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     TotalSec = 0;
 
@@ -1670,6 +1653,11 @@ SHELL FUN rk_err_t SdDevShellDel(HDC dev, uint8 * pstr)
 {
     SD_DEVICE_CLASS * pstSdDev =  (SD_DEVICE_CLASS *)dev;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     if (RKDev_Delete(DEV_CLASS_SD, pstSdDev->stSdDevice.DevID, NULL) != RK_SUCCESS)
     {
         rk_print_string("SDDev delete failure");
@@ -1692,6 +1680,11 @@ SHELL FUN rk_err_t SdDevShellCreate(HDC dev, uint8 * pstr)
     SD_DEV_ARG stSdDevArg;
     rk_err_t ret;
     uint32 DevID;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
     if (StrCmpA(pstr, "/0", 2) == 0)
     {
@@ -1742,6 +1735,11 @@ SHELL FUN rk_err_t SdDevShellPcb(HDC dev, uint8 * pstr)
 {
     HDC hSdDev;
     uint32 DevID;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
     //Get SdDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)

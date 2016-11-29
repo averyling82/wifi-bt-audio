@@ -64,7 +64,7 @@
 //WIFI_AP wifi_ap_data[WIFI_AP_COUNT] = {0};
 //unsigned int wifi_ap_sum = 0;
 
-WIFI_AP JoinAp;
+extern WIFI_AP JoinAp;
 WIFI_AP  easy_join_ap;
 extern wiced_bool_t wifi_network_up_flag;
 extern unsigned char easy_setup_flag;
@@ -106,7 +106,6 @@ static void           link_renew                ( void );
 static void           link_handshake_error      ( void );
 
 static void* softap_event_handler( const wwd_event_header_t* event_header, const uint8_t* event_data, /*@returned@*/void* handler_user_data );
-static wiced_result_t scan_handler( wiced_scan_handler_result_t* malloced_scan_result );
 void wifi_application_thread(void * arg);
 
 
@@ -137,7 +136,7 @@ static wiced_wifi_softap_event_handler_t ap_event_handler = NULL;
 static xSemaphoreHandle wifitest_semaphore = NULL;
 
 
-wiced_bool_t wifi_link = WICED_FALSE;
+extern uint32 wifi_link;
 
 #if 0
 /*******************************************************************************
@@ -151,19 +150,6 @@ wiced_bool_t wifi_link = WICED_FALSE;
 _ap6181WICE_WIFI_SHELL_
 SHELL FUN rk_err_t wifi_del(uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("music.del : del wifi \r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
 #if 1
     printf("!!! del wifi fifo \r\n");
@@ -353,166 +339,6 @@ wiced_result_t wiced_init( void )
 
     return WICED_SUCCESS;
 }
-
-
-static wiced_result_t scan_handler( wiced_scan_handler_result_t* malloced_scan_result )
-{
-#if 0
-    /* Check if scan is finished (Invalid scan result) */
-    if (malloced_scan_result->scan_complete != WICED_TRUE)
-    {
-        char temp_buffer[70];
-        char* temp_ptr;
-        uint16_t temp_length;
-        int i;
-
-        wiced_tcp_stream_t* stream = scan_data->stream;
-
-        /* Result ID */
-        temp_length = (uint16_t) sprintf( temp_buffer, "%d\n", scan_data->result_count );
-        scan_data->result_count++;
-        wiced_tcp_stream_write(stream, temp_buffer, temp_length);
-
-        /* SSID */
-        temp_ptr = temp_buffer;
-        for ( i = 0; i < malloced_scan_result->ap_details.SSID.len; i++)
-        {
-            temp_ptr += sprintf( temp_ptr, "%02X", malloced_scan_result->ap_details.SSID.val[i] );
-        }
-        temp_ptr += sprintf( temp_ptr, "\n" );
-
-        wiced_tcp_stream_write(stream, temp_buffer, (uint32_t)( temp_ptr - temp_buffer ) );
-
-        /* Security */
-        temp_length = (uint16_t) sprintf( temp_buffer, "%d\n", malloced_scan_result->ap_details.security );
-        wiced_tcp_stream_write(stream, temp_buffer, temp_length);
-        temp_length = (uint16_t) sprintf( temp_buffer, "%s\n", (   malloced_scan_result->ap_details.security == WICED_SECURITY_OPEN )? "OPEN" :
-                                          ( ( malloced_scan_result->ap_details.security & WEP_ENABLED   ) != 0 )? "WEP"  :
-                                          ( ( malloced_scan_result->ap_details.security & WPA_SECURITY  ) != 0 )? "WPA"  :
-                                          ( ( malloced_scan_result->ap_details.security & WPA2_SECURITY ) != 0 )? "WPA2" : "UNKNOWN" );
-        wiced_tcp_stream_write(stream, temp_buffer, temp_length);
-
-        /* RSSI */
-        temp_length = (uint16_t) sprintf( temp_buffer, "%d\n", malloced_scan_result->ap_details.signal_strength );
-        wiced_tcp_stream_write(stream, temp_buffer, temp_length);
-
-        /* Channel */
-        temp_length = (uint16_t) sprintf( temp_buffer, "%d\n", malloced_scan_result->ap_details.channel );
-        wiced_tcp_stream_write(stream, temp_buffer, temp_length);
-
-        /* BSSID */
-        temp_length = (uint16_t) sprintf( temp_buffer, "%02X%02X%02X%02X%02X%02X\n", malloced_scan_result->ap_details.BSSID.octet[0], malloced_scan_result->ap_details.BSSID.octet[1], malloced_scan_result->ap_details.BSSID.octet[2], malloced_scan_result->ap_details.BSSID.octet[3], malloced_scan_result->ap_details.BSSID.octet[4], malloced_scan_result->ap_details.BSSID.octet[5] );
-        wiced_tcp_stream_write(stream, temp_buffer, temp_length);
-
-        /* Remembered */
-        temp_length = (uint16_t) sprintf( temp_buffer, "%d\n", 0 );
-        wiced_tcp_stream_write(stream, temp_buffer, temp_length);
-
-
-    }
-#endif
-    printf("ssid_value= %s\r\n", malloced_scan_result->ap_details.SSID.value);
-    rkos_memory_free(malloced_scan_result);
-
-    return WICED_SUCCESS;
-}
-
-#if 1
-//uint8 tcp_buf[2048];
-void ap6181tcp_test_task(void *arg)
-{
-
-    struct tcp_pcb *pcb;
-    struct netconn *conn;
-    struct netconn *conn_new;
-    struct netbuf * buf;
-    ip_addr_t lipaddr;
-    err_t err;
-    rk_printf("wifi test");
-    conn = netconn_new(NETCONN_TCP);
-    if (conn == NULL)
-    {
-        printf("netconn_new alloc fail\n");
-
-        while (1)
-        {
-            host_rtos_delay_milliseconds(100);
-        }
-    }
-
-    netconn_bind(conn , IP_ADDR_ANY, 90);
-
-    netconn_listen(conn);
-
-    netconn_accept(conn, &conn_new);
-    while (1)
-    {
-        if (netconn_recv(conn_new, &buf) == 0)
-        {
-            netbuf_delete(buf);
-        }
-        else
-        {
-            printf("netconn_close\n");
-            netconn_close(conn_new);
-            netconn_delete(conn_new);
-            netconn_accept(conn, &conn_new);
-            printf("netconn_accept\n");
-
-        }
-    }
-}
-void ap6181tcp_test_init(void)
-{
-    wiced_thread_t   tcp_task_tcb;
-    host_rtos_create_thread(&tcp_task_tcb, ap6181tcp_test_task, "ap6181tcp_test_task", NULL, 512, 18);
-}
-void ap6181tcp_test_send_task(void *arg)
-{
-    struct netconn *conn;
-    ip_addr_t lipaddr;
-
-    uint8 *send_buf = NULL;
-    int i=0;
-
-
-    send_buf = rkos_memory_malloc(2048);
-
-    for(i=0; i<2048; i++)
-    {
-        *(send_buf+i) = i;
-    }
-
-    lipaddr.addr = 0x6500a8c0;
-    conn = netconn_new(NETCONN_TCP);
-    if (conn == NULL)
-    {
-        printf("netconn_new alloc fail\n");
-
-        while (1)
-        {
-            host_rtos_delay_milliseconds(100);
-        }
-    }
-
-    netconn_connect(conn, &lipaddr, 80);
-    rk_printf("wifi send ok");
-    while (1)
-    {
-       // for(i=0; i<10; i++)
-        //{
-             netconn_write(conn, send_buf, 2048, NETCONN_COPY);
-            // rkos_sleep(1);
-      //  }
-       // rkos_sleep(1000);
-    }
-}
-void ap6181tcp_test_send_init(void)
-{
-    wiced_thread_t   tcp_task_tcb;
-    host_rtos_create_thread(&tcp_task_tcb, ap6181tcp_test_send_task, "ap6181tcp_send", NULL, 512, 18);
-}
-#endif
 
 _ap6181WICE_WIFI_INIT_
 wiced_result_t wiced_core_init( void )
@@ -852,7 +678,6 @@ wiced_result_t wiced_join_ap( void )
         if(easy_setup_flag == WICED_BUSY)
         {
             wifi_network_up_flag = 0;
-			WPRINT_NETWORK_INFO(("jjjhhh easy_setup_flag busy\r\n"));
             return WICED_ERROR;
         }
         //wifi_network_up_flag = 1;
@@ -1005,7 +830,7 @@ wiced_result_t wiced_wifi_scan_networks( wiced_scan_result_handler_t results_han
     memset( scan_result_ptr, 0, sizeof( wiced_scan_handler_result_t ) );
     scan_result_ptr->status    = WICED_SCAN_INCOMPLETE;
     scan_result_ptr->user_data = user_data;
-	rk_printf("jjjhhh 2222 wwd_wifi_scan\n");
+
     if ( wwd_wifi_scan( WICED_SCAN_TYPE_ACTIVE, WICED_BSS_TYPE_ANY, NULL, NULL, chlist, &extparam, wiced_scan_result_handler, (wiced_scan_result_t**) &scan_result_ptr, &scan_handler, WWD_STA_INTERFACE ) != WWD_SUCCESS )
     {
         goto error_with_result_ptr;

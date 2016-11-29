@@ -302,6 +302,8 @@ rk_size_t EmmcDev_Read(HDC dev, uint32 LBA, uint8* buffer, uint32 len)
     }
 
     rkos_semaphore_take(pstEmmcDev->osEmmcOperReqSem, MAX_DELAY);
+    FREQ_Disable();
+
 
     if (1 == len)
     {
@@ -350,9 +352,8 @@ rk_size_t EmmcDev_Read(HDC dev, uint32 LBA, uint8* buffer, uint32 len)
 
 
     }
-
+    FREQ_Enable();
     rkos_semaphore_give(pstEmmcDev->osEmmcOperReqSem);
-
     return ret;
 }
 
@@ -381,6 +382,8 @@ rk_size_t EmmcDev_Write(HDC dev, uint32 LBA, uint8* buffer, uint32 len)
     }
 
     rkos_semaphore_take(pstEmmcDev->osEmmcOperReqSem, MAX_DELAY);
+
+    FREQ_Disable();
 
     if (1 == len)
     {
@@ -431,7 +434,9 @@ rk_size_t EmmcDev_Write(HDC dev, uint32 LBA, uint8* buffer, uint32 len)
 
     }
 
-     rkos_semaphore_give(pstEmmcDev->osEmmcOperReqSem);
+    FREQ_Enable();
+
+    rkos_semaphore_give(pstEmmcDev->osEmmcOperReqSem);
 
     return ret;
 }
@@ -1150,10 +1155,9 @@ rk_err_t EmmcDevInit(EMMC_DEVICE_CLASS * pEmmcDev)
 _DRIVER_EMMC_EMMCDEVICE_DATA_
 static  SHELL_CMD ShellEmmcName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "pcb",EmmcShellPcb,"list emmc device pcb inf","emmc.pcb [emmc device object id]",
+    "create",EmmcShellCreate,"create a emmc device","emmc.create",
+    "test",EmmcShellTest,"test emmc deivce","emmc.test",
     "\b",NULL,"NULL","NULL",   // the end
 };
 
@@ -1179,11 +1183,17 @@ rk_err_t EmmcDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellEmmcName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1199,32 +1209,12 @@ rk_err_t EmmcDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                                            //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellEmmcName[i].CmdDes, pItem);
+    if(ShellEmmcName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = EmmcShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = EmmcShellCreate(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = EmmcShellTest(dev,pItem);
-            break;
-
-        case 0x03:  //help
-            ret = EmmcShellHelp (dev,pItem);
-            break;
-
-        case 0x04:
-            //ret = ShellCustomParsing(pItem,UartDeviceHandler);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellEmmcName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 
@@ -1278,20 +1268,10 @@ SHELL FUN rk_err_t EmmcShellTest(HDC dev, uint8 * pstr)
     uint32 i, j;
     rk_err_t ret;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("emmc.test : emmc test cmd.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
-
 
     hEmmcDev = RKDev_Open(DEV_CLASS_EMMC, 0, NOT_CARE);
     if(hEmmcDev == NULL)
@@ -1457,22 +1437,14 @@ SHELL FUN rk_err_t EmmcShellTest(HDC dev, uint8 * pstr)
 _DRIVER_EMMC_EMMCDEVICE_SHELL_
 rk_err_t EmmcShellPcb(HDC dev,  uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA((uint8 *)pstr, "help", 4) == 0)
-        {
-            rk_print_string("emmc.pcb : emmc pcb info .\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
     return RK_SUCCESS;
 
@@ -1496,19 +1468,11 @@ rk_err_t EmmcShellCreate(HDC dev,  uint8 * pstr)
     //uint8 DevPath[16], len;
     EMMC_DEV_ARG stEmmcDevArg;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA((uint8 *)pstr, "help", 4) == 0)
-        {
-            rk_print_string("emmc.open : open emmc.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+
 
     stEmmcDevArg.hSdc = RKDev_Open(DEV_CLASS_SDC, 0, NOT_CARE);
 

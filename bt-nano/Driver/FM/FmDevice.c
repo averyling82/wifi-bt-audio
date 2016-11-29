@@ -845,10 +845,10 @@ INIT FUN rk_err_t FmDevInit(FM_DEVICE_CLASS * pstFmDev)
 _DRIVER_FM_FMDEVICE_SHELL_
 static SHELL_CMD ShellFmName[] =
 {
-    "pcb",FmDevShellPcb,"fm.pcb show fm pcb info","NULL",
-    "create",FmDevShellCreate,"create fm device","NULL",
-    "delete",FmDevShellDel,"delete fm device","NULL",
-    "test",FmDevShellTest,"fm test","NULL",
+    "pcb",FmDevShellPcb,"show fm pcb info","fm.pcb[ device number] --- display device pcb info",
+    "create",FmDevShellCreate,"create fm device","fm.create --- create the fm device list",
+    "delete",FmDevShellDel,"delete fm device","fm.delete --- delete the fm device list ",
+    "test",FmDevShellTest,"fm test","fm.test --- open a radio station",
     "cc",FmDevShellManualSearch,"change FM channel","cc.pre:previous channel; cc.next:next channel",
     "setvol",FmDevShellSetVol,"set FM vol","setvol.1:set fm output vol 1; setvol.5:set fm output vol 5; setvol.10:set fm output vol 10; setvol.15:set fm output vol 15",
     "setmute",FmDevShellSetMute,"set FM mute or unmute","setmute 1:set mute; setmute 0:set unmute",
@@ -859,7 +859,6 @@ static SHELL_CMD ShellFmName[] =
     "prestation",FmDevShellPreStation,"previous Station in the preset","NULL",
     "nextstation",FmDevShellNextStation,"next Station in the preset","NULL",
     "mod",FmDevShellByPassModChange,"change mode between bypass and fm-line","mod.bypass:fm bypass mode; mod.rec:fm recording mod",
-    "help",NULL,"help cmd","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -888,13 +887,17 @@ SHELL API rk_err_t FmDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
 
-    ShellHelpSampleDesDisplay(dev, ShellFmName, pstr);
+    if(ShellHelpSampleDesDisplay(dev, ShellFmName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -955,12 +958,12 @@ SHELL FUN rk_err_t FmDevShellByPassModChange(HDC dev, uint8 * pstr)
     if(StrCmpA(pstr, "bypass", 6) == 0)
     {
         Codec_ExitMode(Codec_Line1ADC);
-        RockcodecDev_SetAdcInputMode(hRockCodec, Codec_Line1in);
+        RockcodecDev_SetAdcMode(hRockCodec, Codec_Line1in);
     }
     else if(StrCmpA(pstr, "rec", 3) == 0)
     {
         Codec_ExitMode(Codec_Line1in);
-        RockcodecDev_SetAdcInputMode(hRockCodec, Codec_Line1ADC);
+        RockcodecDev_SetAdcMode(hRockCodec, Codec_Line1ADC);
     }
 
     RKDev_Close(hRockCodec);
@@ -1503,7 +1506,6 @@ SHELL FUN rk_err_t FmDevShellTest(HDC dev, uint8 * pstr)
     if((hFmDev == NULL) || (hFmDev == (HDC)RK_ERROR) || (hFmDev == (HDC)RK_PARA_ERR))
     {
         rk_print_string("FmDev open failure");
-		rk_printf("hFmDev=%d\n",(int)hFmDev);
          return RK_SUCCESS;
     }
 
@@ -1565,18 +1567,18 @@ SHELL FUN rk_err_t FmDevShellDel(HDC dev, uint8 * pstr)
     #endif
     printf("AudioDevExitType...\n");
     #ifdef CODEC_24BIT //24bit
-    //RockcodecDev_SetDataWidth(hFmDev,ACodec_I2S_DATA_WIDTH24);
+    //RockcodecDev_SetDacDataWidth(hFmDev,ACodec_I2S_DATA_WIDTH24);
     #else
-    RockcodecDev_SetDataWidth(hFmDev,ACodec_I2S_DATA_WIDTH16);
+    RockcodecDev_SetDacDataWidth(hFmDev,ACodec_I2S_DATA_WIDTH16);
     #endif
-    //RockcodecDev_SetRate(hFmDev, I2S_FS_44100Hz);
+    //RockcodecDev_SetDacRate(hFmDev, I2S_FS_44100Hz);
 
-    printf("RockcodecDev_SetRate...\n");
+    printf("RockcodecDev_SetDacRate...\n");
 
     #ifndef _BROAD_LINE_OUT_
-    //RockcodecDev_SetMode(hFmDev, Codec_DACoutHP);
+    //RockcodecDev_SetDacMode(hFmDev, Codec_DACoutHP);
     #else
-    RockcodecDev_SetMode(hFmDev, Codec_DACoutLINE);
+    RockcodecDev_SetDacMode(hFmDev, Codec_DACoutLINE);
     #endif
 
     FMDevPowerOffDeinit(hFmDev);
@@ -1638,6 +1640,7 @@ SHELL FUN rk_err_t FmDevShellCreate(HDC dev, uint8 * pstr)
     stI2sDevArg.I2S_Bus_mode = I2S_NORMAL_MODE;
     stI2sDevArg.Data_width = I2S_DATA_WIDTH24;
 
+    #ifdef _RECORD_
     gSysConfig.RecordConfig.RecordQuality = 1;
     if (RECORD_QUALITY_HIGH == gSysConfig.RecordConfig.RecordQuality)  //quality record.
     {
@@ -1651,6 +1654,8 @@ SHELL FUN rk_err_t FmDevShellCreate(HDC dev, uint8 * pstr)
         stI2sDevArg.I2S_FS = I2S_FS_48KHz;
         stI2sDevArg.Rx_Data_width = I2S_DATA_WIDTH16;
     }
+    #endif
+
     stI2sDevArg.RX_BUS_FORMAT = I2S_FORMAT;
     stI2sDevArg.Rx_I2S_Bus_mode = I2S_NORMAL_MODE;
 
@@ -1666,31 +1671,34 @@ SHELL FUN rk_err_t FmDevShellCreate(HDC dev, uint8 * pstr)
 
     hRockCodec = RKDev_Open(DEV_CLASS_ROCKCODEC,0,NOT_CARE);
 
+    #ifdef _RECORD_
     if (RECORD_QUALITY_HIGH == gSysConfig.RecordConfig.RecordQuality)  //quality record.
     {
         rk_print_string("codec = FS_192KHz;");
-        stRockCodecDevArg.SampleRate = I2S_FS_192KHz;
-        stRockCodecDevArg.DataWidth = VDW_RX_WIDTH_16BIT;//VDW_RX_WIDTH_24BIT;
+        stRockCodecDevArg.DacFs = I2S_FS_192KHz;
+        stRockCodecDevArg.DacDataWidth = VDW_RX_WIDTH_16BIT;//VDW_RX_WIDTH_24BIT;
     }
     else
     {
         rk_print_string("codec = FS_48KHz;");
-        stRockCodecDevArg.SampleRate = I2S_FS_48KHz;
-        stRockCodecDevArg.DataWidth = VDW_RX_WIDTH_16BIT;
+        stRockCodecDevArg.DacFs = I2S_FS_48KHz;
+        stRockCodecDevArg.DacDataWidth = VDW_RX_WIDTH_16BIT;
     }
-#ifndef _BROAD_LINE_OUT_
-    stRockCodecDevArg.DacOutMode  = Codec_DACoutHP;
-#else
-    stRockCodecDevArg.DacOutMode  = Codec_DACoutLINE;
-#endif
-    stRockCodecDevArg.AdcinMode = Codec_Line1in;//Codec_Line1in : bypass mode
-    rk_printf(" DacOutMode =%d \n", stRockCodecDevArg.DacOutMode);
+    #endif
 
-    RockcodecDev_SetDataWidth(hRockCodec,stRockCodecDevArg.DataWidth);
-    RockcodecDev_SetAdcDataWidth(hRockCodec,stRockCodecDevArg.DataWidth);
-    RockcodecDev_SetRate(hRockCodec, stRockCodecDevArg.SampleRate);
-    RockcodecDev_SetAdcInputMode(hRockCodec, stRockCodecDevArg.AdcinMode);
-    RockcodecDev_SetMode(hRockCodec, stRockCodecDevArg.DacOutMode);
+#ifndef _BROAD_LINE_OUT_
+    stRockCodecDevArg.DacMode  = Codec_DACoutHP;
+#else
+    stRockCodecDevArg.DacMode  = Codec_DACoutLINE;
+#endif
+    stRockCodecDevArg.AdcMode = Codec_Line1in;//Codec_Line1in : bypass mode
+    rk_printf(" DacMode =%d \n", stRockCodecDevArg.DacMode);
+
+    RockcodecDev_SetDacDataWidth(hRockCodec,stRockCodecDevArg.DacDataWidth);
+    RockcodecDev_SetAdcDataWidth(hRockCodec,stRockCodecDevArg.DacDataWidth);
+    RockcodecDev_SetDacRate(hRockCodec, stRockCodecDevArg.DacFs);
+    RockcodecDev_SetAdcMode(hRockCodec, stRockCodecDevArg.AdcMode);
+    RockcodecDev_SetDacMode(hRockCodec, stRockCodecDevArg.DacMode);
 
     RKDev_Close(hRockCodec);
 
@@ -1738,12 +1746,14 @@ SHELL FUN rk_err_t FmDevShellPcb(HDC dev, uint8 * pstr)
         return RK_ERROR;
     }
 
-    pstFmDev = gpstFmDevISR[DevID];
-    if(pstFmDev == NULL)
+    if(RKDeviceFind(DEV_CLASS_FM, DevID) == RK_ERROR)
     {
         rk_printf("FmDev%d in not exist", DevID);
         return RK_SUCCESS;
     }
+
+    pstFmDev = gpstFmDevISR[DevID];
+
     //Display pcb...
     if(gpstFmDevISR[DevID] != NULL)
     {

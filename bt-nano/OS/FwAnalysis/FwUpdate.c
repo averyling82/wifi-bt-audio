@@ -33,7 +33,9 @@
 #include "FwUpdate.h"
 #include "FwAnalysis.h"
 #include "LunDevice.h"
+#ifdef _FS_
 #include "FileDevice.h"
+#endif
 #include "Bsp.h"
 #include "pmc.h"
 
@@ -226,10 +228,10 @@ COMMON API rk_err_t FwRecovery(void)
     uint32 FwSize;
     uint8 *pUBuf = (uint8 *)rkos_memory_malloc(FW_BUF_LEN);
 
-	printf("\nFwRecovery Start\n");
+	rk_printf("\nFwRecovery Start\n");
     if(pUBuf == NULL)
     {
-        printf("memory maloc fail");
+        rk_printf("memory maloc fail");
         return RK_ERROR;
     }
 
@@ -249,7 +251,7 @@ COMMON API rk_err_t FwRecovery(void)
        DstAddr =  0;
     }
 
-    printf("\nFwRecovery Enter: src = %d, dst = %d, size = %d",SrcAddr, DstAddr, FwSize);
+    rk_printf("\nFwRecovery Enter: src = %d, dst = %d, size = %d",SrcAddr, DstAddr, FwSize);
 
     memset (pUBuf, 0xFF, FW_BUF_LEN);
     LunDev_Write(hLunFW, DstAddr + FW_SYS_OFFSET, pUBuf, FW_BUF_LEN>>9);  //先清除固件头
@@ -262,13 +264,13 @@ COMMON API rk_err_t FwRecovery(void)
         //DEBUG("i = %d", i);
         if ((FW_BUF_LEN>>9) != LunDev_Read(hLunFW, SrcAddr + FW_SYS_OFFSET, pUBuf, FW_BUF_LEN>>9))
         {
-            printf("\nread src fail1 = %d!", SrcAddr);
+            rk_printf("\nread src fail1 = %d!", SrcAddr);
             while(1);
         }
 
         if ((FW_BUF_LEN>>9) != LunDev_Write(hLunFW, DstAddr + FW_SYS_OFFSET, pUBuf, FW_BUF_LEN>>9))
         {
-            printf("\nwrite dst fail1 = %d!", DstAddr);
+            rk_printf("\nwrite dst fail1 = %d!", DstAddr);
             while(1);
         }
 
@@ -281,20 +283,20 @@ COMMON API rk_err_t FwRecovery(void)
 
     if ((FW_BUF_LEN>>9) != LunDev_Read(hLunFW, SrcAddr + FW_SYS_OFFSET, pUBuf, FW_BUF_LEN>>9))
     {
-        printf("\nread src fai2 = %d!", SrcAddr);
+        rk_printf("\nread src fai2 = %d!", SrcAddr);
         return RK_ERROR;
     }
 
     if ((FW_BUF_LEN>>9) != LunDev_Write(hLunFW, DstAddr + FW_SYS_OFFSET, pUBuf, FW_BUF_LEN>>9))
     {
-        printf("\nwrite dst fail2 = %d!", DstAddr);
+        rk_printf("\nwrite dst fail2 = %d!", DstAddr);
         return RK_ERROR;
     }
 
     RKDev_Close(hLunFW);
     rkos_memory_free(pUBuf);
 
-    printf("\nFwRecovery Exit");
+    rk_printf("\nFwRecovery Exit");
 	return RK_SUCCESS;
 }
 
@@ -316,12 +318,14 @@ COMMON API rk_err_t FwUpdate(uint16 * path, uint32 ForceUpate)
     unsigned char FwSign[8] = {'R','K','n','a','n','o','F','W'};
     uint8 *pUBuf = (uint8 *)rkos_memory_malloc(FW_BUF_LEN);
     uint32 i, addr2, FwSize, LunSize;
+    #ifdef _FS_
     FILE_ATTR stFileAttr;
+    #endif
     HDC hFile;
     HDC hLunFW;
 
     rk_printf("FwUpdate Enter");
-
+    #ifdef _FS_
     if(pUBuf == NULL)
     {
         return RK_ERROR;
@@ -484,7 +488,7 @@ UPDATE_ERROR:
     rk_printf("FwUpdate Exit");
     PmuSetSysRegister(3, (0x18CF|0xFFFF0000)); //restart Fw2
     SystemReset();
-
+    #endif
     return ret;
 }
 
@@ -512,7 +516,7 @@ COMMON API void FwCheck(void)
 #ifdef _OTA_UPDATEFW_SPI
 	memset(&g_OTAINFOR,0x0,sizeof(OTAINFOR));//init g_OTAINFOR----jjjjhhhh20161105
 #endif
-	printf("FwCheck start\n");
+	rk_printf("FwCheck start\n");
     hLunFW = RKDev_Open(DEV_CLASS_LUN,0,NOT_CARE);
 
 
@@ -547,7 +551,7 @@ COMMON API void FwCheck(void)
                 LunDev_GetSize(hLunFW, &LunSize);
                 if ((SysProgDiskCapacity - (3 << 11)) > LunSize)
                 {
-                    printf("\nidb error, SysProgDiskCapacity = %d, LunSize = %d", IdSec1->SysProgDiskCapacity, LunSize);
+                    rk_printf("\nidb error, SysProgDiskCapacity = %d, LunSize = %d", IdSec1->SysProgDiskCapacity, LunSize);
                     while(1);
                 }
                 break;
@@ -564,7 +568,7 @@ COMMON API void FwCheck(void)
         LunDev_Read(hLunFW, addr+(pFWHead1->FwEndOffset>>9),TmpBuf2, 1);
         if (0 != memcmp(TmpBuf1, TmpBuf2, 512))
         {
-            printf("\nfw1 compare error!");
+            rk_printf("\nfw1 compare error!");
         }
         else
         {
@@ -574,7 +578,7 @@ COMMON API void FwCheck(void)
     }
     else
     {
-        printf("fw1 Sign error!\n");
+        rk_printf("fw1 Sign error!\n");
     }
 
     if (1==FW1Valid)
@@ -594,7 +598,7 @@ COMMON API void FwCheck(void)
 
     for(i = 0; (i < 32) && (addr > FW_SYS_OFFSET); i++) //查找第二份固件,固件可能变大
     {
-        printf("\ni = %d addr = %d, SPI_FW_OFFSET = %d", i, addr, FW_SYS_OFFSET);
+        rk_printf("\ni = %d addr = %d, SPI_FW_OFFSET = %d", i, addr, FW_SYS_OFFSET);
         LunDev_Read(hLunFW, addr, TmpBuf2, 1);
         if (0 != memcmp(pFWHead2->FwSign, FwSign, 8))
         {
@@ -604,7 +608,7 @@ COMMON API void FwCheck(void)
         {
             LunDev_Read(hLunFW, addr+(pFWHead2->FwEndOffset>>9),TmpBuf1, 1);
             if (0 != memcmp(TmpBuf2, TmpBuf1, 512))
-                printf("\nfw2 compare error! 0x%x", addr);
+                rk_printf("\nfw2 compare error! 0x%x", addr);
             else
             {
                 FW2Valid = 1;
@@ -617,7 +621,7 @@ COMMON API void FwCheck(void)
 
     if (i >= 32 || addr <= FW_SYS_OFFSET)
     {
-        printf("\nNo find fw2!");
+        rk_printf("\nNo find fw2!");
     }
 
     if(PmuGetSysRegister(3) == (0x18CF|0xFFFF0000))
@@ -631,7 +635,7 @@ COMMON API void FwCheck(void)
 
     if (0==FW1Valid && 0==FW2Valid)    //两份都错了,表示机器变砖了
     {
-        printf("fw1 && fw2 error!\n");
+        rk_printf("fw1 && fw2 error!\n");
         while(1);
     }
 
@@ -658,7 +662,7 @@ COMMON API void FwCheck(void)
         FwSysOffset = FW_SYS_OFFSET + SysProgRawDiskCapacity;
     }
 
-    printf("FwSysOffset = %d\nFW_SYS_OFFSET=%d\nSysProgRawDiskCapacity=%d\nSysProgRawDiskCapacity=%d\n", FwSysOffset,FW_SYS_OFFSET,SysProgRawDiskCapacity,SysProgRawDiskCapacity);//FwSysOffset以好的fw为基准。
+    rk_printf("FwSysOffset = %d\nFW_SYS_OFFSET=%d\nSysProgRawDiskCapacity=%d\nSysProgRawDiskCapacity=%d\n", FwSysOffset,FW_SYS_OFFSET,SysProgRawDiskCapacity,SysProgRawDiskCapacity);//FwSysOffset以好的fw为基准。
 
     RKDev_Close(hLunFW);
 
@@ -935,26 +939,28 @@ static COMMON FUN rk_err_t CheckOTAServer(uint8 *cu,uint8 *vc,uint8 *sn,int rela
 	dwRet = snprintf(ota_url,MAX_URL_LEN,"%sCU=%s&VC=%s&SN=%s&ID=%s&RL=%d",
 		OTA_URL_HEADER,cu,vc,sn,sn,relase);/**/
 
-	printf("\n   CheckOTAServer http start********************\nota_url=%s\n\n",ota_url);
+	rk_printf("\n   CheckOTAServer http start********************\nota_url=%s\n\n",ota_url);
 	//rkos_sleep(2000);//sleep 2S
 	//init g_OTAINFOR
 	g_OTAINFOR.url = NULL;
 	g_OTAINFOR.total_size = 0;
 	g_OTAINFOR.download_size= 0;
+	//rk_printf("\nhttp 1111111111\n");
 
-	httptestpcb = HttpPcb_New(NULL, GetNewFirmwareUrl, FILEWRITE);
+	httptestpcb = HttpPcb_New(NULL, GetNewFirmwareUrl, FILEWRITE);//rk_printf("\nhttp 222222222\n");
 	dwRet = HttpGet_Url(httptestpcb,ota_url, 0);//"http://192.168.169.5/index.asp?mac=DDDD"
+	//rk_printf("\nhttp 33333333\n");
 
 	if(dwRet == RK_SUCCESS)
 	{
-		printf("\nhttp ok\n");
+		rk_printf("\nhttp ok\n");
 	}
 	else
 	{
-		printf("\nhttp error\n");
+		rk_printf("\nhttp error\n");
 	}
 	
-	printf("\n\n  http close********************\n\n");
+	rk_printf("\n\n  http close********************\n\n");
 	
 	rkos_sleep(2000);//sleep 2S
 	Http_Close(httptestpcb);
@@ -973,7 +979,7 @@ COMMON API rk_err_t CheckOTAandUpdateFw(void)//check only once
 	if((0 == FW1Valid) || 
 		(OTA_DOWNLOAD_STATUS_ERROR == g_OTAINFOR.download_status) || 
 		(OTA_DOWNLOAD_STATUS_SUCCESS== g_OTAINFOR.download_status) ||
-		(gSysConfig.PlayerType != SOURCE_FROM_DLNA))
+		(gSysConfig.PlayerType != SOURCE_FROM_HTTP))
 	{
 		rk_printf("Already checked or FW1Valid=%d\n",FW1Valid);
 		return RK_ERROR;
@@ -986,7 +992,7 @@ COMMON API rk_err_t CheckOTAandUpdateFw(void)//check only once
 		return RK_ERROR;
 	}
 	else
-		printf("ota_cu:%s\nota_vc:%s\nota_sn:%s\nota_id:%s  \n",ota_cu,ota_vc,ota_sn,ota_id);
+		rk_printf("ota_cu:%s\nota_vc:%s\nota_sn:%s\nota_id:%s  \n",ota_cu,ota_vc,ota_sn,ota_id);
 
 	rkos_sleep(2000);//sleep 10S
 	ret = CheckOTAServer(ota_cu,ota_vc,ota_sn,1);//check server if there has new fw

@@ -93,6 +93,8 @@
 #define TXOF_INT                    (1 << 2)      //Tx fifo overflow interrupt
 #define RXUF_INT                    (1 << 1)      //Rx fifo underflow interrupt
 #define RXFULL_INT                  (1 << 0)      //Rx fifo full interrupt
+
+#define MIN(x, y)  ((x) < (y) ? (x) : (y))
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *

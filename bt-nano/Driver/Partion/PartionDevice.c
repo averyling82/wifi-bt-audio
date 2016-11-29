@@ -982,7 +982,7 @@ SHELL API rk_err_t ParDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
@@ -992,7 +992,7 @@ SHELL API rk_err_t ParDev_Shell(HDC dev, uint8 * pstr)
     }
 
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1089,23 +1089,13 @@ SHELL FUN rk_err_t ParShellFormat(HDC dev, uint8 * pstr)
 _DRIVER_PARTION_PARTIONDEVICE_SHELL_
 rk_err_t ParShellPcb(HDC dev,  uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA((uint8 *)pstr, "help", 4) == 0)
-        {
-            rk_print_string("par.pcb : pcb info.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
-
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
     return RK_SUCCESS;
 }
 
@@ -1127,19 +1117,10 @@ rk_err_t ParShellCreate(HDC dev, uint8 * pstr)
     uint8 buf[512];
     uint32 i;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA((uint8 *)pstr, "help", 4) == 0)
-        {
-            rk_print_string("\npar.open : open cmd.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
 
     hLun = RKDev_Open(DEV_CLASS_LUN, 4, NOT_CARE);
 

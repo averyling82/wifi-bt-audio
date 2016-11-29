@@ -115,10 +115,6 @@ The range of values available for a 32-bit watchdog*/
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-extern rk_err_t WatchDogStart(void);
-extern rk_err_t WatchDogClearIntFlag(void);
-extern rk_size_t WatchDogGetCurrentValue(void);
-extern rk_err_t WatchDogSetPeriod(WdtTimeoutPeriod_t period);
 extern rk_err_t WatchDogReload(void);
 extern rk_size_t WatchDogGetStat(void);
 extern rk_err_t WatchDogInit(WdtRespMode_t mode , WdtRstPluseLenth_t RstPluse, WdtTimeoutPeriod_t period);

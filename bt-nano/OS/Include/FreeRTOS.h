@@ -80,6 +80,7 @@
  * Include the generic headers required for the FreeRTOS port being used.
  */
 #include <stddef.h>
+#include <stdint.h>
 
 /* Basic FreeRTOS definitions. */
 #include "projdefs.h"
@@ -583,11 +584,13 @@ task that attempted the write. */
 #endif
 
 #ifndef pvPortMallocAligned
-#define pvPortMallocAligned( x, puxStackBuffer ) ( ( ( puxStackBuffer ) == NULL ) ? ( pvPortMalloc((x),1) ) : ( puxStackBuffer ) )
+//#define pvPortMallocAligned( x, puxStackBuffer ) ( ( ( puxStackBuffer ) == NULL ) ? ( pvPortMalloc((x),1) ) : ( puxStackBuffer ) )
+#define pvPortMallocAligned( x, puxStackBuffer ) ( ( ( puxStackBuffer ) == NULL ) ? ( rkos_memory_malloc(x) ) : ( puxStackBuffer ) )
 #endif
 
 #ifndef vPortFreeAligned
-#define vPortFreeAligned( pvBlockToFree ) vPortFree( pvBlockToFree, 1)
+//#define vPortFreeAligned( pvBlockToFree ) vPortFree( pvBlockToFree, 1)
+#define vPortFreeAligned( pvBlockToFree ) rkos_memory_free( pvBlockToFree, 1)
 #endif
 
 #ifndef portSUPPRESS_TICKS_AND_SLEEP

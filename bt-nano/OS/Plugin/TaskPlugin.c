@@ -31,12 +31,15 @@
 #include "RKOS.h"
 #include "BSP.h"
 #include "AppInclude.h"
+#ifdef _USE_GUI_
 #include "GUITask.h"
+#endif
 #include "DeviceInclude.h"
 #include "tcpip.h"
-#include "airplay.h"
+#ifdef _BLUETOOTH_
 #include "btPhoneVoice.h"
-
+#endif
+#include "airplay.h"
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -1070,7 +1073,7 @@ const static RK_TASK_CLASS InitTaskItem[TASK_ID_NUM] =
 },
 #endif
 
-#ifdef __WICE_WIFITHREAD_C__
+#ifdef _WICE_
     {
         .TaskInitFun   = wifi_applicationTask_Init,
         .TaskDeInitFun = wifi_applicationTask_DeInit,
@@ -1594,7 +1597,7 @@ const static RK_TASK_CLASS InitTaskItem[TASK_ID_NUM] =
         .OverlayModule = NULL,
         .TaskFlag      = NULL,
         .TaskPriority  = TASK_PRIORITY_SDIO,
-        .TaskStackSize = 100*2 ,
+        .TaskStackSize = MAXIMAL_STACK_SIZE*2 ,
         .TaskClassID   = TASK_ID_SDIO_IRQ_TASK,
         .taskname      = "sdio_irq",
     },
@@ -1977,11 +1980,10 @@ COMMON API rk_err_t RKTaskCreate(uint32 TaskClassID, uint32 TaskObjectID, void *
 
     if (pstNewTask == NULL)
         return RK_ERROR;
-	//rk_printf(">>>>>>>RKTaskCreate 111\n");
 
     RKGetTaskMsg(TaskClassID, pstNewTask);
 
-    FW_GetSegmentInfo(SEGMENT_ID_TASK_INF,&Segment);//rk_printf(">>>>>>>RKTaskCreate 222\n");
+    FW_GetSegmentInfo(SEGMENT_ID_TASK_INF,&Segment);
 
     LBA = ((uint32)pstNewTask->taskname - Segment.CodeImageBase - sizeof(InitTaskItem)) / 512;
     offset = ((uint32)pstNewTask->taskname - Segment.CodeImageBase - sizeof(InitTaskItem)) % 512;
@@ -2035,7 +2037,7 @@ COMMON API rk_err_t RKTaskCreate(uint32 TaskClassID, uint32 TaskObjectID, void *
             return RK_SUCCESS;
         }
         else if(Mode == SYNC_MODE)
-        {//rk_printf(">>>>>>>RKTaskCreate 333\n");
+        {
             TaskItem.TaskHandler = pstNewTask;
             TaskItem.RkTaskEvent = RK_TASK_EVENT_CREATE;
             TaskItem.Mode = Mode;
@@ -2403,6 +2405,7 @@ COMMON FUN rk_err_t RKTaskCreateOperating(RK_TASK_CLASS * TaskHandler, void * ar
         #ifdef __OS_FWANALYSIS_FWANALYSIS_C__
         if(FW_LoadSegment(TaskHandler->OverlayModule, SEGMENT_OVERLAY_ALL) != RK_SUCCESS)
         {
+            rkos_memory_free(TaskHandler);
             return RK_ERROR;
         }
         #endif
@@ -2418,6 +2421,7 @@ COMMON FUN rk_err_t RKTaskCreateOperating(RK_TASK_CLASS * TaskHandler, void * ar
                 FW_RemoveSegment(TaskHandler->OverlayModule);
                 #endif
             }
+            rkos_memory_free(TaskHandler);
             return RK_ERROR;
         }
     }
@@ -2435,7 +2439,7 @@ COMMON FUN rk_err_t RKTaskCreateOperating(RK_TASK_CLASS * TaskHandler, void * ar
                 FW_RemoveSegment(TaskHandler->OverlayModule);
                 #endif
             }
-
+            rkos_memory_free(TaskHandler);
             return RK_ERROR;
         }
         else
@@ -2445,13 +2449,13 @@ COMMON FUN rk_err_t RKTaskCreateOperating(RK_TASK_CLASS * TaskHandler, void * ar
     }
     else
     {
-        rkos_memory_free(TaskHandler);
         if(TaskHandler->OverlayModule != NULL)
         {
             #ifdef __OS_FWANALYSIS_FWANALYSIS_C__
             FW_RemoveSegment(TaskHandler->OverlayModule);
             #endif
         }
+        rkos_memory_free(TaskHandler);
         return RK_ERROR;
 
     }

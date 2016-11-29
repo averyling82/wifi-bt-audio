@@ -12,6 +12,7 @@
 *    desc:    ORG.
 ********************************************************************************
 */
+#define __DRIVER_TIME_TIMEDEVICE_C__
 #include "BspConfig.h"
 #ifdef __DRIVER_TIME_TIMEDEVICE_C__
 #define _IN_TIMER_

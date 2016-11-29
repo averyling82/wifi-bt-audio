@@ -125,6 +125,8 @@ typedef  struct _SDIO_DEV_ARG
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+extern rk_err_t SdioDev_Memcpy_FromIo(HDC hSdioFun, void *dst, uint32 addr, uint32 count);
+extern rk_err_t SdioDev_Memcpy_ToIo(HDC hSdioFun, uint32 addr, void *src, uint32 count);
 extern rk_err_t SdioDevDelete(uint32 DevID, void * arg);
 extern rk_err_t SdioDev_DisalbeInt(HDC dev, uint32 FuncNum);
 extern rk_err_t SdioDev_EnableInt(HDC dev, uint32 FunNum);
@@ -146,6 +148,7 @@ extern void SdioIrqTask(void);
 extern rk_err_t SdioIntIrqInit(void *pvParameters);
 extern rk_err_t SdioIntIrqDeInit(void *pvParameters);
 extern int SdioDev_Claim_irq(void *_func, sdio_irq_handler_t * handler);
+extern int sdio_release_irq(void *func);
 
 
 

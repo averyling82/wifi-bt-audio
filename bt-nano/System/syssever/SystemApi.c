@@ -103,7 +103,7 @@ COMMON API rk_err_t rkos_get_wifi_ssid(uint8 * ssid)
     {
         return RK_ERROR;
     }
-    #ifdef _WIFI_
+    #ifdef _WICE_
     rkwifi_get_ssid(ssid, &len);
     #endif
     ssid[len] = 0;
@@ -219,33 +219,6 @@ COMMON API rk_err_t rkos_get_battery_status(void)
 {
     return gBattery.IsBatt_Charge;
 }
-
-/*******************************************************************************
-** Name: rkos_get_wifi_status
-** Input:void
-** Return: rk_err_t
-** Owner:aaron.sun
-** Date: 2016.6.2
-** Time: 9:46:26
-*******************************************************************************/
-_SYSTEM_SYSSEVER_SYSTEMAPI_COMMON_
-COMMON API rk_err_t rkos_get_wifi_status(void)
-{
-    if(RKTaskFind(TASK_ID_WIFI_APPLICATION, 0) == NULL)
-    {
-        return RK_ERROR;
-    }
-    #ifdef _WIFI_
-    if(wifi_connect_flag() == TRUE)
-    #endif
-    {
-        return RK_SUCCESS;
-    }
-
-    return RK_ERROR;
-}
-
-
 
 /*
 *---------------------------------------------------------------------------------------------------------------------

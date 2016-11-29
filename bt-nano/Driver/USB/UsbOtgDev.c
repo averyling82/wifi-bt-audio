@@ -2004,6 +2004,8 @@ COMMON API rk_err_t UsbOtgDev_Delete(uint32 DevID ,void * arg)
         return RK_ERROR;
     }
 
+    UsbOtgDevHwDeInit(DevID, 0);
+
     //UsbOtgDev deinit...
     UsbOtgDevDeInit(gpstUsbOtgDevISR[DevID]);
 
@@ -2187,13 +2189,12 @@ INIT FUN rk_err_t UsbOtgDevInit(USBOTG_DEVICE_CLASS * pstUsbOtgDev)
 _DRIVER_USB_USBOTGDEV_SHELL_DATA_
 static SHELL_CMD ShellUsbOtgName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "delete",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
-    "suspend",NULL,"NULL","NULL",
-    "resume",NULL,"NULL","NULL",
+    "pcb",UsbOtgDevShellPcb,"list usbotg device pcb inf","usbotg.pcb [object id]",
+    "create",UsbOtgDevShellMc,"create usbotg device","usbotg.create [object id]",
+    "delete",UsbOtgDevShellDel,"delete usbotg device","usbotg.delete [object id]",
+    "test",UsbOtgDevShellTest,"test usbotg device","usbotg.delete [object id]",
+    "suspend",UsbOtgDevShellSuspend,"suspend usbotg device","usbotg.suspend [object id]",
+    "resume",UsbOtgDevShellResume,"resume usbotg device","usbotg.resume [object id]",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -2219,13 +2220,19 @@ SHELL API rk_err_t UsbOtgDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellUsbOtgName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -2241,39 +2248,10 @@ SHELL API rk_err_t UsbOtgDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                                                 //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellUsbOtgName[i].CmdDes, pItem);
+    if(ShellUsbOtgName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = UsbOtgDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = UsbOtgDevShellMc(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = UsbOtgDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:
-            ret = UsbOtgDevShellTest(dev,pItem);
-            break;
-
-        case 0x04:
-            ret = UsbOtgDevShellHelp(dev,pItem);
-            break;
-
-        case 0x05:
-            ret = UsbOtgDevShellSuspend(dev,pItem);
-            break;
-
-        case 0x06:
-            ret = UsbOtgDevShellResume(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellUsbOtgName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 }
@@ -2326,6 +2304,11 @@ SHELL FUN rk_err_t UsbOtgDevShellHelp(HDC dev, uint8 * pstr)
 _DRIVER_USB_USBOTGDEV_SHELL_
 SHELL FUN rk_err_t UsbOtgDevShellSuspend(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     UsbOtgDevSuspend(dev);
 
     return RK_SUCCESS;
@@ -2342,6 +2325,11 @@ SHELL FUN rk_err_t UsbOtgDevShellSuspend(HDC dev, uint8 * pstr)
 _DRIVER_USB_USBOTGDEV_SHELL_
 SHELL FUN rk_err_t UsbOtgDevShellResume(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     UsbOtgDevResume(dev);
 
     return RK_SUCCESS;
@@ -2361,19 +2349,10 @@ SHELL FUN rk_err_t UsbOtgDevShellTest(HDC dev, uint8 * pstr)
     HDC hUsbOtgDev;
     uint32 DevID;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("usbotg.test : usbotgdev test cmd.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
 
     //Get UsbOtgDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
@@ -2423,19 +2402,10 @@ SHELL FUN rk_err_t UsbOtgDevShellDel(HDC dev, uint8 * pstr)
 {
     uint32 DevID;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("usbotg.del : usbotgdev del cmd.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
 
     //Get UsbOtgDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
@@ -2475,19 +2445,10 @@ SHELL FUN rk_err_t UsbOtgDevShellMc(HDC dev, uint8 * pstr)
     rk_err_t ret;
     uint32 DevID;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("usbotg.mc : usbotgdev mc cmd.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
 
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -2530,19 +2491,10 @@ SHELL FUN rk_err_t UsbOtgDevShellPcb(HDC dev, uint8 * pstr)
     HDC hUsbOtgDev;
     uint32 DevID;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("usbotg.pcb : usbotg pcb info cmd.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
 
     //Get UsbOtgDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)

@@ -40,9 +40,9 @@
 
 typedef struct _SDC_TRANS_INFO
 {
-    uint32     TransLen;                   //已经发送或接收的数据长度
-    uint32     NeedLen;                  //需要传输的数据长度
-    uint8      *pBuf;                    //中断数据接收或发送数据用到的buf地址                                        //指针用32 bit的uint32指针，就可以满足SDMMC FIFO要求的32 bits对齐的要求了，                                    //这样就算你的数据没有4字节对齐，也会因为用了uint32指针，每次向FIFO操作是4字节对齐的。
+    uint32     TransLen;                   //????????????
+    uint32     NeedLen;                  //?????????
+    uint8      *pBuf;                    //??????????????buf??                                        //???32 bit?uint32??,?????SDMMC FIFO???32 bits??????,                                    //??????????4????,??????uint32??,???FIFO???4??????
 
 }SDC_TRANS_INFO;
 
@@ -113,6 +113,8 @@ rk_err_t SdcDevDeInit(SDC_DEVICE_CLASS * pstSdcDev);
 rk_err_t SdcDevInit(SDC_DEVICE_CLASS * pstSdcDev);
 void SdcDevIntIsr(SDMMC_PORT SDCPort);
 rk_err_t SdMmcShellDel(HDC dev, uint8 * pstr);
+rk_err_t SdMmcShellPcb(HDC dev,  uint8 * pstr);
+rk_err_t SdMmcShellCreate(HDC dev,  uint8 * pstr);
 
 
 /*
@@ -1059,10 +1061,9 @@ rk_err_t SdcRegisterIoIntIsr(HDC hSdc, void(*isr_hook)(HDC hSdc, void *arg))
 _DRIVER_SDMMC_SDMMCDEVICE_SHELL_DATA_
 static  SHELL_CMD ShellSdMmcName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "delete",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "pcb",SdMmcShellPcb,"list sdmmc device pcb inf","sdmmc.pcb [object id]",
+    "create",SdMmcShellCreate,"create sdmmc device","sdmmc.create",
+    "delete",SdMmcShellDel,"delete sdmmc device","sdmmc.delete",
     "\b",NULL,"NULL","NULL",                         // the end
 };
 
@@ -1088,13 +1089,19 @@ rk_err_t SdcDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t  ret;
+    rk_err_t  ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellSdMmcName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1110,28 +1117,12 @@ rk_err_t SdcDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                                            //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellSdMmcName[i].CmdDes, pItem);
+    if(ShellSdMmcName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = SdMmcShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = SdMmcShellCreate(dev,pItem);
-            break;
-
-        case 0x02:  //help
-            ret = SdMmcShellDel(dev,pItem);
-            break;
-
-        case 0x03:  //help
-            ret = SdMmcShellHelp(dev,pItem);
-            break;
-
-            default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellSdMmcName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 
@@ -1148,20 +1139,16 @@ _DRIVER_SDMMC_SDMMCDEVICE_SHELL_
 SHELL FUN rk_err_t SdMmcShellDel(HDC dev, uint8 * pstr)
 {
     SDC_DEV_ARG stSdcArg;
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("sdc.del : 删除sdc 设备命令.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     if (RKDev_Delete(DEV_CLASS_SDC, 1, &stSdcArg) != RK_SUCCESS)
     {
         printf("sdc1 delete failure\n");
@@ -1188,32 +1175,6 @@ SHELL FUN rk_err_t SdMmcShellDel(HDC dev, uint8 * pstr)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-/*******************************************************************************
-** Name: SdMmcShellHelp
-** Input:HDC dev, const uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.Ma
-** Date: 2014.11.3
-** Time: 16:31:39
-*******************************************************************************/
-_DRIVER_SDMMC_SDMMCDEVICE_SHELL_
-SHELL FUN rk_err_t SdMmcShellHelp(HDC dev,  uint8 * pstr)
-{
-    pstr--;
-
-    if ( StrLenA((uint8 *) pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("sdmmc命令集提供了一系列的命令对sdmmc进行操作\r\n");
-    rk_print_string("sdmmc包含的子命令如下:           \r\n");
-    rk_print_string("pcb       显示pcb信息         \r\n");
-    rk_print_string("open0     打开 SDC0 for eMMC etc       \r\n");
-    rk_print_string("open1     打开 SDC1 for TF or WIFI etc      \r\n");
-    //rk_print_string("test      测试命令    \r\n");
-    rk_print_string("help      显示sdmmc命令帮助信息  \r\n");
-
-    return RK_SUCCESS;
-}
 
 /*******************************************************************************
 ** Name: EmmcShellPcb
@@ -1235,7 +1196,10 @@ rk_err_t SdMmcShellPcb(HDC dev,  uint8 * pstr)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     DevID = String2Num(pstr);
 
     if(DevID >= SDC_MAX)
@@ -1296,20 +1260,14 @@ rk_err_t SdMmcShellCreate(HDC dev,  uint8 * pstr)
 
     int DevID;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA((uint8 *) pstr, "help", 4) == 0)
-        {
-            rk_print_string("sdmmc.open : sdmmc open cmd.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-    else
-#endif
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     {
         pstr++;
         if (StrCmpA((uint8 *) pstr, "/0/0", 2) == 0)

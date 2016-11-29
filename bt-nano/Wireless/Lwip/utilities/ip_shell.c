@@ -18,7 +18,7 @@
 
 
 #include "BspConfig.h"
-//#ifdef __IP_SHELL__
+#ifdef USE_LWIP
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -112,12 +112,11 @@ rk_err_t IP_config_display(HDC dev, uint8 * pstr);
 
 
 
-
+_IP_SHELL_COMMON_
 static SHELL_CMD ShellIPConfigName[] =
 {
     "config",IP_config_display,"display local ip information","ip.config",
     "ping",Ping_Shell,"ping remote ip","ip.ping [ip addr]",
-    "conn",NULL,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -138,6 +137,11 @@ rk_err_t IP_config_display(HDC dev, uint8 * pstr)
     if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
         return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
     }
 
     default_netif = netif_get_default();
@@ -217,11 +221,18 @@ rk_err_t IP_config_shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellIPConfigName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -262,4 +273,4 @@ rk_err_t IP_config_shell(HDC dev, uint8 * pstr)
 
 
 
-//#endif
+#endif

@@ -24,26 +24,31 @@
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-#include "platform.h"
 #include "RKOS.h"
 #include "BSP.h"
 #include "DeviceInclude.h"
 #include "AppInclude.h"
 #include "ModuleFormat.h"
-#include "LCDDriver.h"
 #include "FwAnalysis.h"
+#ifdef _USE_GUI_
 #include "GUITask.h"
+#include "LCDDriver.h"
+#endif
 #include "music.h"
+#ifdef _WICE_
+#include "platform.h"
 #include "ap6181wifi.h"
+#endif
 #include "ShellDevCmd.h"
 #include "ShellSysCmd.h"
 #include "ShellTaskCmd.h"
 #include "ShellCustomCmd.h"
+#ifdef _RECORD_
 #include "record.h"
+#endif
 #include "FwAnalysis.h"
 #include "airplay.h"
 #include "lwipopts.h"
-#include "shell_switch_player.h"//jjjhhh 20161016
 
 
 /*
@@ -115,10 +120,10 @@ rk_err_t ShellCmdRemove(HDC dev, uint8 * pItemName);
 _SYSTEM_SHELL_SHELLTASK_COMMON_
 static SHELL_CMD ShellRootName[] =
 {
-    "connect",ShellCmdRegister,"load shell cmd","NULL",
-    "remove",ShellCmdRemove,"reload shell cmd","NULL",
-    "pcb",ShellPcb,"display shell task pcb information","pcb format as follow:\r\n pcb",
-    "help",ShellHelp,"help cmd","NULL",
+    "connect",ShellCmdRegister,"load cmd package","conect <cmd name> --- cmd name is list when input help, if load fail, please remove current package",
+    "remove",ShellCmdRemove,"reload cmd package","remove <cmd name> --- cmd name is list when input help, input pcb get current package",
+    "pcb",ShellPcb,"display shell task pcb information","pcb --- programmer control block",
+    "help",ShellHelp,"help cmd","If you do not how to use RKOS, please input help cmd.",
     "\b",NULL,"NULL","NULL",                          // the end
 };
 
@@ -130,7 +135,7 @@ const static SHELL_CMD_INFO ShellRegisterName1[] =
     //...
 #ifdef __DRIVER_FM_FMDEVICE_C__
 #ifdef _FM_DEV_SHELL_
-    "fm",SEGMENT_ID_FM_SHELL,FmDev_Shell,"fm device cmd package","FMDevice Functional test entry",
+    "fm",SEGMENT_ID_FM_SHELL,FmDev_Shell,"fm device cmd package","fm<.fm sub cmd | fm sub cmd package[...]> --- fm device use i2c device for configure,support radio app.\r\n   Fm sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_I6000_WIFI_C__
@@ -140,100 +145,100 @@ const static SHELL_CMD_INFO ShellRegisterName1[] =
 #endif
 #ifdef USE_LWIP
 #ifdef _IP_SHELL_
-    "ip",SEGMENT_ID_IPCONFIG_SHELL,IP_config_shell,"ip config cmd package","NULL",
+    "ip",SEGMENT_ID_IPCONFIG_SHELL,IP_config_shell,"ip config cmd package,before use, please use \"connect\" cmd load it","ip<.ip sub cmd | ip sub cmd package[...]> --- lwip cmd can display lwip protocal information.\r\n   lwip sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef _BLUETOOTH_
 #ifdef _BLUETOOTH_SHELL_
-    "bt",SEGMENT_ID_BLUETOOTH_SHELL,BlueTooth_Shell,"blueetooh cmd package","NULL",
+    "bt",SEGMENT_ID_BLUETOOTH_SHELL,BlueTooth_Shell,"blueetooh cmd package","bt<.bt sub cmd | bt sub cmd package[...]> --- bluetooth cmd can display bluetooth protocal information.\r\n   lwip sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __SYSTEM_SHELL_SHELLCUSTOMCMD_C__
-    "custom",SEGMENT_ID_CUSTOM_CMD,ShellCustomParsing,"user custom cmd package","NULL",
+    "custom",SEGMENT_ID_CUSTOM_CMD,ShellCustomParsing,"user custom cmd package","custom<.custom sub cmd | custom sub cmd package[...]> --- custom cmd is user oneself define cmd.\r\n   custom sub cmd or cmd package as the following:",
 #endif
 #ifdef __SYSTEM_SHELL_SHELLDEVCMD_C__
-    "dev",SEGMENT_ID_DEV_CMD,ShellDeviceParsing,"rkos device manager cmd packaage","NULL",
+    "dev",SEGMENT_ID_DEV_CMD,ShellDeviceParsing,"rkos device manager cmd packaage","dev<.dev sub cmd | dev sub cmd package[...]> --- dev cmd can list all device and device list.\r\n   dev sub cmd or cmd package as the following:",
 #endif
 #ifdef __SYSTEM_SHELL_SHELLTASKCMD_C__
-    "task",SEGMENT_ID_TASK_CMD,ShellTaskParsing,"rkos thread manager cmd package","NULL",
+    "task",SEGMENT_ID_TASK_CMD,ShellTaskParsing,"rkos thread manager cmd package","task<.task sub cmd | task sub cmd package[...]> --- task cmd can list all task  and memory malloc information\r\n   task sub cmd or cmd package as the following:",
 #endif
 #ifdef __SYSTEM_SHELL_SHELLSYSCMD_C__
-    "system",SEGMENT_ID_SYS_CMD,ShellSystemParsing,"rkos system cmd package","NULL",
+    "system",SEGMENT_ID_SYS_CMD,ShellSystemParsing,"rkos system cmd package","system<.system sub cmd | system sub cmd package[...]> --- system cmd can get system clk and memory information\r\n   system sub cmd or cmd package as the following:",
 #endif
 #ifdef __DRIVER_PWM_PWMDEVICE_C__
 #ifdef _PWM_DEV_SHELL_
-    "pwm",SEGMENT_ID_PWM_SHELL,PwmDev_Shell,"pwm device cmd package","NULL",
+    "pwm",SEGMENT_ID_PWM_SHELL,PwmDev_Shell,"pwm device cmd package","pwm<.pwm sub cmd | pwm sub cmd package[...]> --- pwm device can cause different duty cycle square wave\r\n   pwm sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_VOP_VOPDEVICE_C__
 #ifdef _VOP_DEV_SHELL_
-    "vop",SEGMENT_ID_VOP_SHELL,VopDev_Shell,"vop device cmd package","NULL",
+    "vop",SEGMENT_ID_VOP_SHELL,VopDev_Shell,"vop device cmd package","vop<.vop sub cmd | vop sub cmd package[...]> --- vop device can output RGB 8080 interface, support RGB565 and YUV input\r\n   vop sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_DISPLAY_DISPLAYDEVICE_C__
 #ifdef _DISPLAY_DEV_SHELL_
-    "display",SEGMENT_ID_DISPLAY_SHELL,DisplayDev_Shell,"display device cmd package","NULL",
+    "display",SEGMENT_ID_DISPLAY_SHELL,DisplayDev_Shell,"display device cmd package","display<.display sub cmd | display sub cmd package[...]> --- display device can vitrual a canvas for gui manager\r\n   display sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __GUI_GUITASK_C__
 #ifdef _GUI_SHELL_
-    "gui",SEGMENT_ID_GUI_SHELL,GuiShell,"gui manager cmd package","NULL",
+    "gui",SEGMENT_ID_GUI_SHELL,GuiShell,"gui manager cmd package","gui<.gui sub cmd | gui sub cmd package[...]> --- gui task can supply a lot of api for many app\r\n   gui sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_KEY_KEYDEVICE_C__
 #ifdef _KEY_DEV_SHELL_
-    "key",SEGMENT_ID_KEY_SHELL,KeyDev_Shell,"key device cmd package","NULL",
+    "key",SEGMENT_ID_KEY_SHELL,KeyDev_Shell,"key device cmd package","key<.key sub cmd | key sub cmd package[...]> --- key device can scan system keyboard and send key information to gui task or main task\r\n   key sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_AD_ADCDEVICE_C__
 #ifdef _ADC_DEV_SHELL_
-    "adc",SEGMENT_ID_ADC_SHELL,ADCDev_Shell,"adc device cmd package","NULL",
+    "adc",SEGMENT_ID_ADC_SHELL,ADCDev_Shell,"adc device cmd package","adc<.adc sub cmd | adc sub cmd package[...]> --- adc device can check 6 channels voltage value, for the key device and battery check provide services\r\n   vop sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_TIMER_TIMERDEVICE_C__
 #ifdef _TIMER_DEV_SHELL_
-    "timer",SEGMENT_ID_TIMER_SHELL,TimerDev_Shell,"timer device cmd package","NULL",
+    "timer",SEGMENT_ID_TIMER_SHELL,TimerDev_Shell,"timer device cmd package","timer<.timer sub cmd | timer sub cmd package[...]> --- timer device canuse the timer interrupt on time\r\n   timer sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_SPIFLASH_SPIFLASHDEV_C__
 #ifdef _SPIFLASH_DEV_SHELL_
-    "spiflash",SEGMENT_ID_SPIFLASH_SHELL,SpiFlashDev_Shell,"spiflash device cmd package","NULL",
+    "spiflash",SEGMENT_ID_SPIFLASH_SHELL,SpiFlashDev_Shell,"spiflash device cmd package","spiflash<.spiflash sub cmd | spiflash sub cmd package[...]> --- spiflash device can read and write spiflash\r\n   spiflash sub cmd or cmd package as the following:",
 #endif
 #endif
 
 #ifdef __DRIVER_BCORE_BCOREDEVICE_C__
 #ifdef _BCORE_DEV_SHELL_
-    "bcore",SEGMENT_ID_BCORE_SHELL,BcoreDev_Shell,"rknanod b core device cmd package","NULL",
+    "bcore",SEGMENT_ID_BCORE_SHELL,BcoreDev_Shell,"rknanod b core device cmd package","bcore<.bcore sub cmd | bcore sub cmd package[...]> --- bcore device can driver B cotex-m3 core with mailbox\r\n   bcore sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_MSG_MSGDEVICE_C__
 #ifdef _MSG_DEV_SHELL_
-    "msg",SEGMENT_ID_MSG_SHELL,MsgDev_Shell,"message device cmd package","NULL",
+    "msg",SEGMENT_ID_MSG_SHELL,MsgDev_Shell,"message device cmd package","msg<.msg sub cmd | msg sub cmd package[...]> --- msg device can record and transmit system information\r\n   msg sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_FILE_DIRDEVICE_C__
 #ifdef _DIR_DEV_SHELL_
-    "dir",SEGMENT_ID_DIR_SHELL,DirDev_Shell,"dir for system device cmd package","NULL",
+    "dir",SEGMENT_ID_DIR_SHELL,DirDev_Shell,"dir for system device cmd package","dir<.dir sub cmd | dir sub cmd package[...]> --- dir device anlayse file system dir tree for app\r\n   dir sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_ROCKCODEC_ROCKCODECDEVICE_C__
 #ifdef _RK_ACODE_SHELL_
-    "rockcodec",SEGMENT_ID_ROCKCODEC_SHELL,RockCodecDev_Shell,"rknanod acode device cmd package","NULL",
+    "rockcodec",SEGMENT_ID_ROCKCODEC_SHELL,RockCodecDev_Shell,"rknanod acode device cmd package","rockcodec<.rockcodec sub cmd | rockcodec sub cmd package[...]> --- rockcodec device driver rknanod 192K,24BIT CODEC\r\n   rockcodec sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_I2S_I2SDEVICE_C__
 #ifdef _I2S_DEV_SHELL_
-    "i2s",SEGMENT_ID_I2S_SHELL,I2SDev_Shell,"i2s device cmd package","NULL",
+    "i2s",SEGMENT_ID_I2S_SHELL,I2SDev_Shell,"i2s device cmd package","i2s<.i2s sub cmd | i2s sub cmd package[...]> --- i2s device can move data from memory to codec and codec to memory for audio play and record\r\n   i2s sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_AUDIO_AUDIODEVICE_C__
 #ifdef _AUDIO_SHELL_
-    "audio",SEGMENT_ID_AUDIO_SHELL,AudioDev_Shell,"audio device for play, record and fm cmd package","NULL",
+    "audio",SEGMENT_ID_AUDIO_SHELL,AudioDev_Shell,"audio device cmd package","audio<.adc sub cmd | audio sub cmd package[...]> --- audio device can play music and record voice\r\n   audio sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_USBMSC_USBMSCDEVICE_C__
 #ifdef _USBMSC_DEV_SHELL_
-    "usbmsc",SEGMENT_ID_USBMSC_SHELL,USBMSCDev_Shell,"usb massstorage device cmd package","NULL",
+    "usbmsc",SEGMENT_ID_USBMSC_SHELL,USBMSCDev_Shell,"usb massstorage device cmd package","usbmsc<.usbmsc sub cmd | usbmsc sub cmd package[...]> --- usbmsc device use usbotg device implement usb mass stroage function\r\n   usbmsc sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_MAILBOX_MAILBOXDEVICE_C__
@@ -243,7 +248,7 @@ const static SHELL_CMD_INFO ShellRegisterName1[] =
 #endif
 #ifdef __DRIVER_WATCHDOG_WATCHDOGDEVICE_C__
 #ifdef _WDT_DEV_SHELL_
-    "wdt", SEGMENT_ID_WDOG_SHELL, WDTDev_Shell,"watch dog device cmd package","NULL",
+    "wdt", SEGMENT_ID_WDOG_SHELL, WDTDev_Shell,"watch dog device cmd package","wdt<.wdt sub cmd | wdt sub cmd package[...]> --- wdt device can reset system when not feed it long time\r\n   wdt sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_WM8987_WM8987DEVICE_C__
@@ -258,22 +263,22 @@ const static SHELL_CMD_INFO ShellRegisterName1[] =
 #endif
 #ifdef __DRIVER_SD_SDDEVICE_C__
 #ifdef _SD_DEV_SHELL_
-    "sd",SEGMENT_ID_SD_SHELL,SdDev_Shell,"sd card device cmd package","NULL",
+    "sd",SEGMENT_ID_SD_SHELL,SdDev_Shell,"sd card device cmd package","sd<.sd sub cmd | sd sub cmd package[...]> --- sd device use sdmmc device driver sd card\r\n   sd sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_I2C_I2CDEVICE_C__
 #ifdef _I2C_DEV_SHELL_
-    "i2c",SEGMENT_ID_I2C_SHELL,I2CDev_Shell,"i2c controller device cmd package","NULL",
+    "i2c",SEGMENT_ID_I2C_SHELL,I2CDev_Shell,"i2c controller device cmd package","i2c<.i2c sub cmd | i2c sub cmd package[...]> --- i2c device provide api to other device for configure it \r\n   i2c sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_USB_USBOTGDEV_C__
 #ifdef _USBOTG_DEV_SHELL_
-    "usbotg",SEGMENT_ID_USBOTG_SHELL,UsbOtgDev_Shell,"usb otg device cmd package","NULL",
+    "usbotg",SEGMENT_ID_USBOTG_SHELL,UsbOtgDev_Shell,"usb otg device cmd package","usbotg<.usbotg sub cmd | usbotg sub cmd package[...]> --- usbotg device can driver usb otg phy for usb class\r\n   usbotg sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_SDIO_SDIODEVICE_C__
 #ifdef _SDIO_DEV_SHELL_
-    "sdio",SEGMENT_ID_SDIO_SHELL,SdioDev_Shell,"sdio device cmd package","NULL",
+    "sdio",SEGMENT_ID_SDIO_SHELL,SdioDev_Shell,"sdio device cmd package","sdio<.sdio sub cmd | sdio sub cmd package[...]> --- sdio device use sdmmc device driver sdio card or wifi module\r\n   sdio sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_SPINOR_SPINORDEVICE_C__
@@ -283,42 +288,42 @@ const static SHELL_CMD_INFO ShellRegisterName1[] =
 #endif
 #ifdef __DRIVER_SPI_SPIDEVICE_C__
 #ifdef _SPI_DEV_SHELL_
-     "spi",NULL,SpiDev_Shell,"spi controller device cmd package","NULL",
+     "spi",SEGMENT_ID_SPI_SHELL,SpiDev_Shell,"spi controller device cmd package","spi<.spi sub cmd | spi sub cmd package[...]> --- spi device provide api to other device for transmit data\r\n   spi sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_FIFO_FIFODEVICE_C__
 #ifdef _FIFO_DEV_SHELL_
-    "fifo",SEGMENT_ID_FIFO_SHELL,fifoDev_Shell,"rkos fifo device for network stream transport cmd package","NULL",
+    "fifo",SEGMENT_ID_FIFO_SHELL,fifoDev_Shell,"rkos fifo device cmd package","fifo<.fifo sub cmd | fifo sub cmd package[...]> --- fifo device can buffer net data for player or recorder\r\n   fifo sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_SDMMC_SDMMCDEVICE_C__
 #ifdef _SDEMMC_SHELL_
-    "sdmmc",SEGMENT_ID_SDC_SHELL,SdcDev_Shell,"sd/mmsc controller device cmd package","NULL",
+    "sdmmc",SEGMENT_ID_SDC_SHELL,SdcDev_Shell,"sd/mmsc controller device cmd package","sdmmc<.sdmmc sub cmd | sdmmc sub cmd package[...]> --- sdmmc device provide api to sdio, sd and emmc device\r\n   sdmmc sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_EMMC_EMMCDEVICE_C__
 #ifdef _EMMC_DEV_SHELL_
-    "emmc", SEGMENT_ID_EMMC_SHELL, EmmcDev_Shell,"emmc card device cmd package","NULL",
+    "emmc", SEGMENT_ID_EMMC_SHELL, EmmcDev_Shell,"emmc device cmd package","emmc<.emmc sub cmd | emmc sub cmd package[...]> --- emmc device use sdmmc device driver emmc flash \r\n   emmc sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_LUN_LUNDEVICE_C__
 #ifdef _LUN_DEV_SHELL_
-    "lun", SEGMENT_ID_LUN_SHELL, LunDev_Shell,"lun device for storage cmd package","NULL",
+    "lun", SEGMENT_ID_LUN_SHELL, LunDev_Shell,"lun device cmd package","lun<.lun sub cmd | lun sub cmd package[...]> --- lun device insulate all storage device\r\n   lun sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_PARTION_PARTIONDEVICE_C__
 #ifdef _PAR_DEV_SHELL_
-    "par", SEGMENT_ID_PAR_SHELL, ParDev_Shell,"partion device for file system cmd package","NULL",
+    "par", SEGMENT_ID_PAR_SHELL, ParDev_Shell,"partion device for file system cmd package","par<.par sub cmd | par sub cmd package[...]> --- par device check partion on the lun device\r\n   par sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_VOLUME_FATDEVICE_C__
 #ifdef _FAT_SHELL_
-    "fat", SEGMENT_ID_FAT_SHELL, FatDev_Shell,"fat file system cmd package","NULL",
+    "fat", SEGMENT_ID_FAT_SHELL, FatDev_Shell,"fat file system cmd package","fat<.fat sub cmd | fat sub cmd package[...]> --- fat device driver fat file system on the partion device\r\n   par sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_FILE_FILEDEVICE_C__
 #ifdef _FILE_SHELL_
-    "file", SEGMENT_ID_FILE_SHELL, FileDev_Shell,"file manager device cmd package","NULL",
+    "file", SEGMENT_ID_FILE_SHELL, FileDev_Shell,"file manager device cmd package","file<.file sub cmd | file sub cmd package[...]> --- file device manage all volume in system\r\n   file sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_ALC5633_ALC5633DEVICE_C__
@@ -328,22 +333,22 @@ const static SHELL_CMD_INFO ShellRegisterName1[] =
 #endif
 #ifdef __DRIVER_DMA_DMADEVICE_C__
 #ifdef _DMA_SHELL_
-    "dma", SEGMENT_ID_DMA_SHELL, DmaDev_Shell,"dma device cmd package","NULL",
+    "dma", SEGMENT_ID_DMA_SHELL, DmaDev_Shell,"dma device cmd package","dma<.dma sub cmd | dma sub cmd package[...]> --- dma device driver rknanod dma controller\r\n   dma sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __GUI_LCDDRIVER_C__
 #ifdef _LCD_SHELL_
-    "lcd", SEGMENT_ID_LCD_SHELL, LcdShell,"lcd device cmd package","NULL",
+    "lcd", SEGMENT_ID_LCD_SHELL, LcdShell,"lcd device cmd package","lcd<.lcd sub cmd | lcd sub cmd package[...]> --- lcd device provide lcd drvier struct for all lcd by used in rkos system\r\n   lcd sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __OS_FWANALYSIS_FWANALYSIS_C__
 #ifdef _FW_ANLYSIS_SHELL_
-    "fw", SEGMENT_ID_FW_SHELL, FWShell,"firmeware dirver cmd package","NULL",
+    "fw", SEGMENT_ID_FW_SHELL, FWShell,"firmeware dirver cmd package","fw<.fw sub cmd | fw sub cmd package[...]> --- fw module driver rkos firmwave\r\n   fw sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __DRIVER_UART_UARTDEVICE_C__
 #ifdef _AUDIO_SHELL_
-    "uart", NULL, UartDev_Shell,"uart device cmd package","NULL",
+    "uart", SEGMENT_ID_UART_SHELL, UartDev_Shell,"uart device cmd package","uart<.uart sub cmd | uart sub cmd package[...]> --- uart device driver uart controller\r\n   uart sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __CPU_NANOD_LIB_HW_MP3_IMDCT_C__
@@ -393,26 +398,23 @@ const static SHELL_CMD_INFO ShellRegisterName1[] =
 #endif
 #ifdef __CPU_NANOD_LIB_GPIO_C__
 #ifdef _GPIO_SHELL_
-    "gpio", SEGMENT_ID_GPIO_SHELL, GPIOShell,"gpio bsp driver cmd package","NULL",
+    "gpio", SEGMENT_ID_GPIO_SHELL, GPIOShell,"gpio bsp driver cmd package","gpio<.gpio sub cmd | gpio sub cmd package[...]> --- gpio module driver gpio controller\r\n   gpio sub cmd or cmd package as the following:",
 #endif
 #endif
 #ifdef __APP_RECORD_RECORD_C__  //chad.ma add
-    "record",SEGMENT_ID_RECORD_SHELL,record_shell,"record contoller cmd package","NULL",
+    "record",SEGMENT_ID_RECORD_SHELL,record_shell,"record contoller cmd package","record<.record sub cmd | record sub cmd package[...]> --- record send record cmd to record controller\r\n   record sub cmd or cmd package as the following:",
 #endif
 #ifdef __APP_AUDIO_MUSIC_C__
-    "music", SEGMENT_ID_MUSIC_SHELL, music_shell,"audio contoller cmd package","NULL",
+    "music", SEGMENT_ID_MUSIC_SHELL, music_shell,"audio contoller cmd package","music<.music sub cmd | music sub cmd package[...]> --- music send music cmd to audio controller\r\n   music sub cmd or cmd package as the following:",
 #endif
-#ifdef _DRIVER_WIFI__
-    "wifi", SEGMENT_ID_AP6181_SHELL, wifi_shell,"wifi contoller cmd package","NULL",
+#ifdef _WICE_
+    "wifi", SEGMENT_ID_AP6181_SHELL, wifi_shell,"wifi contoller cmd package","wifi<.wifi sub cmd | wifi sub cmd package[...]> --- wifi driver cmd support wice and realtek\r\n   wifi sub cmd or cmd package as the following:",
 #endif
 #ifdef __WIFI_DLNA_C__
-    "dlna", SEGMENT_ID_DLNA_SHELL, dlna_shell,"dlna player cmd package","NULL",
+    "dlna", SEGMENT_ID_DLNA_SHELL, dlna_shell,"dlna player cmd package","dlna<.dlna sub cmd | dlna sub cmd package[...]> --- dlna player control cmd\r\n   dlna sub cmd or cmd package as the following:",
 #endif
 #ifdef __WIFI_XXX_C__
-    "XXX", SEGMENT_ID_XXX_SHELL, XXX_shell,"XXX player cmd package","NULL",
-#endif
-#ifdef __SHELL_SWITCH_PLAYER_C__//JJJHHH 20161016
-	"switch", SEGMENT_ID_SWITCHPLAYER_SHELL, SwitchPlayer_shell,"switch player cmd package","NULL",
+    "xxx", SEGMENT_ID_XXX_SHELL, XXX_shell,"XXX player cmd package","xxx<.xxx sub cmd | xxx sub cmd package[...]> --- xxx player control cmd\r\n   xxx sub cmd or cmd package as the following:",
 #endif
 
     "\b", NULL, NULL, NULL
@@ -476,7 +478,7 @@ COMMON API rk_err_t ShellHelpDesDisplay(HDC dev,  uint8 * CmdDes,  uint8 * pstr)
 
     FW_ReadFirmwaveByByte(Segment.CodeLoadBase + (uint32)CmdDes - Segment.CodeImageBase , CmdSampleDes, 511);
 
-    rk_printf_no_time("%s", CmdSampleDes);
+    rk_printf_no_time("  %s\r\n", CmdSampleDes);
 
     return RK_SUCCESS;
 
@@ -529,7 +531,7 @@ COMMON API rk_err_t ShellHelpSampleDesDisplay(HDC dev,  SHELL_CMD * cmd,  uint8 
 
         FW_ReadFirmwaveByByte(Segment.CodeLoadBase + (uint32)cmd[i].CmdSampleDes - Segment.CodeImageBase, CmdSampleDes, 511);
 
-        rk_printf_no_time("%s\t\t%s",buf, CmdSampleDes);
+        rk_printf_no_time("\t%s\t%s",buf, CmdSampleDes);
         i++;
     }
 
@@ -878,7 +880,7 @@ COMMON API rk_err_t ShellRootParsing(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 temp;
     SHELL_CMD_ITEM * pTempCmdItem = NULL;
 
@@ -886,9 +888,8 @@ COMMON API rk_err_t ShellRootParsing(HDC dev, uint8 * pstr)
 
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if(StrCnt == 0)
     {
-        rk_print_string("error cmd\r\n");
         return RK_ERROR;
     }
 
@@ -1065,6 +1066,15 @@ _SYSTEM_SHELL_SHELLTASK_COMMON_
 COMMON FUN rk_err_t ShellPcb(HDC dev, uint8 * pstr)
 {
     uint32 i;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     if(gpstShellTaskDataBlock == NULL)
     {
         rk_printf("shell task not exist");
@@ -1079,7 +1089,7 @@ COMMON FUN rk_err_t ShellPcb(HDC dev, uint8 * pstr)
         rk_printf_no_time("        .useflag = %d",gpstShellTaskDataBlock->CmdHeadItem[i].useflag);
         rk_printf_no_time("        .CmdDes = %d",gpstShellTaskDataBlock->CmdHeadItem[i].CmdDes);
         rk_printf_no_time("        .SegmentID = %d",gpstShellTaskDataBlock->CmdHeadItem[i].SegmentID);
-        rk_printf_no_time("        .ShellCmdName = %08x",gpstShellTaskDataBlock->CmdHeadItem[i].ShellCmdName);
+        rk_printf_no_time("        .ShellCmdName = %s",gpstShellTaskDataBlock->CmdHeadItem[i].ShellCmdName);
         rk_printf_no_time("        .ShellCmdParaseFun = %08x",gpstShellTaskDataBlock->CmdHeadItem[i].ShellCmdParaseFun);
     }
 
@@ -1106,13 +1116,36 @@ COMMON FUN rk_err_t ShellHelp(HDC dev, uint8 * pstr)
     SEGMENT_INFO_T  Segment;
     uint32 DesStart, DesSize;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     pstr--;
 
     if (StrLenA(pstr) != 0)
         return RK_ERROR;
 
-    rk_print_string("\nrkos shell support mulitple level cmd£¬between two level cmd use '.', for example usbotg.mc");
-    rk_print_string("\n max level cmd as follow:");
+    rk_print_string("\n  rkos shell command format is:");
+    rk_print_string("\n  rkos://cmd[.<sub cmd | sub cmd package>...][ parameter...]\r\n");
+    rk_print_string("\n  Parameter	Description");
+    rk_print_string("\n  ------------------------------------------------------------");
+    rk_print_string("\n  cmd	    Command or command package");
+    rk_print_string("\n  sub cmd	Sub command or sub command package in the command package");
+    rk_print_string("\n  parameter	Command or sub command parameter");
+    rk_print_string("\n  [xxx]	    xxx Can be removed");
+    rk_print_string("\n  <xxx>	    xxx Can not be removed");
+    rk_print_string("\n  x | y	    x or y, only select one");
+    rk_print_string("\n  x & y	    x and y, must select two");
+    rk_print_string("\n  x...	    Can have a lot of x");
+    rk_print_string("\n  Between two parameters, command with parameter or sub command with parameter use space character.");
+    rk_print_string("\nBetween cmd package with sub cmd package or cmd package with sub cmd use '.' .The whole cmd line is");
+    rk_print_string("\nthe end of enter key.You can input \"help\" cmd to list all command.The commands which are list in");
+    rk_print_string("\nthe below table can be used in some SDK use rkos.\r\n");
+
 
     FW_GetSegmentInfo(SEGMENT_ID_SHELL_CMD_NAME, &Segment);
 
@@ -1130,7 +1163,7 @@ COMMON FUN rk_err_t ShellHelp(HDC dev, uint8 * pstr)
         memcpy(buf, ShellRootName[i].CmdName, strlen(ShellRootName[i].CmdName));
 
         FW_ReadFirmwaveByByte(Segment.CodeLoadBase + (uint32)ShellRootName[i].CmdSampleDes - Segment.CodeImageBase, CmdSampleDes, 511);
-        rk_printf_no_time("%s\t\t%s",buf, CmdSampleDes);
+        rk_printf_no_time("\t%s\t%s",buf, CmdSampleDes);
         i++;
     }
 
@@ -1144,7 +1177,7 @@ COMMON FUN rk_err_t ShellHelp(HDC dev, uint8 * pstr)
         memcpy(buf, ShellCmdName[i].ShellCmdName, strlen(ShellCmdName[i].ShellCmdName));
 
         FW_ReadFirmwaveByByte(Segment.CodeLoadBase + (uint32)ShellCmdName[i].CmdSampleDes - Segment.CodeImageBase, CmdSampleDes, 511);
-        rk_printf_no_time("%s\t\t%s",buf, CmdSampleDes);
+        rk_printf_no_time("\t%s\t%s",buf, CmdSampleDes);
         i++;
     }
 
@@ -1165,6 +1198,11 @@ COMMON FUN rk_err_t ShellCmdRegister(HDC dev, uint8 * pItemName)
     SHELL_CMD_ITEM * pCmdItem;
     SEGMENT_INFO_T  Segment;
     SHELL_CMD_INFO  ShellRegisterName[sizeof(ShellRegisterName1) / sizeof(SHELL_CMD_INFO)];
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pItemName) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
     pItemName--;
 
@@ -1253,6 +1291,16 @@ COMMON FUN rk_err_t ShellCmdRemove(HDC dev, uint8 * pItemName)
     SHELL_CMD_ITEM * pCmdItem;
 
     uint32 i = 0, j = 0;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pItemName) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pItemName - 1) != ' ')
+    {
+        return RK_ERROR;
+    }
 
     pCmdItem = gpstShellTaskDataBlock->CmdHeadItem;
     for (j = 0; j < SHELL_CMD_MAX_ITEM; j++)

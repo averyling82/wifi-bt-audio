@@ -18,7 +18,10 @@ $Log    :
 
 //global variables
 _APP_AUDIO_AUDIOCONTROLTASK_DATA_ int CurrentDecCodec;
+
+#ifdef _RECORD_
 _APP_RECORD_RECORDCONTROLTASK_DATA_ int CurrentEncCodec;
+#endif
 
 
 //be sure to keep consistent with array order of IOCTL enum that is defined in audio_globals.h.
@@ -119,7 +122,7 @@ static unsigned long (*CodecDecPFn[NUMCODECS])(unsigned long ulSubFn,
     #endif
 };
 
-
+#ifdef _RECORD_
 _APP_RECORD_RECORDCONTROLTASK_DATA_
 static unsigned long (*CodecEncPFn[NUMCODECS])(unsigned long ulSubFn,
                                                    unsigned long ulParam1,
@@ -235,19 +238,20 @@ unsigned long CodeOpenEnc(unsigned long arg, short *ppsBuffer, long *plLength)
     // Return the result to the caller.
     return(ulRet);
 }
+#endif
 
 _APP_AUDIO_AUDIOCONTROLTASK_COMMON_
-unsigned long CodeOpenDec(void)
+unsigned long CodeOpenDec(unsigned long directplay, unsigned long savememory)
 {
     unsigned long ulRet;
 
     if(CurrentDecCodec == 0xff)
         return -1;
 
-
+	rk_printf("directplay=%d savememory=%d\n",directplay,savememory);
     // Pass the open request to the entry point for the codec.
-    ulRet = (CodecDecPFn[CurrentDecCodec])(SUBFN_CODEC_OPEN_DEC, 0, 0, 0);
-
+    ulRet = (CodecDecPFn[CurrentDecCodec])(SUBFN_CODEC_OPEN_DEC, directplay, savememory, 0);
+	rk_printf("20161129 111aaaa1\n");
     // Return the result to the caller.
     return(ulRet);
 }
@@ -301,6 +305,7 @@ unsigned long CodecGetDecBitrate(unsigned long *pulBitrate)
    return ret;
 }
 
+#ifdef _RECORD_
 _APP_RECORD_RECORDCONTROLTASK_COMMON_
 unsigned long CodecGetEncBitrate(unsigned long *pulBitrate)
 {
@@ -313,7 +318,7 @@ unsigned long CodecGetEncBitrate(unsigned long *pulBitrate)
 
    return ret;
 }
-
+#endif
 
 _APP_AUDIO_AUDIOCONTROLTASK_COMMON_
 unsigned long CodecGetSampleRate(unsigned long *pulSampleRate)
@@ -392,7 +397,7 @@ unsigned long CodecGetDecBuffer(short *ppsBuffer, long *plLength)
             (unsigned long)plLength, 0));
 }
 
-
+#ifdef _RECORD_
 _APP_RECORD_RECORDCONTROLTASK_COMMON_
 unsigned long CodecGetEncBuffer(short *ppsBuffer, long *plLength)
 {
@@ -416,6 +421,7 @@ unsigned long CodecEncode(void)
 
     return((CodecEncPFn[CurrentEncCodec])(SUBFN_CODEC_ENCODE, 0, 0, 0));
 }
+#endif
 
 _APP_AUDIO_AUDIOCONTROLTASK_COMMON_
 unsigned long CodecGetBitPerSample(long *audioBps)

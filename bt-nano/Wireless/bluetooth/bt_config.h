@@ -31,7 +31,9 @@
 #include "BspConfig.h"
 #include "RKOS.h"
 #include "BSP.h"
+#ifdef _RK_EQ_
 #include "effect.h"
+#endif
 #include "SysInfoSave.h"
 
 
@@ -56,7 +58,7 @@ typedef unsigned int        uint32_t;
 #define _WEB_BLUETOOTH_BT_CONFIG_INIT_  __attribute__((section("web_bluetooth_bt_config_init")))
 #define _WEB_BLUETOOTH_BT_CONFIG_SHELL_  __attribute__((section("web_bluetooth_bt_config_shell")))
 
-#define BT_DEBUG(format,...)    printf("%s,L:%d:"format"\n", __MODULE__, __LINE__, ##__VA_ARGS__)
+#define BT_DEBUG(format,...)    rk_printf("%s,L:%d:"format"", __MODULE__, __LINE__, ##__VA_ARGS__)
 
 //-----------------------------------------------------------------------------
 #define BT_HCI_DATA_RECV_TASK_STACK_SIZE        (256)

@@ -131,6 +131,11 @@ rk_err_t UartDevSuspend(HDC dev, uint32 Level);
 rk_err_t UartDevDeInit(UART_DEVICE_CLASS * pstUartDev);
 rk_err_t UartDevInit(UART_DEVICE_CLASS * pstUartDev);
 void UartIntIsr(uint32 UartDevID);
+rk_err_t UartDevShellPcb(HDC dev, uint8 * pstr);
+rk_err_t UartDevShellMc(HDC dev, uint8 * pstr);
+rk_err_t UartDevShellDel(HDC dev, uint8 * pstr);
+rk_err_t UartDevShellTest(HDC dev, uint8 * pstr);
+
 
 
 /*
@@ -778,12 +783,13 @@ rk_err_t UartDevInit(UART_DEVICE_CLASS * pstUartDev)
 _DRIVER_UART_UARTDEVICE_SHELL_DATA_
 static SHELL_CMD ShellUartName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "mc",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "bsp",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "pcb",UartDevShellPcb,"list uart device pcb inf","uart.pcb [object id]",
+    "create",UartDevShellMc,"create uart device","uart.create [object id]",
+    "delete",UartDevShellDel,"delete uart device","uart.delete [object id]",
+    "test",UartDevShellTest,"test uart device","uart.test [object id]",
+    #ifdef SHELL_BSP
+    "bsp",UartDevShellBsp,"NULL","NULL",
+    #endif
     "\b",NULL,"NULL","NULL",
 };
 
@@ -791,18 +797,17 @@ static SHELL_CMD ShellUartName[] =
 _DRIVER_UART_UARTDEVICE_SHELL_DATA_
 static SHELL_CMD ShellUartBspName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "setbitw",NULL,"NULL","NULL",
-    "setstopb",NULL,"NULL","NULL",
-    "setparity",NULL,"NULL","NULL",
-    "setbaudrate",NULL,"NULL","NULL",
-    "send",NULL,"NULL","NULL",
-    "recive",NULL,"NULL","NULL",
-    "sr",NULL,"NULL","NULL",
-    "m2u",NULL,"NULL","NULL",
-    "u2m",NULL,"NULL","NULL",
-    "uutogether",NULL,"NULL","NULL",  //uart Cooperative Work
-    "flowcontrol",NULL,"NULL","NULL",  //test uart cts / rts
+    "setbitw",UartDevShellBspSetbitW,"NULL","NULL",
+    "setstopb",UartDevShellBspSetStopB,"NULL","NULL",
+    "setparity",UartDevShellBspSetParity,"NULL","NULL",
+    "setbaudrate",UartDevShellBspSetBaudRate,"NULL","NULL",
+    "send",UartDevShellBspSend,"NULL","NULL",
+    "recive",UartDevShellBspRecive,"NULL","NULL",
+    "sr",UartDevShellBspSR,"NULL","NULL",
+    "m2u",UartDevShellBspMemToUart,"NULL","NULL",
+    "u2m",UartDevShellBspUartToMem,"NULL","NULL",
+    "uutogether",UartDevShellTeamworkTest,"NULL","NULL",  //uart Cooperative Work
+    "flowcontrol",UartDevShellFlowControlTest,"NULL","NULL",  //test uart cts / rts
     "\b",NULL,"NULL","NULL",
 };
 
@@ -857,12 +862,18 @@ SHELL API rk_err_t UartDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellUartName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -878,38 +889,10 @@ SHELL API rk_err_t UartDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                      //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellUartName[i].CmdDes, pItem);
+    if(ShellUartName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //pcb
-            ret = UartDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:  //mc
-            ret = UartDevShellMc(dev,pItem);
-            break;
-
-        case 0x02:  //del
-            ret = UartDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:  //test
-            ret = UartDevShellTest(dev,pItem);
-            break;
-
-        case 0x04:  //bsp
-            #ifdef SHELL_BSP
-            ret = UartDevShellBsp(dev,pItem);
-            #endif
-            break;
-         case 0x05: //help
-           #ifdef SHELL_HELP
-           ret = UartDevShellHelp(dev,pItem);
-           #endif
-           break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellUartName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 }
@@ -941,19 +924,6 @@ SHELL FUN rk_err_t UartDevShellFlowControlTest(HDC dev,uint8 * pstr)
     gUartint_write_flag = 1;
     uint32 status;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("Uart.bsp.flowcontrol  测试uart流控功能。\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
    switch( gUartChannel )
     {
@@ -1288,19 +1258,6 @@ SHELL FUN rk_err_t UartDevShellTeamworkTest(HDC dev, uint8 * pstr)
     gUartint_flag = 0;
     gUartint_write_flag = 1;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("Uart.bsp.uutogether uart to uart ,one as transmitter,the oterh as reciver.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
      switch( gUartChannel )
     {
@@ -1568,19 +1525,6 @@ SHELL FUN rk_err_t UartDevShellBspMemToUart(HDC dev, uint8 * pstr)
     gdma_test_channel = DMA_CHN1;
 
     /*send bsp help info*/
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("uart.bsp.m2u      测试内存通过dma方式发送数据到某一uart.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
      switch( gUartChannel )
     {
@@ -1785,19 +1729,6 @@ SHELL FUN rk_err_t UartDevShellBspUartToMem(HDC dev, uint8 * pstr)
     gUartData = 0;
 
     /*send bsp help info*/
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("uart.bsp.u2m      测试某一uart通过dma方式将接收到的数据发送到内存.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
      switch( gUartChannel )
     {
@@ -2042,20 +1973,6 @@ SHELL FUN rk_err_t UartDevShellBspSR( HDC dev, uint8 * pstr)
     gUartBitRate = UART_BR_115200;
     gUartBitWidth = UART_DATA_8B;
     gUartint_flag = 0;
-
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("Uart.bsp.sr 命令用于连续发送m个5A数据的同时，连续接收n个数据，并在发送完之后回显\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     //open uart clk
     switch( gUartChannel )
@@ -2391,20 +2308,6 @@ SHELL FUN rk_err_t UartDevShellBspRecive(HDC dev, uint8 * pstr)
     }
 
     /*recive bsp help info*/
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("Uart.bsp.recive 命令用于连续接收m个数据. \r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     /*recive bsp test*/
     while(1)
     {
@@ -2431,7 +2334,7 @@ SHELL FUN rk_err_t UartDevShellBspRecive(HDC dev, uint8 * pstr)
         }
     }
 
-    /*恢复os使用的uart中断服务程序*/
+    /*??os???uart??????*/
     UARTSetIntEnabled((eUART_CH)gUartChannel,UART_IE_RX);
 
     switch( gUartChannel )
@@ -2613,20 +2516,6 @@ SHELL FUN rk_err_t UartDevShellBspSend(HDC dev, uint8 * pstr)
 
 
     /*send bsp help info*/
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("uart.bsp.send 命令用来连续发送m个5A. \r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     if( *pstr == NULL)
     {
         cnt = 1;
@@ -2650,7 +2539,7 @@ SHELL FUN rk_err_t UartDevShellBspSend(HDC dev, uint8 * pstr)
         cnt--;
     }
 
-    /*恢复os使用的uart中断服务程序*/
+    /*??os???uart??????*/
     UARTSetIntEnabled((eUART_CH)gUartChannel,UART_IE_TX);
 
     switch( gUartChannel )
@@ -2829,20 +2718,6 @@ SHELL FUN rk_err_t UartDevShellBspSetBaudRate(HDC dev, uint8 * pstr)
     }
 
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("uart.bsp.setbaudrate 用来设置uart采样率，取值范围110 - 921600\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     if( *pstr == NULL)
     {
         rk_print_string("miss baudrate parameter.please give the baud rate value. \
@@ -2997,21 +2872,6 @@ SHELL FUN rk_err_t UartDevShellBspSetParity(HDC dev, uint8 * pstr)
             IntEnable(INT_ID_UART5);
             break;
     }
-
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("uart.bsp.setparity 命令用来设置奇偶校验模式,取值范围0,1,2。\
-                            \r\n0 - 奇校验，1 - 偶校验，2 - 无奇偶校验\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     if( *pstr == NULL)
     {
@@ -3170,20 +3030,6 @@ SHELL FUN rk_err_t UartDevShellBspSetStopB(HDC dev, uint8 * pstr)
             break;
     }
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("uart.bsp.setstopb 命令用来设置停止位,取值0或1，0 - 1个停止位，1 - 1.5 或 2个停止位。\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     if( *pstr == NULL)
     {
         rk_print_string("miss stop bit parameter.please use 0 or 1. \
@@ -3338,20 +3184,6 @@ SHELL FUN rk_err_t UartDevShellBspSetbitW( HDC dev, uint8 * pstr)
             break;
     }
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("uart.bsp.setbitw 命令用来设置位宽 uart.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     if( *pstr == NULL)
     {
         rk_print_string("miss bit width parameter.please use 5 - 8. \r\n");
@@ -3375,78 +3207,7 @@ SHELL FUN rk_err_t UartDevShellBspSetbitW( HDC dev, uint8 * pstr)
 
 #endif
 
-#ifdef SHELL_HELP
-/*******************************************************************************
-** Name: UartDevShellHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.ma
-** Date: 2014.10.31
-** Time: 14:34:24
-*******************************************************************************/
-_DRIVER_UART_UARTDEVICE_SHELL_
-SHELL FUN rk_err_t UartDevShellHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
-
-    if( StrLenA( pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("Uart命令集提供了一系列的命令对UART进行操作\r\n");
-    rk_print_string("命令如下:\r\n");
-    rk_print_string("pcb       显示pcb信息         \r\n");
-    rk_print_string("mc        mc命令              \r\n");
-    rk_print_string("del       删除uart device命令 \r\n");
-    rk_print_string("test      测试命令            \r\n");
-    rk_print_string("bsp       板级支持包命令      \r\n");
-    rk_print_string("help      显示uart命令帮助信息\r\n");
-
-    return RK_SUCCESS;
-
-}
-#endif
-
 #ifdef SHELL_BSP
-
-#ifdef SHELL_HELP
-/*******************************************************************************
-** Name: UartDevShellBspHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:aaron.sun
-** Date: 2014.10.14
-** Time: 11:34:24
-*******************************************************************************/
-_DRIVER_UART_UARTDEVICE_SHELL_
-SHELL FUN rk_err_t UartDevShellBspHelp(HDC dev, uint8 * pstr)
-{
-     pstr--;
-
-    if(StrLenA(pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("uart.Bsp命令集提供了一系列的命令对UART板级驱动接口进行测试\r\n");
-    rk_print_string("测试命令如下:\r\n");
-//    rk_print_string("init             初始化 uart\r\n");
-//    rk_print_string("deinit           反初始化 uart\r\n");
-    rk_print_string("setbitw w        设置位宽w\r\n");
-    rk_print_string("setstopb b       设置停止位b\r\n");
-    rk_print_string("setparity f      设置校验位f\r\n");
-    rk_print_string("setbaudrate s    设置采样率s\r\n");
-//    rk_print_string("SetSendMode m    设置发送模式m, m = p PIO模式，m = d, DMA模式\r\n");
-//    rk_print_string("SetReciveMode m  设置接收模式m, m = p PIO模式，m = d, DMA模式\r\n");
-    rk_print_string("send [m]         发送数据，不带参数，只发送5A;带参数表示连续发送m个5A数据。\r\n");
-    rk_print_string("recive [m]       接收数据.不带参数，只接受一个数据，带参数表示连续接收m个数据，然后回显\r\n");
-    rk_print_string("sr m             连续发送m个5A数据的同时，连续接收m个数据，并在发送完之后回显 \r\n");
-    rk_print_string("dtu              通过dma发送数据到uart。\r\n");
-    rk_print_string("utd              uart通过dma发送数据到memory。\r\n");
-    rk_print_string("uutogether       uart Cooperative Work。\r\n");
-    rk_print_string("flowcontrol       uart flow control test。\r\n");
-
-    return RK_SUCCESS;
-}
-#endif
-
 
 /*******************************************************************************
 ** Name: UartDevShellBsp
@@ -3462,13 +3223,19 @@ SHELL FUN rk_err_t UartDevShellBsp(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellUartBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -3484,62 +3251,12 @@ SHELL FUN rk_err_t UartDevShellBsp(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                                                 //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellUartBspName[i].CmdDes, pItem);
+    if(ShellUartBspName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //bsp help
-            #ifdef SHELL_HELP
-            ret = UartDevShellBspHelp(dev,pItem);
-            #endif
-            break;
-
-        case 0x01:  //setbitw
-            ret = UartDevShellBspSetbitW(dev,pItem);
-            break;
-
-        case 0x02:  //setstopb
-            ret = UartDevShellBspSetStopB(dev,pItem);
-            break;
-
-        case 0x03:  //setparity
-            ret = UartDevShellBspSetParity(dev,pItem);
-            break;
-
-        case 0x04:  //set baud rate
-            ret = UartDevShellBspSetBaudRate(dev,pItem);
-            break;
-
-        case 0x05:  //send
-            ret = UartDevShellBspSend(dev,pItem);
-            break;
-
-        case 0x06:  //recive
-            ret = UartDevShellBspRecive(dev,pItem);
-            break;
-
-        case 0x07:  //send and recive
-            ret = UartDevShellBspSR(dev,pItem);
-            break;
-
-        case 0x08:  //memory to uart test
-            ret = UartDevShellBspMemToUart(dev,pItem);
-            break;
-
-        case 0x09:  //uart to memory test
-            ret = UartDevShellBspUartToMem(dev,pItem);
-            break;
-
-        case 0x0a:  //uart to uart test,two uart works together
-            ret = UartDevShellTeamworkTest(dev,pItem);
-            break;
-
-        case 0x0b:  //uart0 as transmitter ,uart1 as reciver,test rts / cts
-            ret = UartDevShellFlowControlTest(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellUartBspName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 #endif
@@ -3558,6 +3275,16 @@ SHELL FUN rk_err_t UartDevShellTest(HDC dev, uint8 * pstr)
     HDC hUartDev;
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     //Get UartDev ID...
     if(StrCmpA(pstr, "0", 1) == 0)
     {
@@ -3571,20 +3298,6 @@ SHELL FUN rk_err_t UartDevShellTest(HDC dev, uint8 * pstr)
     {
         DevID = 0;
     }
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("Uart.test 命令用于测试uart device 是否成功创建或能否正确打开\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     //Open UartDev...
     hUartDev = RKDev_Open(DEV_CLASS_UART, 0, NOT_CARE);
 
@@ -3616,6 +3329,14 @@ SHELL FUN rk_err_t UartDevShellDel(HDC dev, uint8 * pstr)
 {
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     //Get UsbOtgDev ID...
     if(StrCmpA(pstr, "0", 1) == 0)
     {
@@ -3629,20 +3350,6 @@ SHELL FUN rk_err_t UartDevShellDel(HDC dev, uint8 * pstr)
     {
         DevID = 0;
     }
-
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("Uart.del 命令用于删除指定ID 的uart device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     if(RKDev_Delete(DEV_CLASS_UART, DevID, NULL) != RK_SUCCESS)
     {
@@ -3668,6 +3375,14 @@ SHELL FUN rk_err_t UartDevShellMc(HDC dev, uint8 * pstr)
     rk_err_t ret;
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     if(StrCmpA(pstr, "0", 1) == 0)
     {
         DevID = 0;
@@ -3680,20 +3395,6 @@ SHELL FUN rk_err_t UartDevShellMc(HDC dev, uint8 * pstr)
     {
         DevID = 0;
     }
-
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("Uart.mc 命令用来创建uart device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     stUartDevArg.dwBitWidth = UART_DATA_8B;
     stUartDevArg.dwBitRate = UART_BR_115200;
@@ -3722,6 +3423,14 @@ SHELL FUN rk_err_t UartDevShellPcb(HDC dev, uint8 * pstr)
 {
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     //Get UartDev ID...
     if(StrCmpA(pstr, "0", 1) == 0)
     {
@@ -3735,20 +3444,6 @@ SHELL FUN rk_err_t UartDevShellPcb(HDC dev, uint8 * pstr)
     {
         DevID = 0;
     }
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("Uart.pcb 命令是显示uart device ID\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     //Display pcb...
     if(gpstUartDevISR[DevID] != NULL)
     {

@@ -34,7 +34,9 @@
 #include "device.h"
 #include "DeviceManagerTask.h"
 #include "ShellTask.h"
+#ifdef _USB_
 #include "UsbService.h"
+#endif
 #include "FwAnalysis.h"
 #include "ModuleInfoTab.h"
 #include "PowerManager.h"
@@ -42,10 +44,12 @@
 #include "DriverInclude.h"
 #include "DeviceInclude.h"
 #include "AppInclude.h"
+#ifdef _USE_GUI_
 #include "GUITask.h"
 #include "GUIManager.h"
-#include "rk_fochannel.h"
 #include "..\Resource\ImageResourceID.h"
+#endif
+#include "rk_fochannel.h"
 #endif
 /*
 *---------------------------------------------------------------------------------------------------------------------

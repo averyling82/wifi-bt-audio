@@ -31,6 +31,7 @@
 #include "DriverInclude.h"
 #include "interrupt.h"
 #include "PowerManager.h"
+#include "Bsp.h"
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -76,7 +77,7 @@ typedef enum
 #define RKNANOD_L                   0
 #define RKNANOD_G                   1
 #define RKNANOD_N                   2
-#define RKNANOD_CHIP_TYPE           RKNANOD_G//RKNANOD_N//JJJHHH
+#define RKNANOD_CHIP_TYPE           RKNANOD_N
 
 #define BATT_POWEROFF_CNT           20
 #define BATT_POWEROFF_VALUE         BATT_EMPTY_VALUE
@@ -102,6 +103,8 @@ uint64          g_APPDisableList;
 uint64          g_APPEnableList;
 uint8           FreqDisableFlag = 0;
 uint8           FreqDisableCnt = 0;
+static pSemaphore FreqOperSem;
+
 pTimer  PowerTimer;
 /*Battery*/
 HDC     ADCHandler;
@@ -401,7 +404,7 @@ COMMON API void ChargeDisable(void)
 _SYSTEM_SYSSEVER_POWERMANAGER_COMMON_
 COMMON API void ChargeEnable(void)
 {
-    gBattery.Enable_Charge = 1;
+    gBattery.Enable_Charge = 1;/**/
 }
 
 /*******************************************************************************
@@ -598,12 +601,12 @@ COMMON API void SetSysFreq(uint32 nMhz)
      PllArg.cal_stclk_div = 1;
      PllArg.sys_core_div = 1;
      PllArg.sys_stclk_div = 1;
-     PllArg.pclk_logic_div = 4;
+     PllArg.pclk_logic_div = 0;
      PllArg.div_con_24m = 24 / nMhz;
 
      chip_freq.pll = nMhz * 1000 * 1000;
      chip_freq.hclk_sys_core = nMhz * 1000 * 1000;
-     chip_freq.pclk_logic_pre = chip_freq.hclk_sys_core / PllArg.pclk_logic_div;
+     chip_freq.pclk_logic_pre = chip_freq.hclk_sys_core / (1 << PllArg.pclk_logic_div);
 
      SetPllFreq(nMhz * 1000 * 1000, &PllArg);
 
@@ -625,12 +628,12 @@ COMMON API int32 FREQ_Enable(void)
 {
     uint32 i;
 
-    rkos_enter_critical();
+    rkos_semaphore_take(FreqOperSem, MAX_DELAY);
+
     if(FreqDisableCnt >= 1)
     {
         FreqDisableCnt--;
     }
-    rkos_exit_critical();
 
 
     if(FreqDisableCnt == 0)
@@ -644,7 +647,7 @@ COMMON API int32 FREQ_Enable(void)
 
                 if(!(g_APPEnableList & ((uint64)0x01<< i)))
                 {
-                    FREQ_ExitModule(i);
+                    FREQStopAPP(i);
                 }
                 else
                 {
@@ -654,10 +657,12 @@ COMMON API int32 FREQ_Enable(void)
             else if(g_APPEnableList & ((uint64)0x01<< i))
             {
                 g_APPEnableList &= ~((uint64)0x01 << i);
-                FREQ_EnterModule(i);
+                FREQStartAPP(i);
             }
         }
     }
+
+    rkos_semaphore_give(FreqOperSem);
 }
 /*******************************************************************************
 ** Name: FREQ_Disable
@@ -670,10 +675,10 @@ COMMON API int32 FREQ_Enable(void)
 _SYSTEM_SYSSEVER_POWERMANAGER_COMMON_
 COMMON API int32 FREQ_Disable(void)
 {
-    rkos_enter_critical();
+    rkos_semaphore_take(FreqOperSem, MAX_DELAY);
     FreqDisableFlag = 1;
     FreqDisableCnt++;
-    rkos_exit_critical();
+    rkos_semaphore_give(FreqOperSem);
 }
 
 /*******************************************************************************
@@ -687,6 +692,8 @@ COMMON API int32 FREQ_Disable(void)
 _SYSTEM_SYSSEVER_POWERMANAGER_COMMON_
 COMMON API int32 FREQ_ExitModule(eFREQ_APP modulename)
 {
+    rkos_semaphore_take(FreqOperSem, MAX_DELAY);
+
     if (FreqDisableFlag == 0)
     {
         FREQStopAPP(modulename);
@@ -695,6 +702,8 @@ COMMON API int32 FREQ_ExitModule(eFREQ_APP modulename)
     {
          g_APPDisableList |= ((uint64)0x01<< modulename);
     }
+
+    rkos_semaphore_give(FreqOperSem);
 
     return 0;
 }
@@ -710,6 +719,8 @@ COMMON API int32 FREQ_ExitModule(eFREQ_APP modulename)
 _SYSTEM_SYSSEVER_POWERMANAGER_COMMON_
 COMMON API int32 FREQ_EnterModule(eFREQ_APP modulename)
 {
+    rkos_semaphore_take(FreqOperSem, MAX_DELAY);
+
     if (FreqDisableFlag == 0)
     {
         FREQStartAPP(modulename);
@@ -718,6 +729,8 @@ COMMON API int32 FREQ_EnterModule(eFREQ_APP modulename)
     {
          g_APPEnableList |= ((uint64)0x01<< modulename);
     }
+
+    rkos_semaphore_give(FreqOperSem);
 
     return(0);
 }
@@ -781,17 +794,21 @@ COMMON FUN void PowerTimerIsr(void)
 
             FwResume();
 
+            #ifndef _IDLE_DEBUG_
             if(UartHDC == NULL)
             {
                 UartHDC = RKDev_Open(DEV_CLASS_UART, 0, NOT_CARE);
             }
+            #endif
 
             rk_printf("system return from idle%d",gSysConfig.SysIdleStatus);
 
+            #ifdef _FS_
             if(FileSysHDC == NULL)
             {
                 FileSysHDC = RKDev_Open(DEV_CLASS_FILE, 0, NOT_CARE);
             }
+            #endif
 
             if(hKey == NULL)
             {
@@ -802,6 +819,9 @@ COMMON FUN void PowerTimerIsr(void)
             {
                 ADCHandler = RKDev_Open(DEV_CLASS_ADC, 0, NOT_CARE);
             }
+
+            DBResume();
+
             #ifdef _USE_GUI_
             Lcd_BL_On(hLcd);
             #endif
@@ -822,14 +842,22 @@ COMMON FUN void PowerTimerIsr(void)
             {
                 rk_printf("system enter idle2.8");
                 gSysConfig.SysIdleStatus = 4;
+                DBSuspend();
+
+                #ifdef _FS_
                 RKDev_Close(FileSysHDC);
                 FileSysHDC = NULL;
+                #endif
+
                 RKDev_Close(hKey);
                 hKey = NULL;
                 RKDev_Close(ADCHandler);
                 ADCHandler = NULL;
+
+                #ifndef _IDLE_DEBUG_
                 RKDev_Close(UartHDC);
                 UartHDC = NULL;
+                #endif
             }
         }
         else if(gSysConfig.SysIdleStatus == 4)
@@ -837,11 +865,19 @@ COMMON FUN void PowerTimerIsr(void)
             RKTaskIdleTick();
             DeviceTask_DevIdleTick();
             #ifdef _SPI_BOOT_
-            if(DevTotalCnt == (DevTotalSuspendCnt + 2))
+            #ifndef _IDLE_DEBUG_
+            if(DevTotalCnt == (DevTotalSuspendCnt + 4))
+            #else
+            if(DevTotalCnt == (DevTotalSuspendCnt + 5))
+            #endif
             #endif
 
             #ifdef _EMMC_BOOT_
-            if(DevTotalCnt == (DevTotalSuspendCnt + 4))
+            #ifndef _IDLE_DEBUG_
+            if(DevTotalCnt == (DevTotalSuspendCnt + 5))
+            #else
+            if(DevTotalCnt == (DevTotalSuspendCnt + 6))
+            #endif
             #endif
             {
                 gSysConfig.SysIdleStatus = 5;
@@ -855,13 +891,16 @@ COMMON FUN void PowerTimerIsr(void)
             DeviceTask_DevIdleTick();
             if((TaskTotalCnt == (TaskTotalSuspendCnt + 4)))
             {
-                if(DevTotalCnt == (DevTotalSuspendCnt + 0))
+                #ifndef _IDLE_DEBUG_
+                if(DevTotalCnt == (DevTotalSuspendCnt + 1))
+                #else
+                if(DevTotalCnt == (DevTotalSuspendCnt + 2))
+                #endif
                 {
                     gSysConfig.SysIdleStatus = 3;
                     rk_printf("system enter idle3");
                     FREQ_ExitModule(FREQ_BLON);
                 }
-
             }
         }
         else if(gSysConfig.SysIdleStatus == 3)
@@ -874,12 +913,11 @@ COMMON FUN void PowerTimerIsr(void)
             rk_printf("system enter idle2");
         }
     }
-	
 
     if(gSysConfig.SysIdleStatus < 3)
     {
         battery_level = Battery_GetLevel();
-        if (gSysConfig.battery_level != battery_level)//update battery level
+        if (gSysConfig.battery_level != battery_level)
         {
             gSysConfig.battery_level = battery_level;
             MainTask_SetTopIcon(MAINTASK_BATTERY);
@@ -1188,7 +1226,13 @@ COMMON FUN int32 FREQSetFreq(uint64 appList)
         FreqAppTabl.calhclk = g_CruAPPTabel[FREQ_MAX].calhclk;
     }
 
+    rkos_enter_critical();
     FREQSetARMFreq(&FreqAppTabl, &chip_freq);
+    rkos_exit_critical();
+
+    rk_printf("pll=%d, shclk=%d, stck=%d, splk=%d, hhclk=%d, htck=%d",
+          chip_freq.pll, chip_freq.hclk_sys_core, chip_freq.stclk_sys_core, chip_freq.pclk_logic_pre,
+          chip_freq.hclk_cal_core, chip_freq.stclk_cal_core);
 
     return(0);
 }
@@ -1381,24 +1425,24 @@ COMMON FUN void FREQSetARMFreq(FREQ_APP_TABLE *FreqTab, chip_freq_t *pChipFreq)
         pChipFreq->stclk_sys_core = pChipFreq->hclk_sys_core / PllArg.sys_stclk_div;
         //sys core pclk
 
-        #if 1
+        #if 0
         if(pChipFreq->hclk_sys_core >= 200000000)
         {
-            PllArg.pclk_logic_div = 4;
+            PllArg.pclk_logic_div = 3;
         }
         else if(pChipFreq->hclk_sys_core >= 100000000)
         {
-            PllArg.pclk_logic_div = 2;
+            PllArg.pclk_logic_div = 1;
         }
         else
         {
-            PllArg.pclk_logic_div = 1;
+            PllArg.pclk_logic_div = 0;
         }
         #else
         PllArg.pclk_logic_div = 1;
         #endif
                 //DEBUG("PllArg.pclk_logic_div = %d", PllArg.pclk_logic_div);
-        pChipFreq->pclk_logic_pre = pChipFreq->hclk_sys_core / PllArg.pclk_logic_div;
+        pChipFreq->pclk_logic_pre = pChipFreq->hclk_sys_core / (1 << PllArg.pclk_logic_div);
 
         //cal core hclk/fclk
         PllArg.cal_core_div = calhclk_div;
@@ -1436,12 +1480,13 @@ COMMON FUN void FREQSetARMFreq(FREQ_APP_TABLE *FreqTab, chip_freq_t *pChipFreq)
             #endif
         }
 
+        if(hWdt != NULL)
+        {
+            WDTDev_Feed(hWdt);
+        }
+
         SysTickPeriodSet(10);
     }
-
-    rk_printf("VCO=%d, pll=%d, shclk=%d, stck=%d, splk=%d, hhclk=%d, htck=%d",
-          PllArg.VCO, pChipFreq->pll, pChipFreq->hclk_sys_core, pChipFreq->stclk_sys_core, pChipFreq->pclk_logic_pre,
-          pChipFreq->hclk_cal_core, pChipFreq->stclk_cal_core);
 
 }
 
@@ -1758,7 +1803,7 @@ COMMON FUN void BatteryInit(void)
 
     if((gBattery.Batt_Value <= BATT_EMPTY_VALUE+10)&(!Grf_CheckVbus()))
     {
-        printf("Low Power, BatteryVal = %d\n", gBattery.Batt_Value);
+        printf("\nLow Power, BatteryVal = %d\n", gBattery.Batt_Value);
         DelayMs(200);
         System_Power_On(0);       //power down
         while(1);
@@ -1809,11 +1854,8 @@ INIT API void BatteryManagerDeInit(void)
 _SYSTEM_SYSSEVER_POWERMANAGER_INIT_
 INIT API void PowerManagerStart(void)
 {
-#ifdef __ENABLE_POWERMANAGER
     rkos_start_timer(PowerTimer);
     BatteryManagerInit();
-#endif
-
 }
 
 /*******************************************************************************
@@ -1827,11 +1869,9 @@ INIT API void PowerManagerStart(void)
 _SYSTEM_SYSSEVER_POWERMANAGER_INIT_
 INIT API void PowerManagerEnd(void)
 {
-#ifdef __ENABLE_POWERMANAGER
     rkos_stop_timer(PowerTimer);
     rkos_delete_timer(PowerTimer);
     BatteryManagerDeInit();
-#endif
 }
 
 
@@ -1905,6 +1945,7 @@ INIT FUN int32 FREQ_Control_Init(void)
 {
     FreqDisableFlag = 0;
     FreqDisableCnt = 0;
+    FreqOperSem = rkos_semaphore_create(1, 1);
 }
 
 

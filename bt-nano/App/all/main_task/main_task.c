@@ -29,10 +29,12 @@
 */
 #include "RKOS.h"
 #include "Bsp.h"
+#ifdef _USE_GUI_
 #include "GUITask.h"
 #include "GUIManager.h"
 #include "..\Resource\ImageResourceID.h"
 #include "..\Resource\MenuResourceID.h"
+#endif
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -79,6 +81,7 @@ typedef  struct _MAIN_TASK_DATA_BLOCK
     #endif
 
     //GUI Handle
+    #ifdef _USE_GUI_
     HGC     hBackGround;
     HGC     hplayerIcon;
     HGC     hchargeIcon;
@@ -91,6 +94,7 @@ typedef  struct _MAIN_TASK_DATA_BLOCK
     HGC     hMusicName;
     HGC     hWelcom;
     HGC     hMainMenu;
+    #endif
 
     TASK_SWTICH_ARG  stSwtichs;
 
@@ -245,7 +249,6 @@ COMMON API uint8 MainTask_SetStatus (uint32 StatusID, uint8 status)
 _APP_MAIN_TASK_MAIN_TASK_COMMON_
 COMMON API rk_err_t MainTask_SysEventCallBack(uint32 event, void*arg)
 {
-    HGC pGc;
     MAIN_ASK_QUEUE EventAskQueue;
     MAIN_ASK_QUEUE EventAskQueue_tmp;
     rk_err_t ret;
@@ -311,6 +314,7 @@ COMMON API rk_err_t MainTask_SysEventCallBack(uint32 event, void*arg)
         rkos_queue_receive(gpstMainData->MainAskQueue, &EventAskQueue_tmp, 0);
         MAINTASK_DEBUG ("0----type=%d event=%d\n",EventAskQueue_tmp.event_type,EventAskQueue_tmp.event);
         //EventAskQueue.event_type = MAINTASK_EVENT;//MAINTASK_EVENT
+        #ifdef _USE_GUI_
         if (EventAskQueue_tmp.event_type == GUI_EVENT_KEY)
         {
             //丢按键
@@ -318,6 +322,7 @@ COMMON API rk_err_t MainTask_SysEventCallBack(uint32 event, void*arg)
             MAINTASK_DEBUG ("1----type=%d evnet=%d\n",EventAskQueue.event_type,EventAskQueue.event);
         }
         else
+        #endif
         {
             //丢本次事件
             rkos_queue_send(gpstMainData->MainAskQueue, &EventAskQueue_tmp, 0);
@@ -441,7 +446,7 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
                 Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin5, GPIO_HIGH); //red off
                 Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin5, DISABLE);
                 #else
-                printf ("<-----------------red led init-------------->\n");
+                rk_printf("<-----------------red led init-------------->\n");
                 #endif
                 break;
             case MAINTASK_LED_ON:
@@ -451,7 +456,7 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
                     Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin5, GPIO_LOW); //red on
                     Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin5, DISABLE);
                     #else
-                    printf ("<-----------------red led on-------------->\n");
+                    rk_printf("<-----------------red led on-------------->\n");
                     #endif
                 }
                 gpstMainData->redled_state = 1;
@@ -464,7 +469,7 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
                     Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin5, GPIO_HIGH); //red off
                     Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin5, DISABLE);
                     #else
-                    printf ("<-----------------red led off-------------->\n");
+                    rk_printf("<-----------------red led off-------------->\n");
                     #endif
                 }
                 gpstMainData->redled_state = 0;
@@ -486,7 +491,7 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
                 Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin4, GPIO_HIGH); //green off
                 Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin4, DISABLE);
                 #else
-                printf ("<-----------------green led init-------------->\n");
+                rk_printf("<-----------------green led init-------------->\n");
                 #endif
                 break;
             case MAINTASK_LED_ON:
@@ -496,7 +501,7 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
                     Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin4, GPIO_LOW); //green off
                     Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin4, DISABLE);
                     #else
-                    printf ("<-----------------green led on-------------->\n");
+                    rk_printf("<-----------------green led on-------------->\n");
                     #endif
                 }
                 gpstMainData->greenled_state = 1;
@@ -509,7 +514,7 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
                     Gpio_SetPinLevel(GPIO_CH2, GPIOPortB_Pin4, GPIO_HIGH); //green off
                     Grf_GPIO_SetPinPull(GPIO_CH2, GPIOPortB_Pin4, DISABLE);
                     #else
-                    printf ("<-----------------green led off-------------->\n");
+                    rk_printf("<-----------------green led off-------------->\n");
                     #endif
                 }
                 gpstMainData->greenled_state = 0;
@@ -525,6 +530,8 @@ COMMON API uint8 MainTask_SetLED (int8 led,int8 led_state)
 #endif //NOSCREEN_USE_LED end
 
 #endif //No _USE_GUI_ end
+
+#ifdef _USE_GUI_
 /*******************************************************************************
 ** Name: MainTask_GuiCallBack
 ** Input:uint32 event_type, uint32 event, void * arg, uint32 mode
@@ -563,8 +570,9 @@ COMMON API rk_err_t MainTask_GuiCallBack(APP_RECIVE_MSG_EVENT event_type, uint32
     }
     return RK_SUCCESS;
 }
+#endif
 
-
+#ifdef _MUSIC_
 /*******************************************************************************
 ** Name: MainTask_AudioCallBack
 ** Input:uint32 audio_state
@@ -600,6 +608,7 @@ COMMON API void MainTask_AudioCallBack(uint32 audio_state)
 
     return ;
 }
+#endif
 
 
 /*******************************************************************************
@@ -698,12 +707,15 @@ COMMON API int32 MainTask_TaskSwtich (uint32 CurClassId, uint32 CurObjectId, uin
 _APP_MAIN_TASK_MAIN_TASK_COMMON_
 COMMON API int32 MainTask_SetTopIcon (uint32 StatusID)
 {
+    #ifdef _USE_GUI_
     RKGUI_ICON_ARG pGcArg;
     RKGUI_CHAIN_ARG pstChainArg;
     RKGUI_TEXT_ARG pstTextArg;
 
     uint32 Icon[6] = {IMG_ID_RK_LOCALL_PLAYER, IMG_ID_RK_DLNA_PLAYER,IMG_ID_RK_BT_PLAYER,
         IMG_ID_RK_XXX_PLAYER,IMG_ID_RK_CHANNEL_PLAYER,IMG_ID_RK_RECORD};
+
+    #endif
 
     rkos_semaphore_take(gpstMainData->osMainOperSem, MAX_DELAY);
 
@@ -957,7 +969,9 @@ COMMON API int32 MainTask_DeleteTopIcon (uint32 StatusID)
 {
     rkos_semaphore_take(gpstMainData->osMainOperSem, MAX_DELAY);
 
+    #ifdef _USE_GUI_
     RKGUI_ICON_ARG pGcArg;
+    #endif
 
     switch (StatusID)
     {
@@ -965,8 +979,8 @@ COMMON API int32 MainTask_DeleteTopIcon (uint32 StatusID)
         case MAINTASK_APP_DLNA_PLAYER:
         case MAINTASK_APP_BT_PLAYER:
         case MAINTASK_APP_XXX_PLAYER:
-        case IMG_ID_RK_CHANNEL_PLAYER:
-        case IMG_ID_RK_RECORD:
+        case MAINTASK_APP_CHANNEL_PLAYER:
+        case MAINTASK_APP_RECORD:
             #ifdef _USE_GUI_
             MAINTASK_DEBUG("Delete player0\n");
             if(gpstMainData->hplayerIcon != NULL)
@@ -1092,6 +1106,7 @@ COMMON API void MainTask_Enter(void)
 #endif
 
 #ifndef _USE_GUI_
+    #ifdef NOSCREEN_OPEN
     if (Grf_CheckVbus()==0)
     {
 #ifndef _ENABLE_WIFI_BLUETOOTH
@@ -1099,7 +1114,7 @@ COMMON API void MainTask_Enter(void)
             MainTask_StartSubThread(FM_SUB_THREAD); //打开音乐线程
         #endif
 
-        #ifdef _DRIVER_WIFI__
+        #ifdef _WIFI_
             MainTask_StartSubThread(VEDIO_SUB_THREAD); //打开WIFI音乐线程
         #endif
 #else
@@ -1110,7 +1125,9 @@ COMMON API void MainTask_Enter(void)
 			MainTask_StartSubThread(VEDIO_SUB_THREAD);
 #endif
     }
-#endif
+	#endif//#ifdef NOSCREEN_OPEN end
+    FREQ_EnterModule(FREQ_BLON);
+#endif//#ifndef _USE_GUI_ end
 
     while (1)
     {
@@ -1141,7 +1158,9 @@ COMMON API void MainTask_Enter(void)
                 #endif
                 break;
             case MAINTASK_AUDIO_EVENT:
+                #ifdef _MUSIC_
                 MainTask_HandleAudioEvent(MainTaskAskQueue.event);
+                #endif
                 break;
 
             case MAINTASK_TASK_SWTICH:
@@ -1177,6 +1196,9 @@ COMMON FUN rk_err_t MainTaskResume(HTC hTask)
 {
    RK_TASK_CLASS*   pMainTask = (RK_TASK_CLASS*)hTask;
    gpstMainData->hMsg = RKDev_Open(DEV_CLASS_MSG, 0, NOT_CARE);
+   #ifndef _USE_GUI_
+   gpstMainData->hKey = RKDev_Open(DEV_CLASS_KEY, 0, NOT_CARE);
+   #endif
    pMainTask->State = TASK_STATE_WORKING;
    return RK_SUCCESS;
 }
@@ -1202,6 +1224,10 @@ COMMON FUN rk_err_t MainTaskSuspend(HTC hTask, uint32  Level)
         pMainTask->State = TASK_STATE_IDLE2;
     }
     RKDev_Close(gpstMainData->hMsg);
+
+    #ifndef _USE_GUI_
+    RKDev_Close(gpstMainData->hKey);
+    #endif
     return RK_SUCCESS;
 }
 
@@ -1252,6 +1278,23 @@ COMMON int32 MainTask_NoScreenHandleKey(uint32 keyvalue)
     }
 #endif
 
+#ifndef NOSCREEN_OPEN
+    switch (keyvalue)
+    {
+        case KEY_VAL_PLAY_PRESS_START: //ShutDown
+            //Shutdown
+            KeyDev_UnRegister(gpstMainData->hKey);
+            RKDev_Close(gpstMainData->hKey);
+
+            DeviceTask_System_PowerOff();
+            while(1)
+            {
+                rkos_sleep(100);
+            }
+            break;
+    }
+#endif
+
     return RK_SUCCESS;
 }
 #endif
@@ -1278,6 +1321,10 @@ int32 MainTask_HandleKey(uint32 event)
             MainTask_ShutDown(0);
             //Shutdown
             DeviceTask_System_PowerOff();
+            while(1)
+            {
+                rkos_sleep(100);
+            }
             break;
 
 
@@ -1388,10 +1435,9 @@ int32 MainTask_HandleSysEvent(uint32 event)
                 if(RKTaskFind(TASK_ID_MUSIC_PLAY_MENU, 0) != NULL)
                 {
                     //RKTaskDelete(TASK_ID_MUSIC_PLAY_MENU, 0, SYNC_MODE);
-                    MAINTASK_DEBUG ("Create Usb Server---\n");
                     MainTask_SetStatus(MAINTASK_APP_PLAYMENU,0);
                     //SaveSysInformation(1);
-                    DeviceTask_SystemReset();
+                    DeviceTask_SystemReset(0);
                 }
                 #endif
                 MAINTASK_DEBUG ("Create Usb Server\n");
@@ -1429,6 +1475,7 @@ int32 MainTask_HandleSysEvent(uint32 event)
             #endif
 
             break;
+
         case MAINTASK_SHUTDOWN: //关机
             {
                 rk_printf("get a power off");
@@ -1457,7 +1504,7 @@ int32 MainTask_HandleSysEvent(uint32 event)
         case MAINTASK_SUSPEND_WIFI:
         {
 
-            #ifdef _WIFI_
+            #ifdef _WICE_
             MainTask_SetStatus(MAINTASK_WIFI_SUSPEND, 1);
             rk_wifi_deinit();
             RKTaskDelete(TASK_ID_WIFI_APPLICATION,0,SYNC_MODE);
@@ -1481,7 +1528,7 @@ int32 MainTask_HandleSysEvent(uint32 event)
     return RK_SUCCESS;
 }
 
-
+#ifdef _MUSIC_
 /*******************************************************************************
 ** Name: MainTask_HandleAudioEvent
 ** Input:uint32 event ,int params
@@ -1499,9 +1546,11 @@ int32 MainTask_HandleAudioEvent(uint32 event)
         AUDIO_INFO stAudioInfo;
         uint32 playstate;
         uint32 PlayerState;
+
+        #ifdef _USE_GUI_
         RKGUI_ICON_ARG pstIconArg;
         RKGUI_TEXT_ARG pstTextArg;
-
+        #endif
 
 
         case AUDIO_STATE_MUSIC_CHANGE:
@@ -1616,6 +1665,7 @@ int32 MainTask_HandleAudioEvent(uint32 event)
     }
     return RK_SUCCESS;
 }
+#endif
 
 
 /*******************************************************************************
@@ -1855,7 +1905,7 @@ COMMON FUN int32 MainTask_DeleteAllApp (void)
 
     if (MsgDev_GetMsg(gpstMainData->hMsg, MAINTASK_WIFI_OPEN_OK) == RK_SUCCESS)
     {
-        #ifdef _DRIVER_WIFI__
+        #ifdef _WICE_
         MAINTASK_DEBUG ("Delete wifi\n");
         while(wifi_init_flag() == 0)
         {
@@ -1865,7 +1915,6 @@ COMMON FUN int32 MainTask_DeleteAllApp (void)
         rk_wifi_deinit();
         RKTaskDelete(TASK_ID_WIFI_APPLICATION, 0, SYNC_MODE);
         MAINTASK_DEBUG ("Delete wifi OK\n");
-        MainTask_SetStatus(MAINTASK_WIFI_OPEN_OK, 0);
         #endif
     }
 
@@ -1936,14 +1985,21 @@ COMMON FUN int32 MainTask_DeleteAllApp (void)
 
         if(RKTaskFind(TASK_ID_WIFI_APPLICATION, 0) != NULL)
         {
-            MainTask_SetStatus(MAINTASK_WIFI_OPEN_OK, 0);
+            #ifdef _WICE_
             rk_wifi_deinit();
+            #endif
             RKTaskDelete(TASK_ID_WIFI_APPLICATION, 0, SYNC_MODE);
             MAINTASK_DEBUG ("Delete wifi OK\n");
         }
 
     }
     #endif
+
+    //delete playmenuapp
+    if(RKTaskFind(TASK_ID_MUSIC_PLAY_MENU, 0) != NULL)
+    {
+        RKTaskDelete(TASK_ID_MUSIC_PLAY_MENU, 0, SYNC_MODE);
+    }
 #endif
 
 
@@ -2115,7 +2171,7 @@ COMMON FUN int32 MainTask_StartSubThread (uint32 MenuId)
         case VEDIO_SUB_THREAD: //DLNA播放器
             #ifdef __WIFI_DLNA_C__
             //本次播放器类型
-            stTaskPlayer.ucSelPlayType = SOURCE_FROM_DLNA;
+            stTaskPlayer.ucSelPlayType = SOURCE_FROM_HTTP;
 
             MainTask_TaskSwtich(TASK_ID_MAIN, 0, TASK_ID_MUSIC_PLAY_MENU,0, &stTaskPlayer);
             //RKTaskCreate(TASK_ID_MUSIC_PLAY_MENU,0, &stTaskPlayer, SYNC_MODE);
@@ -2317,7 +2373,10 @@ INIT API rk_err_t MainTask_Init(void *pvParameters, void *arg)
     RK_TASK_CLASS*   pMainTask = (RK_TASK_CLASS*)pvParameters;
     RK_TASK_MAIN_ARG * pArg = (RK_TASK_MAIN_ARG *)arg;
     MAIN_TASK_DATA_BLOCK*  pMainTaskData;
+
+    #ifdef _USE_GUI_
     RKGUI_ICON_ARG pGcArg;
+    #endif
 
     if (pMainTask == NULL)
         return RK_PARA_ERR;

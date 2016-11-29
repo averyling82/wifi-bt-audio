@@ -181,7 +181,7 @@ COMMON API void MediaTask_Enter(void)
     }
 
     AudioDev_SetChannel(hAudio, 0, 2);
-    AudioDev_SetSampleRate(hAudio, 0, CodecFS_8000Hz);
+    AudioDev_SetTxSampleRate(hAudio, 0, CodecFS_8000Hz);
     AudioDev_SetTrackLen(hAudio, 2048);
     AudioDev_SetBit(hAudio, 0, 16);
 

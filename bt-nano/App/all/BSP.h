@@ -63,13 +63,16 @@ extern void * UartHDC;
 extern void * FileSysHDC;
 extern void * hLcd;
 extern void * hKey;
+extern void * hWdt;
 extern volatile uint32 SysTickCounter;
 extern uint32 SysTickCounterSave;
 extern uint32 SysTickCheck;
 extern uint32 MspSave;
 extern void (*pIdleFun)(void);
 extern void (*pIdleFunSave)(void);
+#ifdef _USB_
 extern uint8 gLun[USBMSC_LUN];
+#endif
 
 
 

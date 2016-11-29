@@ -97,6 +97,12 @@ extern "C"
     /** If set, the netif has IGMP capability.
      * Set by the netif driver in its init function. */
 #define NETIF_FLAG_IGMP         0x80U
+/** if set, the netif has IP layer switch capability */
+/* Realtek Modified Start */
+#ifdef CONFIG_DONT_CARE_TP
+#define NETIF_FLAG_IPSWITCH       0x80U
+#endif
+/* Realtek Modified End */
 
     /** Function prototype for netif init functions. Set up flags and output/linkoutput
      * callback functions in this function.

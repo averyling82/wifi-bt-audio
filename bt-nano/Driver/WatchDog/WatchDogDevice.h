@@ -73,6 +73,7 @@ typedef  struct _WDT_DEV_ARG
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+extern rk_err_t WDTDev_Feed(HDC dev);
 extern rk_err_t WDTDev_Shell(HDC dev, uint8 * pstr);
 extern rk_err_t WDTDev_Write(HDC dev);
 extern rk_err_t WDTDev_Read(HDC dev);

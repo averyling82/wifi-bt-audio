@@ -40,6 +40,7 @@
 typedef  struct _SPIFLASH_DEV_ARG
 {
     uint32 spirate;
+    HDC hDma;
 }SPIFLASH_DEV_ARG;
 
 #define _DRIVER_SPIFLASH_SPIFLASHDEV_COMMON_  __attribute__((section("driver_spiflash_spiflashdev_common")))

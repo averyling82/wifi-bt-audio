@@ -29,9 +29,11 @@
 */
 #include "RKOS.h"
 #include "Bsp.h"
+#ifdef _USE_GUI_
 #include "GUITask.h"
 #include "GUIManager.h"
 #include "..\Resource\ImageResourceID.h"
+#endif
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -57,8 +59,10 @@ typedef  struct _USBSERVICE_DATA_BLOCK
     pQueue  UsbServiceAskQueue;
     pQueue  UsbServiceRespQueue;
 
+    #ifdef _USE_GUI_
     //GUI Handlle
     HGC hUsbBackGroud;
+    #endif
 
 
 }USBSERVICE_DATA_BLOCK;
@@ -141,7 +145,11 @@ COMMON FUN int UsbMscDeviceServer(void)
     if (Grf_CheckVbus() == 0)
     {
         printf ("Vbus Disconnect\n");
+        #ifndef _USE_GUI_
+        MainTask_TaskSwtich(TASK_ID_USBSERVER, 0, TASK_ID_MUSIC_PLAY_MENU, 0, NULL);
+        #else
         MainTask_TaskSwtich(TASK_ID_USBSERVER, 0, TASK_ID_MAIN, 0, NULL);
+        #endif
         return 0;
     }
 
@@ -151,7 +159,11 @@ COMMON FUN int UsbMscDeviceServer(void)
     {
         printf ("\nusbservive create usbmsc device failure\n");
         ChargeEnable();
+        #ifndef _USE_GUI_
+        MainTask_TaskSwtich(TASK_ID_USBSERVER, 0, TASK_ID_MUSIC_PLAY_MENU, 0, NULL);
+        #else
         MainTask_TaskSwtich(TASK_ID_USBSERVER, 0, TASK_ID_MAIN, 0, NULL);
+        #endif
         while(1)
         {
             rkos_sleep(1000);
@@ -258,7 +270,6 @@ COMMON FUN int UsbMscDeviceServer(void)
         UsbService_DeleteUsb(3);
         while(1)
         {
-        	ChargeEnable();//jjjhhh 20161110
             rkos_sleep(1000);
         }
     }
@@ -347,7 +358,7 @@ COMMON int32 UsbService_NoScreenUSBKey(uint32 keyvalue)
 ** Time: 17:30:03
 *******************************************************************************/
 _SYSTEM_USBSERVER_USBSERVICE_COMMON_
-static COMMON API rk_err_t UsbService_ButtonCallBack(uint32 event_type,
+COMMON API rk_err_t UsbService_ButtonCallBack(uint32 event_type,
                                                             uint32 event,
                                                             void * arg,
                                                             uint32 mode)
@@ -442,7 +453,8 @@ COMMON API void UsbService_DeleteUsb(int status)
         status = 1;
     }
 
-    ChargeDisable();
+    if(!Grf_CheckVbus())
+        ChargeDisable();
 
     UsbService_DeleteGuiHandle();
 
@@ -451,18 +463,26 @@ COMMON API void UsbService_DeleteUsb(int status)
 #ifdef _MEDIA_MODULE_
         if(gSysConfig.MedialibPara.MediaUpdataFlag)
         {
-            printf("\n -----media update-----\n");
+            rk_printf("-----media update-----");
             RKTaskCreate(TASK_ID_MEDIA_UPDATE, 0, NULL, SYNC_MODE);
         }
 #endif
-
+        #ifndef _USE_GUI_
+        MainTask_TaskSwtich(TASK_ID_USBSERVER, 0, TASK_ID_MUSIC_PLAY_MENU, 0, NULL);
+        #else
         MainTask_TaskSwtich(TASK_ID_USBSERVER, 0, TASK_ID_MAIN, 0, NULL);
+        #endif
     }
     else if (status == 2) //go to PLayMenu Window
     {
         #ifndef _USE_GUI_
+        #ifdef NOSCREEN_OPEN
         rkos_sleep(1000);
         MainTask_TaskSwtich(TASK_ID_USBSERVER, 0, TASK_ID_MUSIC_PLAY_MENU, 0, NULL);
+        #else
+        rkos_sleep(1000);
+        MainTask_TaskSwtich(TASK_ID_USBSERVER, 0, TASK_ID_MAIN, 0, NULL);
+        #endif
         #endif
     }
 }
@@ -535,6 +555,12 @@ COMMON API void UsbService_Enter(void)
                 MainTask_SysEventCallBack(MAINTASK_SHUTDOWN_CMD, NULL);
                 #endif
                 break;
+
+            case 0xFFFFFFFE:
+                DeviceTask_DeleteDeviceList(DEVICE_LIST_USBDEVICE_MSC, NULL, SYNC_MODE);
+                FREQ_ExitModule(FREQ_USB);
+                DeviceTask_SystemReset(1); //Entry Maskrom
+                break;
             default:
                 break;
         }
@@ -565,7 +591,7 @@ COMMON API rk_err_t UsbService_DeInit(void *pvParameters)
     rkos_queue_delete(gpstUsbService->UsbServiceRespQueue);
     rkos_memory_free(gpstUsbService);
     gpstUsbService = NULL;
-    FREQ_ExitModule(FREQ_MAX);
+    FREQ_ExitModule(FREQ_USB);
     //printf("Delete UsbService Success\n");
 
 #ifdef __OS_FWANALYSIS_FWANALYSIS_C__
@@ -644,7 +670,7 @@ INIT API rk_err_t UsbService_Init(void *pvParameters, void *arg)
     if (pMainTask == NULL)
         return RK_PARA_ERR;
 
-    FREQ_EnterModule(FREQ_MAX);
+    FREQ_EnterModule(FREQ_USB);
 
     pUsbServiceData = rkos_memory_malloc(sizeof(USBSERVICE_DATA_BLOCK));
     memset(pUsbServiceData, NULL, sizeof(USBSERVICE_DATA_BLOCK));

@@ -37,7 +37,9 @@
 #include "SysInfoSave.h"
 #include "shelltask.h"
 #ifdef _SPI_BOOT_
+#ifdef _FS_
 #include "FileDevice.h"
+#endif
 #endif
 
 
@@ -103,6 +105,8 @@ uint32 	SysProgDiskCapacity;
 uint32 	SysProgRawDiskCapacity;
 int32  FW1Valid, FW2Valid;
 uint32 FwSysOffset;
+pSemaphore FwOperSem;
+pSemaphore DbOperSem;
 
 #ifdef _SPI_BOOT_
 HDC Codepage;
@@ -176,6 +180,7 @@ FONT_CODEPAGE_TYPE U2CodePage[] =
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+rk_err_t FWShellList(HDC dev, uint8 * pstr);
 rk_err_t FWShellUpdate(HDC dev,  uint8 * pstr);
 #ifdef _OTA_UPDATEFW_SPI
 rk_err_t FWShellOTAUpdate(HDC dev,  uint8 * pstr);
@@ -219,9 +224,11 @@ _OS_FWANALYSIS_FWANALYSIS_COMMON_
 COMMON API rk_err_t FW_CodePageDeInit(void)
 {
 #ifdef _SPI_BOOT_
-   rkos_semaphore_delete(CodePageReqSem);
+   #ifdef _FS_
    FileDev_CloseFile(Codepage);
    Codepage = NULL;
+   #endif
+   rkos_semaphore_delete(CodePageReqSem);
 #endif
 
     return RK_SUCCESS;
@@ -257,6 +264,40 @@ COMMON API rk_err_t FwSuspend(void)
 {
     RKDev_Close(ghLunFW);
     ghLunFW = NULL;
+    return RK_SUCCESS;
+}
+
+/*******************************************************************************
+** Name: FwResume
+** Input:void
+** Return: rk_err_t
+** Owner:aaron.sun
+** Date: 2016.8.16
+** Time: 15:45:06
+*******************************************************************************/
+_OS_FWANALYSIS_FWANALYSIS_COMMON_
+COMMON API rk_err_t DBResume(void)
+{
+    if(ghLunDB == NULL)
+    {
+        ghLunDB = RKDev_Open(DEV_CLASS_LUN,1,NOT_CARE);
+    }
+    return RK_SUCCESS;
+}
+
+/*******************************************************************************
+** Name: FwSuspend
+** Input:void
+** Return: rk_err_t
+** Owner:aaron.sun
+** Date: 2016.8.16
+** Time: 15:44:39
+*******************************************************************************/
+_OS_FWANALYSIS_FWANALYSIS_COMMON_
+COMMON API rk_err_t DBSuspend(void)
+{
+    RKDev_Close(ghLunDB);
+    ghLunDB = NULL;
     return RK_SUCCESS;
 }
 
@@ -317,6 +358,7 @@ _OS_FWANALYSIS_FWANALYSIS_COMMON_
 rk_err_t FW_CodePageInit(void)
 {
 #ifdef _SPI_BOOT_
+    #ifdef _FS_
     FILE_ATTR stFileAttr;
     #ifdef _HIDDEN_DISK1_
     stFileAttr.Path = L"A:\\CodePage.bin";
@@ -328,8 +370,6 @@ rk_err_t FW_CodePageInit(void)
     #endif
     #endif
 
-    CodePageReqSem= rkos_semaphore_create(1,1);
-
     stFileAttr.FileName= NULL;
     Codepage= FileDev_OpenFile(FileSysHDC, NULL, READ_WRITE, &stFileAttr);
     if((Codepage == NULL) || (Codepage == (HDC)RK_ERROR) || (Codepage == (HDC)RK_PARA_ERR))
@@ -338,6 +378,11 @@ rk_err_t FW_CodePageInit(void)
         Codepage= NULL;
         return RK_ERROR;
     }
+    #else
+    Codepage= NULL;
+    #endif
+
+    CodePageReqSem= rkos_semaphore_create(1,1);
 #endif
 
     return RK_SUCCESS;
@@ -356,7 +401,9 @@ COMMON API rk_err_t FW_CodePageUnLoad(void)
 {
 #ifdef _SPI_BOOT_
    rkos_semaphore_take(CodePageReqSem, MAX_DELAY);
+   #ifdef _FS_
    FileDev_CloseFile(Codepage);
+   #endif
    Codepage = NULL;
    rkos_semaphore_give(CodePageReqSem);
 #endif
@@ -376,6 +423,7 @@ _OS_FWANALYSIS_FWANALYSIS_COMMON_
 COMMON API rk_err_t FW_CodePageLoad(void)
 {
 #ifdef _SPI_BOOT_
+    #ifdef _FS_
     FILE_ATTR stFileAttr;
 
     rkos_semaphore_take(CodePageReqSem, MAX_DELAY);
@@ -399,6 +447,7 @@ COMMON API rk_err_t FW_CodePageLoad(void)
         return RK_ERROR;
     }
     rkos_semaphore_give(CodePageReqSem);
+    #endif
 #endif
 
     return RK_SUCCESS;
@@ -441,9 +490,10 @@ uint32 FW_Ansi2UnicodeN(void *dat, Ucs2 * buf,int byteN, uint8 EncodeMode)
             temp[0]= src8[1];
             temp[1]= src8[0];
             LanguageOffset= LcdCharCodePage[gSysConfig.SysLanguage]* 128 * 1024+ (*(uint16 *)temp*2);
-
+            #ifdef _FS_
             FileDev_FileSeek(Codepage, SEEK_SET, LanguageOffset);
             FileDev_ReadFile(Codepage, temp, 2);
+            #endif
             *buf= temp[0]<<8|temp[1];
             buf++;
             src8+= 2;
@@ -532,8 +582,11 @@ uint32 FW_Unicode2AnsiN(Ucs2 *dat, void * buf,int byteN, uint8 EncodeMode)
         {
             LanguageOffset= U2CodePage[gSysConfig.SysLanguage]* 128 * 1024+ (*dat*2);
 
+            #ifdef _FS_
             FileDev_FileSeek(Codepage, SEEK_SET, LanguageOffset);
             FileDev_ReadFile(Codepage, temp, 2);
+            #endif
+
             src8[0]= temp[1];
             src8[1]= temp[0];
             src8+= 2;
@@ -618,8 +671,10 @@ rk_err_t FW_Ansi2UnicodeStr(void *dat, Ucs2 * buf,uint8 EncodeMode)
             temp[0]= src8[1];
             temp[1]= src8[0];
             LanguageOffset= LcdCharCodePage[gSysConfig.SysLanguage]* 128 * 1024+ (*(uint16 *)temp*2);
+            #ifdef _FS_
             FileDev_FileSeek(Codepage, SEEK_SET, LanguageOffset);
             FileDev_ReadFile(Codepage, temp, 2);
+            #endif
             *buf= temp[0]<<8|temp[1];
             buf++;
             src8+= 2;
@@ -686,8 +741,10 @@ rk_err_t FW_Unicode2AnsiStr(Ucs2 *dat, void * buf,uint8 EncodeMode)
         else
         {
             LanguageOffset= U2CodePage[gSysConfig.SysLanguage]* 128 * 1024+ (*dat*2);
+            #ifdef _FS_
             FileDev_FileSeek(Codepage, SEEK_SET, LanguageOffset);
             FileDev_ReadFile(Codepage, temp, 2);
+            #endif
             src8[0]= temp[1];
             src8[1]= temp[0];
             src8+= 2;
@@ -743,8 +800,10 @@ Ucs2 FW_Ansi2Unicode(uint16 dat, uint8 EncodeMode)
         return 0xFFFF;
     }
     rkos_semaphore_take(CodePageReqSem, MAX_DELAY);
+    #ifdef _FS_
     FileDev_FileSeek(Codepage, SEEK_SET, LanguageOffset);
     FileDev_ReadFile(Codepage, temp, 2);
+    #endif
     uni= temp[0]<<8|temp[1];
     rkos_semaphore_give(CodePageReqSem);
 #else
@@ -775,8 +834,10 @@ Ucs2 FW_Unicode2Ansi(uint16 dat, uint8 EncodeMode)
         return 0xFFFF;
     }
     rkos_semaphore_take(CodePageReqSem, MAX_DELAY);
+    #ifdef _FS_
     FileDev_FileSeek(Codepage, SEEK_SET, LanguageOffset);
     FileDev_ReadFile(Codepage, temp, 2);
+    #endif
     uni= temp[0]<<8|temp[1];
     rkos_semaphore_give(CodePageReqSem);
 #else
@@ -799,6 +860,8 @@ COMMON API void FW_Resource_DeInit(void)
 {
     RKDev_Close(ghLunFW);
     RKDev_Close(ghLunDB);
+    rkos_semaphore_delete(FwOperSem);
+    rkos_semaphore_delete(DbOperSem);
 }
 
 /*******************************************************************************
@@ -872,6 +935,8 @@ rk_err_t FW_ReadDataBaseByByte(uint32 Addr, uint8 *pData, uint32 length)
     uint32 RawOffset = 0;
     uint8 bufindex = 0;
     uint32 bufMargin[3];
+
+    rkos_semaphore_take(DbOperSem ,MAX_DELAY);
 
     sectorNum = Addr >> 9;
     sectorOffset = Addr & 511;
@@ -962,6 +1027,8 @@ rk_err_t FW_ReadDataBaseByByte(uint32 Addr, uint8 *pData, uint32 length)
                 if (1 != FW_ReadDataBaseBySector(sectorNum,FlashBuf[bufindex],1))
                 {
                     FlashSec[bufindex] = 0xffffffff;
+
+                    rkos_semaphore_give(DbOperSem);
                     return RK_ERROR;
                 }
                 else
@@ -985,6 +1052,7 @@ rk_err_t FW_ReadDataBaseByByte(uint32 Addr, uint8 *pData, uint32 length)
         {
             if (1 != FW_ReadDataBaseBySector(sectorNum,pData,1))
             {
+                rkos_semaphore_give(DbOperSem);
                 return RK_ERROR;
             }
             pData +=  512;
@@ -993,6 +1061,8 @@ rk_err_t FW_ReadDataBaseByByte(uint32 Addr, uint8 *pData, uint32 length)
 
         sectorNum++;
     }
+
+    rkos_semaphore_give(DbOperSem);
 
     return RK_SUCCESS;
 }
@@ -1107,8 +1177,8 @@ retry:
     }
     else if(ret != RK_SUCCESS)
     {
-        rkos_sleep(100);
-        goto retry;
+        rkos_memory_free(FlashBuf);
+        return RK_ERROR;
     }
 
     if (Type & SEGMENT_OVERLAY_CODE)
@@ -1171,6 +1241,8 @@ COMMON API rk_err_t FW_ReadFirmwaveByByte(uint32 Addr, uint8 *pData, uint32 leng
     uint8 bufindex = 0;
     uint32 bufMargin[3];
 
+    rkos_semaphore_take(FwOperSem,MAX_DELAY);
+
     sectorNum = Addr >> 9;
     sectorOffset = Addr & 511;
 
@@ -1193,6 +1265,7 @@ COMMON API rk_err_t FW_ReadFirmwaveByByte(uint32 Addr, uint8 *pData, uint32 leng
                 if (1 != LUNReadFW(sectorNum, 1,FlashBuf1[bufindex]))
                 {
                     FlashSec1[bufindex] = 0xffffffff;
+                    rkos_semaphore_give(FwOperSem);
                     return RK_ERROR;
                 }
                 else
@@ -1216,6 +1289,7 @@ COMMON API rk_err_t FW_ReadFirmwaveByByte(uint32 Addr, uint8 *pData, uint32 leng
         {
             if (1 != LUNReadFW(sectorNum, 1,pData))
             {
+                rkos_semaphore_give(FwOperSem);
                 return RK_ERROR;
             }
             pData +=  512;
@@ -1223,6 +1297,7 @@ COMMON API rk_err_t FW_ReadFirmwaveByByte(uint32 Addr, uint8 *pData, uint32 leng
         }
         sectorNum++;
     }
+    rkos_semaphore_give(FwOperSem);
     return RK_SUCCESS;
 }
 
@@ -1266,6 +1341,7 @@ COMMON API rk_err_t FW_GetSegmentInfo(uint32 SegmentID, SEGMENT_INFO_T * Segment
 
     Segment->BssImageBase   = pSegment->BssImageBase;
     Segment->BssImageLength = pSegment->BssImageLength;
+    memcpy(Segment->Name, pSegment->Name, 16);
 
     return RK_SUCCESS;
 
@@ -1533,6 +1609,10 @@ INIT API void FW_Resource_Init(void)
 
     pFW_Resourec_addr =  &gstFwInf;
 
+    FwOperSem = rkos_semaphore_create(1,1);
+    DbOperSem = rkos_semaphore_create(1,1);
+
+
 
     ////////////////////////////////////////////////////////////////////////////
     //read resource module address.
@@ -1600,8 +1680,37 @@ INIT API void FW_Resource_Init(void)
 
         gpstDsegment->CodeImageBase = segment.CodeImageBase;
         gpstDsegment->CodeImageLen = segment.CodeImageLength;
-        gpstDsegment->CodeLoadBase = segment.CodeLoadBase ;
+        gpstDsegment->CodeLoadBase = segment.CodeLoadBase - gstFwInf.LoadStartBase + gstFwInf.CodeLogicAddress;
+        gpstDsegment->DataImageBase = segment.DataImageBase;
+        gpstDsegment->DataImageLen = segment.DataImageLength;
+        gpstDsegment->DataLoadBase = segment.DataLoadBase - gstFwInf.LoadStartBase + gstFwInf.CodeLogicAddress;
+        gpstDsegment->BssImageBase = segment.BssImageBase;
+        gpstDsegment->BssImageLen = segment.BssImageLength;
         gpstDsegment->SegmentID = SEGMENT_ID_SYS;
+        gpstDsegment->LoadCnt = 0;
+
+        {
+            D_SEGMENT_INFO * pDsegment;
+
+            pDsegment = gpstEmpDsegment;
+
+            gpstEmpDsegment = gpstEmpDsegment->pstDsegment;
+
+            FW_GetSegmentInfo(SEGMENT_ID_PMU, &segment);
+
+            pDsegment->CodeImageBase = segment.CodeImageBase - 0x03090000;
+            pDsegment->CodeImageLen = segment.CodeImageLength;
+            pDsegment->CodeLoadBase = segment.CodeLoadBase - gstFwInf.LoadStartBase + gstFwInf.CodeLogicAddress;
+            pDsegment->DataImageBase = segment.DataImageBase - 0x03090000;;
+            pDsegment->DataImageLen = segment.DataImageLength;
+            pDsegment->DataLoadBase = segment.DataLoadBase - gstFwInf.LoadStartBase + gstFwInf.CodeLogicAddress;
+            pDsegment->BssImageBase = segment.BssImageBase - 0x03090000;;
+            pDsegment->BssImageLen = segment.BssImageLength;
+            pDsegment->SegmentID = SEGMENT_ID_PMU;
+            pDsegment->LoadCnt = 0;
+            pDsegment->pstDsegment = gpstDsegment;
+            gpstDsegment = pDsegment;
+        }
     }
 
 }
@@ -1692,7 +1801,7 @@ static SHELL_CMD ShellFWName[] =
     "ota",FWShellOTAUpdate,"ota update fw","fw.ota",
 #endif
     "pcb", FWShellPcb, "get firmwave some information", "fw.pcb",
-    "list", NULL, "get all segment information", "fw.list",
+    "list", FWShellList, "get current all segment information", "fw.list",
     "\b", NULL,"NULL","NULL",                         // the end
 };
 
@@ -1718,7 +1827,7 @@ rk_err_t FWShell(HDC dev,  uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
@@ -1728,7 +1837,7 @@ rk_err_t FWShell(HDC dev,  uint8 * pstr)
     }
 
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1760,6 +1869,324 @@ rk_err_t FWShell(HDC dev,  uint8 * pstr)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+typedef struct _SEGMENT_INFO_LIST
+{
+    struct _SEGMENT_INFO_LIST * pNext;
+    uint32 SegMentID;
+    uint32 Addr;
+    uint32 Size;
+    uint32 LoadCnt;
+    uint8  Name[16];
+
+} SEGMENT_INFO_LIST;
+
+/*******************************************************************************
+** Name: FWShellList
+** Input:HDC dev, uint8 * pstr
+** Return: rk_err_t
+** Owner:aaron.sun
+** Date: 2016.11.18
+** Time: 11:55:36
+*******************************************************************************/
+_OS_FWANALYSIS_FWANALYSIS_SHELL_
+SHELL FUN rk_err_t FWShellList(HDC dev, uint8 * pstr)
+{
+    int32 size;
+    uint8 * pbuf;
+    uint32 i, j, oder;
+    SEGMENT_INFO_LIST * p, *pCur, *pPrev, *pFirst;
+    uint32 RamBase[3], RamSize[3], RamRealSize[3];
+    uint8 RamName[3+1][16];
+    uint32 RamTotalCnt, RamCurCnt;
+    uint32 CurBase, CurSize, CurRealSize;
+    D_SEGMENT_INFO * pDSegment;
+    SEGMENT_INFO_T Segment;
+    uint32 debug;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
+    pbuf = rkos_memory_malloc(MAX_SEGMENT_NUM * sizeof(SEGMENT_INFO_LIST) * 3);
+    if(pbuf == NULL)
+    {
+        rk_printf("segment report maloc fail");
+    }
+    else
+    {
+        //search
+        p = (SEGMENT_INFO_LIST *)pbuf;
+        pDSegment = gpstDsegment;
+
+        while(pDSegment != NULL)
+        {
+            FW_GetSegmentInfo(pDSegment->SegmentID, &Segment);
+
+            if(Segment.CodeImageLength != 0)
+            {
+                p->SegMentID = pDSegment->SegmentID;
+                p->pNext = p + 1;
+                p->Addr = pDSegment->CodeImageBase;
+                p->Size = pDSegment->CodeImageLen;
+                p->LoadCnt = pDSegment->LoadCnt;
+                memcpy(p->Name, Segment.Name, 16);
+                p++;
+            }
+
+            if(Segment.DataImageLength != 0)
+            {
+                p->SegMentID = pDSegment->SegmentID;
+                p->pNext = p + 1;
+                p->Addr = pDSegment->DataImageBase;
+                p->Size = pDSegment->DataImageLen;
+                p->LoadCnt = pDSegment->LoadCnt;
+                memcpy(p->Name, Segment.Name, 16);
+                p++;
+            }
+
+            if(Segment.BssImageLength != 0)
+            {
+                p->SegMentID = pDSegment->SegmentID;
+                p->pNext = p + 1;
+                p->Addr = pDSegment->BssImageBase;
+                p->Size = pDSegment->BssImageLen;
+                p->LoadCnt = pDSegment->LoadCnt;
+                memcpy(p->Name, Segment.Name, 16);
+                p++;
+            }
+
+            pDSegment = pDSegment->pstDsegment;
+
+        }
+
+        p--;
+
+        p->pNext = NULL;
+
+
+
+        if(StrCmpA(pstr, "/m", 2) == 0)
+        {
+            oder = 1;
+        }
+        else if(StrCmpA(pstr, "/s", 2) == 0)
+        {
+            oder = 2;
+        }
+        else
+        {
+            oder = 0;
+        }
+
+        pFirst = (SEGMENT_INFO_LIST *)pbuf;
+
+        //sort
+        if(oder != 0)
+        {
+            for(i = (MAX_SEGMENT_NUM - 1); i > 0;  i--)
+            {
+                pCur = pFirst;
+                pPrev = NULL;
+                j = 0;
+
+                while((pCur != NULL) && (pCur->pNext != NULL))
+                {
+                    if(oder == 1)
+                    {
+                        if(pCur->Addr > pCur->pNext->Addr)
+                        {
+                            if(pPrev == NULL)
+                            {
+                                pFirst = pCur->pNext;
+                                pCur->pNext = pCur->pNext->pNext;
+                                pFirst->pNext = pCur;
+                                pPrev = pFirst;
+                            }
+                            else
+                            {
+                                pPrev->pNext = pCur->pNext;
+                                pCur->pNext = pCur->pNext->pNext;
+                                pPrev->pNext->pNext = pCur;
+                                pPrev = pPrev->pNext;
+                            }
+
+                        }
+                        else
+                        {
+                              pPrev = pCur;
+                              pCur = pCur->pNext;
+                        }
+                    }
+                    else if(oder == 2)
+                    {
+                        if(pCur->Size > pCur->pNext->Size)
+                        {
+                            if(pPrev == NULL)
+                            {
+                                pFirst = pCur->pNext;
+                                pCur->pNext = pCur->pNext->pNext;
+                                pFirst->pNext = pCur;
+                                pPrev = pFirst;
+                            }
+                            else
+                            {
+                                pPrev->pNext = pCur->pNext;
+                                pCur->pNext = pCur->pNext->pNext;
+                                pPrev->pNext->pNext = pCur;
+                                pPrev = pPrev->pNext;
+                            }
+                        }
+                        else
+                        {
+                            pPrev = pCur;
+                            pCur = pCur->pNext;
+                        }
+                    }
+
+
+                    j++;
+                    if(j >= i)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        //display
+        pCur = pFirst;
+
+        if(oder == 1)
+        {
+            RamTotalCnt = 3;
+            RamCurCnt = 0;
+
+            RamBase[0] = 0;
+            RamSize[0] = 0x10000;
+            memcpy(RamName[0],"pmu",4);
+
+            RamBase[1] = 0x03000000;
+            RamSize[1] = 0x50000;
+            memcpy(RamName[1],"data",5);
+
+            RamBase[2] = 0x03050000;
+            RamSize[2] = 0x040000;
+            memcpy(RamName[2],"code",5);
+            memcpy(RamName[3],"    ",5);
+
+            CurBase = RamBase[0];
+            CurSize = RamSize[0];
+            CurRealSize = 0;
+            debug = 1;
+
+        }
+
+        do
+        {
+            if(oder == 1)
+            {
+                if(pCur->Addr < CurBase)
+                {
+
+                }
+                else if(pCur->Addr >= (CurBase + CurSize))
+                {
+                    if(RamCurCnt < RamTotalCnt)
+                    {
+                        rk_printf_no_time("%s base = %08x, size = %08x, remain size = %08x-------end", RamName[RamCurCnt],CurBase, CurSize, CurSize - CurRealSize);
+                        RamCurCnt++;
+
+                        if(RamCurCnt < RamTotalCnt)
+                        {
+                            CurBase = RamBase[RamCurCnt];
+                            CurSize = RamSize[RamCurCnt];
+                            CurRealSize = 0;
+
+                            if((pCur->Addr >= CurBase) && (pCur->Addr < CurBase + CurSize))
+                            {
+                                rk_printf_no_time("%s base = %08x, size = %08x, remain size = %08x-------start", RamName[RamCurCnt],CurBase, CurSize, CurSize - CurRealSize);
+
+                                if(pCur->Addr > (CurBase + CurRealSize))
+                                {
+                                    rk_printf_no_time("\t0x%08x\t\t%d\t\t\%d\t%d\t%s",
+                                    CurBase + CurRealSize,
+                                    pCur->Addr - (CurBase + CurRealSize),
+                                    0,
+                                    -1,
+                                    " ");
+                                }
+
+                                if((pCur->Addr + pCur->Size) > (CurBase + CurRealSize))
+                                {
+                                    CurRealSize = (pCur->Addr + pCur->Size) - CurBase;
+                                }
+                            }
+                            else
+                            {
+                                debug = 1;
+                            }
+                        }
+
+                    }
+                }
+                else if((pCur->Addr + pCur->Size) > (CurBase + CurSize))
+                {
+                     memcpy(pCur->Name + strlen(pCur->Name), "*", 2);
+                     CurRealSize = CurSize;
+                }
+                else
+                {
+                    if(debug)
+                    {
+                        rk_printf_no_time("%s base = %08x, size = %08x, remain size = %08x-------start", RamName[RamCurCnt],CurBase, CurSize, CurSize - CurRealSize);
+                        debug = 0;
+                    }
+
+                    if(pCur->Addr > (CurBase + CurRealSize))
+                    {
+                         rk_printf_no_time("\t0x%08x\t\t%d\t\t\%d\t%d\t%s",
+                                    CurBase + CurRealSize,
+                                    pCur->Addr - (CurBase + CurRealSize),
+                                    0,
+                                    -1,
+                                    " ");
+                    }
+
+                    if((pCur->Addr + pCur->Size) > (CurBase + CurRealSize))
+                    {
+                        CurRealSize = (pCur->Addr + pCur->Size) - CurBase;
+                    }
+                }
+
+            }
+
+            rk_printf_no_time("\t0x%08x\t\t%d\t\t%d\t%d\t%s",
+                pCur->Addr,
+                pCur->Size,
+                pCur->LoadCnt,
+                pCur->SegMentID,
+                pCur->Name);
+
+            pCur = pCur->pNext;
+        }while(pCur != NULL);
+
+        if(oder == 1)
+        {
+            if(RamCurCnt < RamTotalCnt)
+            {
+                rk_printf_no_time("%s base = %08x, size = %08x, remain size = %08x-------end", RamName[RamCurCnt],CurBase, CurSize, CurSize - CurRealSize);
+            }
+        }
+
+    }
+    return RK_SUCCESS;
+}
+
 /*******************************************************************************
 ** Name: FWShellUpdate
 ** Input:HDC dev,  uint8 * pstr
@@ -1768,12 +2195,16 @@ rk_err_t FWShell(HDC dev,  uint8 * pstr)
 ** Date: 2016.5.11
 ** Time: 17:39:03
 *******************************************************************************/
-_OS_FWANALYSIS_FWANALYSIS_SHELL_
+_SYSTEM_FWANALYSIS_FWANALYSIS_SHELL_
 SHELL FUN rk_err_t FWShellUpdate(HDC dev,  uint8 * pstr)
 {
     if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
         return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
     }
     FwUpdate(L"C:\\RKNANOFW.IMG", 0);
     return RK_SUCCESS;
@@ -1788,7 +2219,7 @@ SHELL FUN rk_err_t FWShellUpdate(HDC dev,  uint8 * pstr)
 ** Time: 23:25:44
 *******************************************************************************/
 #ifdef _OTA_UPDATEFW_SPI
-_OS_FWANALYSIS_FWANALYSIS_SHELL_
+_SYSTEM_FWANALYSIS_FWANALYSIS_SHELL_
 SHELL FUN rk_err_t FWShellOTAUpdate(HDC dev,  uint8 * pstr)
 {
 	return CheckOTAandUpdateFw();
@@ -1802,15 +2233,7 @@ SHELL FUN rk_err_t FWShellOTAUpdate(HDC dev,  uint8 * pstr)
 ** Date: 2016.4.26
 ** Time: 14:36:56
 *******************************************************************************/
-typedef struct _SEGMENT_INFO_LIST
-{
-    struct _SEGMENT_INFO_LIST * pNext;
-    uint32 SegMentID;
-    SEGMENT_INFO_T  Segment;
-
-} SEGMENT_INFO_LIST;
-
-_OS_FWANALYSIS_FWANALYSIS_SHELL_
+_SYSTEM_FWANALYSIS_FWANALYSIS_SHELL_
 SHELL FUN rk_err_t FWShellSn(HDC dev, uint8 * pstr)
 {
     uint8 buf[512];
@@ -1820,7 +2243,10 @@ SHELL FUN rk_err_t FWShellSn(HDC dev, uint8 * pstr)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     size = FW_GetProductSn(buf);
     if(size > 0)
     {
@@ -1903,14 +2329,15 @@ SHELL FUN rk_err_t FWShellSn(HDC dev, uint8 * pstr)
         uint8 * pbuf;
         uint32 i, j, oder;
         SEGMENT_INFO_LIST * p, *pCur, *pPrev, *pFirst;
-        uint32 BootBase, BootSize, BootRealSize;
-        uint32 ShellBase, ShellSize, ShellRealSize;
-        uint32 AppBase, AppSize, AppRealSize;
-        uint32 DriverBase, DriverSize, DriverRealSize;
+        uint32 RamBase[3], RamSize[3], RamRealSize[3];
+        uint8 RamName[3+1][16];
+        uint32 RamTotalCnt, RamCurCnt;
         uint32 CurBase, CurSize, CurRealSize;
+        SEGMENT_INFO_T Segment;
+        uint32 debug;
 
 
-        pbuf = rkos_memory_malloc(MAX_SEGMENT_NUM * sizeof(SEGMENT_INFO_LIST));
+        pbuf = rkos_memory_malloc(MAX_SEGMENT_NUM * sizeof(SEGMENT_INFO_LIST) * 3);
         if(pbuf == NULL)
         {
             rk_printf("segment report maloc fail");
@@ -1922,10 +2349,50 @@ SHELL FUN rk_err_t FWShellSn(HDC dev, uint8 * pstr)
 
             for(i = 0; i < MAX_SEGMENT_NUM; i++)
             {
-                FW_GetSegmentInfo(i, &p->Segment);
-                p->SegMentID = i;
-                p->pNext = p + 1;
-                p++;
+                if(i == SEGMENT_ID_INIT)
+                {
+                    continue;
+                }
+
+                FW_GetSegmentInfo(i, &Segment);
+
+                if(i == SEGMENT_ID_PMU)
+                {
+                    Segment.CodeImageBase -= 0x03090000;
+                    Segment.DataImageBase -= 0x03090000;
+                    Segment.BssImageBase -= 0x03090000;
+
+                }
+
+                if(Segment.CodeImageLength != 0)
+                {
+                    p->SegMentID = i;
+                    p->pNext = p + 1;
+                    p->Addr = Segment.CodeImageBase;
+                    p->Size = Segment.CodeImageLength;
+                    memcpy(p->Name, Segment.Name, 16);
+                    p++;
+                }
+
+                if(Segment.DataImageLength != 0)
+                {
+                    p->SegMentID = i;
+                    p->pNext = p + 1;
+                    p->Addr = Segment.DataImageBase;
+                    p->Size = Segment.DataImageLength;
+                    memcpy(p->Name, Segment.Name, 16);
+                    p++;
+                }
+
+                if(Segment.BssImageLength != 0)
+                {
+                    p->SegMentID = i;
+                    p->pNext = p + 1;
+                    p->Addr = Segment.BssImageBase;
+                    p->Size = Segment.BssImageLength;
+                    memcpy(p->Name, Segment.Name, 16);
+                    p++;
+                }
             }
 
             p--;
@@ -1960,7 +2427,7 @@ SHELL FUN rk_err_t FWShellSn(HDC dev, uint8 * pstr)
                     {
                         if(oder == 1)
                         {
-                            if(pCur->Segment.CodeImageBase > pCur->pNext->Segment.CodeImageBase)
+                            if(pCur->Addr > pCur->pNext->Addr)
                             {
                                 if(pPrev == NULL)
                                 {
@@ -1986,7 +2453,7 @@ SHELL FUN rk_err_t FWShellSn(HDC dev, uint8 * pstr)
                         }
                         else if(oder == 2)
                         {
-                            if(pCur->Segment.CodeLoadBase > pCur->pNext->Segment.CodeLoadBase)
+                            if(pCur->Size > pCur->pNext->Size)
                             {
                                 if(pPrev == NULL)
                                 {
@@ -2025,103 +2492,120 @@ SHELL FUN rk_err_t FWShellSn(HDC dev, uint8 * pstr)
 
             if(oder == 1)
             {
-                BootBase = 0x00001000;
-                BootSize = 0x0000b800;
-                ShellBase = 0x0000c800;
-                ShellSize = 0x00003800;
-                AppBase = 0x03050000;
-                AppSize = 0X00020000;
-                DriverBase = 0x03070000;
-                DriverSize = 0x0001C000;
+                RamTotalCnt = 3;
+                RamCurCnt = 0;
 
-                CurBase = BootBase;
-                CurSize = BootSize;
+                RamBase[0] = 0;
+                RamSize[0] = 0x10000;
+                memcpy(RamName[0],"pmu",4);
+
+                RamBase[1] = 0x03000000;
+                RamSize[1] = 0x50000;
+                memcpy(RamName[1],"data",5);
+
+                RamBase[2] = 0x03050000;
+                RamSize[2] = 0x040000;
+                memcpy(RamName[2],"code",5);
+                memcpy(RamName[3],"    ",5);
+
+                CurBase = RamBase[0];
+                CurSize = RamSize[0];
                 CurRealSize = 0;
+                debug = 1;
+
             }
 
             do
             {
                 if(oder == 1)
                 {
-                    if(pCur->Segment.CodeImageBase < CurBase)
+                    if(pCur->Addr < CurBase)
                     {
-                        rk_printf("this segment need check");
-                    }
-                    else if(pCur->Segment.CodeImageBase >= (CurBase + CurSize))
-                    {
-                        if(CurBase == BootBase)
-                        {
-                            rk_printf("boot base = %08x, boot size = %08x, boot remain size = %08x", CurBase, CurSize, CurSize - CurRealSize);
-                            CurBase = ShellBase;
-                            CurSize = ShellSize;
-                            CurRealSize = 0;
-                            if((pCur->Segment.CodeImageBase + pCur->Segment.CodeImageLength) > (CurBase + CurRealSize))
-                            {
-                                CurRealSize = (pCur->Segment.CodeImageBase + pCur->Segment.CodeImageLength) - CurBase;
-                            }
-                        }
-                        else if(CurBase == ShellBase)
-                        {
-                            rk_printf("shell base = %08x, shell size = %08x, shell remain size = %08x", CurBase, CurSize, CurSize - CurRealSize);
-                            CurBase = AppBase;
-                            CurSize = AppSize;
-                            CurRealSize = 0;
-                            if((pCur->Segment.CodeImageBase + pCur->Segment.CodeImageLength) > (CurBase + CurRealSize))
-                            {
-                                CurRealSize = (pCur->Segment.CodeImageBase + pCur->Segment.CodeImageLength) - CurBase;
-                            }
-                        }
-                        else if(CurBase == AppBase)
-                        {
-                            rk_printf("App base = %08x, App size = %08x, App remain size = %08x", CurBase, CurSize, CurSize - CurRealSize);
-                            CurBase = DriverBase;
-                            CurSize = DriverSize;
-                            CurRealSize = 0;
-                            if((pCur->Segment.CodeImageBase + pCur->Segment.CodeImageLength) > (CurBase + CurRealSize))
-                            {
-                                CurRealSize = (pCur->Segment.CodeImageBase + pCur->Segment.CodeImageLength) - CurBase;
-                            }
-                        }
-                        else
-                        {
-                            rk_printf("this segment need check");
-                        }
-
 
                     }
-                    else if((pCur->Segment.CodeImageBase + pCur->Segment.CodeImageLength) > (CurBase + CurSize))
+                    else if(pCur->Addr >= (CurBase + CurSize))
                     {
-                       rk_printf("this segment need check");
+                        if(RamCurCnt < RamTotalCnt)
+                        {
+                            rk_printf_no_time("%s base = %08x, size = %08x, remain size = %08x-------end", RamName[RamCurCnt],CurBase, CurSize, CurSize - CurRealSize);
+                            RamCurCnt++;
+
+                            if(RamCurCnt < RamTotalCnt)
+                            {
+                                CurBase = RamBase[RamCurCnt];
+                                CurSize = RamSize[RamCurCnt];
+                                CurRealSize = 0;
+
+                                if((pCur->Addr >= CurBase) && (pCur->Addr < CurBase + CurSize))
+                                {
+                                    rk_printf_no_time("%s base = %08x, size = %08x, remain size = %08x-------start", RamName[RamCurCnt],CurBase, CurSize, CurSize - CurRealSize);
+
+                                    if(pCur->Addr > (CurBase + CurRealSize))
+                                    {
+                                        rk_printf_no_time("\t0x%08x\t\t%d\t\t%d\t%s",
+                                        CurBase + CurRealSize,
+                                        pCur->Addr - (CurBase + CurRealSize),
+                                        -1,
+                                        " ");
+                                    }
+
+                                    if((pCur->Addr + pCur->Size) > (CurBase + CurRealSize))
+                                    {
+                                        CurRealSize = (pCur->Addr + pCur->Size) - CurBase;
+                                    }
+                                }
+                                else
+                                {
+                                    debug = 1;
+                                }
+                            }
+
+                        }
+                    }
+                    else if((pCur->Addr + pCur->Size) > (CurBase + CurSize))
+                    {
+                         memcpy(pCur->Name + strlen(pCur->Name), "*", 2);
+                         CurRealSize = CurSize;
                     }
                     else
                     {
-                        if((pCur->Segment.CodeImageBase + pCur->Segment.CodeImageLength) > (CurBase + CurRealSize))
+                        if(debug)
                         {
-                            CurRealSize = (pCur->Segment.CodeImageBase + pCur->Segment.CodeImageLength) - CurBase;
+                            rk_printf_no_time("%s base = %08x, size = %08x, remain size = %08x-------start", RamName[RamCurCnt],CurBase, CurSize, CurSize - CurRealSize);
+                            debug = 0;
+                        }
+
+                        if(pCur->Addr > (CurBase + CurRealSize))
+                        {
+                            rk_printf_no_time("\t0x%08x\t\t%d\t\t%d\t%s",
+                            CurBase + CurRealSize,
+                            pCur->Addr - (CurBase + CurRealSize),
+                            -1,
+                            " ");
+                        }
+
+                        if((pCur->Addr + pCur->Size) > (CurBase + CurRealSize))
+                        {
+                            CurRealSize = (pCur->Addr + pCur->Size) - CurBase;
                         }
                     }
 
                 }
 
-                rk_printf("%08x %08x %08x %08x %08x %08x %08x %08x %d",
-                    pCur->Segment.CodeLoadBase,
-                    pCur->Segment.CodeImageBase,
-                    pCur->Segment.CodeImageLength,
-                    pCur->Segment.DataLoadBase,
-                    pCur->Segment.DataImageBase,
-                    pCur->Segment.DataImageLength,
-                    pCur->Segment.BssImageBase,
-                    pCur->Segment.BssImageLength,
-                    pCur->SegMentID);
+                rk_printf_no_time("\t0x%08x\t\t%d\t\t%d\t%s",
+                    pCur->Addr,
+                    pCur->Size,
+                    pCur->SegMentID,
+                    pCur->Name);
 
                 pCur = pCur->pNext;
             }while(pCur != NULL);
 
             if(oder == 1)
             {
-                if(CurBase == DriverBase)
+                if(RamCurCnt < RamTotalCnt)
                 {
-                    rk_printf("Driver base = %08x, Dirver size = %08x, Driver remain size = %08x", CurBase, CurSize, CurSize - CurRealSize);
+                    rk_printf_no_time("%s base = %08x, size = %08x, remain size = %08x-------end", RamName[RamCurCnt],CurBase, CurSize, CurSize - CurRealSize);
                 }
             }
 
@@ -2142,7 +2626,14 @@ SHELL FUN rk_err_t FWShellSn(HDC dev, uint8 * pstr)
 _SYSTEM_FWANALYSIS_FWANALYSIS_SHELL_
 rk_err_t FWShellPcb(HDC dev,  uint8 * pstr)
 {
-
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 #endif

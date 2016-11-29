@@ -46,7 +46,7 @@
 /* SFC_DMA_TRIGGER Register */
 #define SFC_DMA_START               (1 << 0)     //Dma start trigger signal. Auto cleared after write
 
-#define MIN(x, y)  ((x) < (y) ? (x) : (y))
+
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *

@@ -29,7 +29,9 @@
 */
 #include "rkos.h"
 #include "SysInfoSave.h"
+#ifdef _USE_GUI_
 #include "menuresourceID.h"
+#endif
 
 
 /*
@@ -380,7 +382,6 @@ INIT API void LoadSysInformation(void)
     BOOL CleanHistortyFlag = FALSE;
     HDC hPwmDev = NULL;
     UINT32 rate;
-	
 
     TempBuffer = rkos_memory_malloc(1024);
     if(TempBuffer == NULL)
@@ -409,7 +410,6 @@ INIT API void LoadSysInformation(void)
         DEBUG("crcval = %d, pconfig->crc = %d", crcval, pSysConfig->crc);
         if (crcval != pSysConfig->crc)
         {
-            DEBUG("warning,crcval != pSysConfig->crc\n");
             memset(TempBuffer, 0xff, 1024);
             #ifdef ENABLE_MBR
             //SendMsg(MSG_FORMAT_DISK);
@@ -419,7 +419,6 @@ INIT API void LoadSysInformation(void)
         {
             if ((pSysConfig->FirmwareFlag != 0x45564153) || (pSysConfig->FirmwareCheck != 0x4f464e49))
             {
-                DEBUG("warning,upgrade poweron and some error?\n");
                 // if no "SAVEINFO" Flag, 1st upgrade poweron and some error, need clear configer Param
                 // and format disk
                 memset(TempBuffer, 0xff, 1024);
@@ -440,6 +439,7 @@ INIT API void LoadSysInformation(void)
     gSysConfig.bShowCdrom= pSysConfig->bShowCdrom & 0x01;
     #endif
 
+    #ifdef _USE_GUI_
     //system language.
     gSysConfig.SysLanguage = pSysConfig->SysLanguage;
 
@@ -447,6 +447,7 @@ INIT API void LoadSysInformation(void)
     {
         gSysConfig.SysLanguage = (uint8)pSystemDefaultPara->gLanguage;
     }
+    #endif
 
     //system volume
     gSysConfig.OutputVolume = pSysConfig->OutputVolume;
@@ -454,7 +455,7 @@ INIT API void LoadSysInformation(void)
     {
         gSysConfig.OutputVolume = (uint8)pSystemDefaultPara->Volume;
     }
-    
+
 #ifdef _USE_GUI_
     //backlight mode
     gSysConfig.BLmode = pSysConfig->BLmode;
@@ -508,7 +509,7 @@ INIT API void LoadSysInformation(void)
         #endif
 
 		#if defined(_DRIVER_WIFI__) || defined(_ENABLE_WIFI_BLUETOOTH)
-        	gSysConfig.PlayerType = SOURCE_FROM_DLNA;
+        gSysConfig.PlayerType = SOURCE_FROM_HTTP;
 		#endif
 		printf ("\n1:--------------gSysConfig.PlayerType=0x%x\n",gSysConfig.PlayerType);
     }

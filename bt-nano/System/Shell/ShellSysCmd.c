@@ -48,6 +48,8 @@
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+rk_err_t ShellSystemIdle1(HDC dev, uint8 * pstr);
+rk_err_t ShellSystemFault(HDC dev, uint8 * pstr);
 rk_err_t ShellSystemReset(HDC dev, uint8 * pstr);
 rk_err_t ShellPowerOff(HDC dev, uint8 * pstr);
 rk_err_t ShellSystemFreq(HDC dev, uint8 * pstr);
@@ -132,12 +134,14 @@ static uint32 temp;
 _SYSTEM_SHELL_SHELLSYSCMD_COMMON_
 static SHELL_CMD ShellSystemName[] =
 {
-    "memory",ShellMemory,"NULL","NULL",
-    "cpu",ShellCpuTest,"NULL","NULL",
-    "rkos",ShellRkosIdleTest,"NULL","NULL",
-    "poweroff",ShellPowerOff,"NULL","NULL",
-    "freq",ShellSystemFreq,"NULL","NULL",
-    "reset",ShellSystemReset,"NULL","NULL",
+    "memory",ShellMemory,"count system heap memory","system.memory",
+    "cpu",ShellCpuTest,"test cpu excute speed","system.cpu [/1 | /2]",
+    "rkos",ShellRkosIdleTest,"test rkos speed","system.rkos",
+    "poweroff",ShellPowerOff,"system power off","system.poweroff",
+    "freq",ShellSystemFreq,"display system freque","system.freq",
+    "reset",ShellSystemReset,"reset system","system.reset",
+    "fault",ShellSystemFault,"fault system","system.fault",
+    "idle1",ShellSystemIdle1,"set system idle1 event time","system.idle1 <time>",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -146,51 +150,47 @@ static SHELL_CMD ShellSystemName[] =
 _SYSTEM_SHELL_SHELLBSP_READ_
 static SHELL_CMD ShellBspName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "memory",NULL,"NULL","NULL",
-    "gpio",NULL,"NULL","NULL",
-    "nvic",NULL,"NULL","NULL",
-    "mailbox",NULL,"NULL","NULL",
+    "memory",ShellBspMemory,"NULL","NULL",
+    "gpio",ShellBspGPIO,"NULL","NULL",
+    "nvic",ShellBspNvic,"NULL","NULL",
+    "mailbox",ShellBspMailBox,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
 _SYSTEM_SHELL_SHELLBSP_READ_
 static SHELL_CMD ShellBspNvicName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "setint",NULL,"NULL","NULL",
-    "setpriority",NULL,"NULL","NULL",
-    "setmask",NULL,"NULL","NULL",
-    "testint",NULL,"NULL","NULL",
-    "testpriority",NULL,"NULL","NULL",
-    "resumem3",NULL,"NULL","NULL",
-    "resumenanod",NULL,"NULL","NULL",
+    "setint",ShellBspNvicSetInt,"NULL","NULL",
+    "setpriority",ShellBspNvicSetPriority,"NULL","NULL",
+    "setmask",ShellBspNvicSetMask,"NULL","NULL",
+    "testint",ShellBspNvicTestInt,"NULL","NULL",
+    "testpriority",ShellBspNvicTestPriority,"NULL","NULL",
+    "resumem3",ShellBspNvicResumeM3,"NULL","NULL",
+    "resumenanod",ShellBspNvicResumeNanoD,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
 _SYSTEM_SHELL_SHELLBSP_READ_
 static SHELL_CMD ShellBspMemoryName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "testpower",NULL,"NULL","NULL",
-    "testclk",NULL,"NULL","NULL",
-    "testrw",NULL,"NULL","NULL",
-    "testconsumption",NULL,"NULL","NULL",
-    "testeffect",NULL,"NULL","NULL",
+    "testpower",ShellBspMemoryTestPower,"NULL","NULL",
+    "testclk",ShellBspMemoryTestClk,"NULL","NULL",
+    "testrw",ShellBspMemoryTestReadWrite,"NULL","NULL",
+    "testconsumption",ShellBspMemoryTestConsumption,"NULL","NULL",
+    "testeffect",ShellBspMemoryTestEffect,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
 _SYSTEM_SHELL_SHELLBSP_READ_
 static SHELL_CMD ShellBspMemoryRAMName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "iram",NULL,"NULL","NULL",
-    "dram",NULL,"NULL","NULL",
-    "hiram",NULL,"NULL","NULL",
-    "hdram",NULL,"NULL","NULL",
-    "pmusarm",NULL,"NULL","NULL",
-    "dma",NULL,"NULL","NULL",
-    "dmallp",NULL,"NULL","NULL",
+    "iram",ShellBspMemoryTestIRAM_RW,"NULL","NULL",
+    "dram",ShellBspMemoryTestDRAM_RW,"NULL","NULL",
+    "hiram",ShellBspMemoryTestHIRAM_RW,"NULL","NULL",
+    "hdram",ShellBspMemoryTestHDRAM_RW,"NULL","NULL",
+    "pmusarm",ShellBspMemoryTestPMUSRAM_RW,"NULL","NULL",
+    "dma",ShellBspMemoryTest_DMA_RW,"NULL","NULL",
+    "dmallp",ShellBspMemoryTest_DMA_LLP_RW,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -212,13 +212,12 @@ static SHELL_CMD ShellBspGpioName[] =
 _SYSTEM_SHELL_SHELLBSP_READ_
 static SHELL_CMD ShellBspMailBoxName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "writedata",NULL,"NULL","NULL",
-    "writecmd",NULL,"NULL","NULL",
-    "readdata",NULL,"NULL","NULL",
-    "readcmd",NULL,"NULL","NULL",
-    "testa2b",NULL,"NULL","NULL",
-    "testb2a",NULL,"NULL","NULL",
+    "writedata",ShellBspMailBoxWriteData,"NULL","NULL",
+    "writecmd",ShellBspMailBoxWriteCmd,"NULL","NULL",
+    "readdata",ShellBspMailBoxReadData,"NULL","NULL",
+    "readcmd",ShellBspMailBoxReadCmd,"NULL","NULL",
+    "testa2b",ShellBspMailBoxTestA2B,"NULL","NULL",
+    "testb2a",ShellBspMailBoxTestB2A,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -254,14 +253,22 @@ COMMON API rk_err_t ShellSystemParsing(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellSystemName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
+    {
         return RK_ERROR;
+    }
 
     ret = ShellCheckCmd(ShellSystemName, pItem, StrCnt);
     if (ret < 0)
@@ -292,6 +299,74 @@ COMMON API rk_err_t ShellSystemParsing(HDC dev, uint8 * pstr)
 *---------------------------------------------------------------------------------------------------------------------
 */
 /*******************************************************************************
+** Name: ShellSystemIdle1
+** Input:HDC dev, uint8 * pstr
+** Return: rk_err_t
+** Owner:aaron.sun
+** Date: 2016.11.8
+** Time: 19:33:57
+*******************************************************************************/
+_SYSTEM_SHELL_SHELLSYSCMD_COMMON_
+COMMON FUN rk_err_t ShellSystemIdle1(HDC dev, uint8 * pstr)
+{
+    uint8  *pItem;
+    uint16 StrCnt = 0;
+    rk_err_t   ret = RK_SUCCESS;
+
+    uint8 Space;
+
+    uint32 Idle1EventTime;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
+    StrCnt = ShellItemExtract(pstr,&pItem, &Space);
+
+    if((StrCnt == 0) || (*(pstr - 1) != ' ') || (Space != '\0'))
+    {
+        return RK_ERROR;
+    }
+
+    Idle1EventTime = String2Num(pstr);
+
+    rk_printf("system idle1 event time = %d s", Idle1EventTime);
+
+    gSysConfig.SysIdle1EventTime = Idle1EventTime * 1000;
+
+    return RK_SUCCESS;
+
+}
+
+
+/*******************************************************************************
+** Name: ShellSystemFault
+** Input:HDC dev, uint8 * pstr
+** Return: rk_err_t
+** Owner:aaron.sun
+** Date: 2016.10.10
+** Time: 16:48:44
+*******************************************************************************/
+_SYSTEM_SHELL_SHELLSYSCMD_COMMON_
+COMMON FUN rk_err_t ShellSystemFault(HDC dev, uint8 * pstr)
+{
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+    IntPendingSet(2);
+    while(1);
+}
+/*******************************************************************************
 ** Name: ShellSystemReset
 ** Input:HDC dev, uint8 * pstr
 ** Return: rk_err_t
@@ -302,8 +377,16 @@ COMMON API rk_err_t ShellSystemParsing(HDC dev, uint8 * pstr)
 _SYSTEM_SHELL_SHELLSYSCMD_COMMON_
 COMMON FUN rk_err_t ShellSystemReset(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     PmuSetSysRegister(0, 0);
-    DeviceTask_SystemReset();
+    DeviceTask_SystemReset(0);
 }
 /*******************************************************************************
 ** Name: ShellSystemFreq
@@ -319,6 +402,14 @@ COMMON FUN rk_err_t ShellSystemFreq(HDC dev, uint8 * pstr)
     chip_freq_t  * pchip_freq;
     uint32 i;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     rk_printf_no_time("freq module list");
     printf("\n");
     for(i = 0; i < 64; i++)
@@ -377,6 +468,14 @@ COMMON FUN rk_err_t ShellSystemFreq(HDC dev, uint8 * pstr)
 _SYSTEM_SHELL_SHELLSYSCMD_COMMON_
 SHELL FUN rk_err_t ShellPowerOff(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     MainTask_SysEventCallBack(MAINTASK_SHUTDOWN, NULL);
     return RK_SUCCESS;
 }
@@ -396,14 +495,22 @@ COMMON API rk_err_t ShellBsp(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if(StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
+    {
         return RK_ERROR;
+    }
 
 
     ret = ShellCheckCmd(ShellBspName, pItem, StrCnt);
@@ -417,33 +524,10 @@ COMMON API rk_err_t ShellBsp(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellBspName[i].CmdDes, pItem);
+    if(ShellBspName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            #ifdef SHELL_HELP
-            ret = ShellBspHelp(dev, pItem);
-            #endif
-            break;
-
-        case 0x01:
-            ret = ShellBspMemory(dev, pItem);
-            break;
-
-        case 0x02:
-            ret = ShellBspGPIO(dev, pItem);
-            break;
-
-        case 0x03:
-            ret = ShellBspNvic(dev, pItem);
-            break;
-
-        case 0x04:
-            ret = ShellBspMailBox(dev, pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellBspName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 
@@ -1587,14 +1671,22 @@ COMMON FUN rk_err_t ShellBspMemoryTestReadWrite(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
-    StrCnt = ShellItemExtract(pstr,&pItem, &Space);
-    if(StrCnt == 0)
-        return RK_ERROR;
+    if(ShellHelpSampleDesDisplay(dev, ShellBspMemoryRAMName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
+
+    StrCnt = ShellItemExtract(pstr,&pItem, &Space);
+
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
+    {
+        return RK_ERROR;
+    }
 
     ret = ShellCheckCmd(ShellBspMemoryRAMName, pItem, StrCnt);
 
@@ -1609,46 +1701,13 @@ COMMON FUN rk_err_t ShellBspMemoryTestReadWrite(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellBspMemoryRAMName[i].CmdDes, pItem);
+    if(ShellBspMemoryRAMName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            #ifdef SHELL_HELP
-            ret = ShellBspMemoryHelp(dev, pItem);
-            #endif
-            break;
-
-        case 0x01:
-            ret = ShellBspMemoryTestIRAM_RW(dev, pItem);
-            break;
-
-        case 0x02:
-            ret = ShellBspMemoryTestDRAM_RW(dev, pItem);
-            break;
-
-        case 0x03:
-            ret = ShellBspMemoryTestHIRAM_RW(dev, pItem);
-            break;
-
-        case 0x04:
-            ret = ShellBspMemoryTestHDRAM_RW(dev, pItem);
-            break;
-
-        case 0x05:
-            ret = ShellBspMemoryTestPMUSRAM_RW(dev, pItem);
-            break;
-        case 0x06:
-            ret = ShellBspMemoryTest_DMA_RW(dev, pItem);
-            break;
-        case 0x07:
-            ret = ShellBspMemoryTest_DMA_LLP_RW(dev, pItem);
-            break;
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellBspMemoryRAMName[i].ShellCmdParaseFun(dev, pItem);
     }
-    //rk_print_string("\r\nmemory test over");
 
-    return RK_SUCCESS;
+    return ret;
 
 }
 /*******************************************************************************
@@ -1813,78 +1872,6 @@ COMMON FUN rk_err_t ShellBspNvicSetInt(HDC dev, uint8 * pstr)
     return RK_SUCCESS;
 }
 
-#ifdef SHELL_HELP
-
-/*******************************************************************************
-** Name: ShellBspMailBoxHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:aaron.sun
-** Date: 2014.11.11
-** Time: 10:48:57
-*******************************************************************************/
-_SYSTEM_SHELL_SHELLBSP_READ_
-COMMON FUN rk_err_t ShellBspMailBoxHelp(HDC dev, uint8 * pstr)
-{
-    return RK_SUCCESS;
-}
-
-/*******************************************************************************
-** Name: ShellBspGpioHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:aaron.sun
-** Date: 2014.11.11
-** Time: 10:48:23
-*******************************************************************************/
-_SYSTEM_SHELL_SHELLBSP_READ_
-COMMON FUN rk_err_t ShellBspGpioHelp(HDC dev, uint8 * pstr)
-{
-    return RK_SUCCESS;
-}
-
-/*******************************************************************************
-** Name: ShellBspMemoryHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:aaron.sun
-** Date: 2014.11.11
-** Time: 10:47:31
-*******************************************************************************/
-_SYSTEM_SHELL_SHELLBSP_READ_
-COMMON FUN rk_err_t ShellBspMemoryHelp(HDC dev, uint8 * pstr)
-{
-    return RK_SUCCESS;
-}
-/*******************************************************************************
-** Name: ShellBspNvicHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:aaron.sun
-** Date: 2014.11.11
-** Time: 10:41:28
-*******************************************************************************/
-_SYSTEM_SHELL_SHELLBSP_READ_
-COMMON FUN rk_err_t ShellBspNvicHelp(HDC dev, uint8 * pstr)
-{
-    return RK_SUCCESS;
-}
-/*******************************************************************************
-** Name: ShellBspHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:aaron.sun
-** Date: 2014.11.11
-** Time: 10:40:03
-*******************************************************************************/
-_SYSTEM_SHELL_SHELLBSP_READ_
-COMMON FUN rk_err_t ShellBspHelp(HDC dev, uint8 * pstr)
-{
-    return RK_SUCCESS;
-}
-
-#endif
-
 /*******************************************************************************
 ** Name: ShellBspMailBox
 ** Input:HDC dev, uint8 * pstr
@@ -1899,14 +1886,22 @@ COMMON FUN rk_err_t ShellBspMailBox(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellBspMailBoxName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if(StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
+    {
         return RK_ERROR;
+    }
 
 
     ret = ShellCheckCmd(ShellBspMailBoxName, pItem, StrCnt);
@@ -1920,41 +1915,10 @@ COMMON FUN rk_err_t ShellBspMailBox(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellBspMailBoxName[i].CmdDes, pItem);
+    if(ShellBspMailBoxName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            #ifdef SHELL_HELP
-            ret = ShellBspMailBoxHelp(dev, pItem);
-            #endif
-            break;
-
-        case 0x01:
-            ret = ShellBspMailBoxWriteData(dev, pItem);
-            break;
-
-        case 0x02:
-            ret = ShellBspMailBoxWriteCmd(dev, pItem);
-            break;
-
-        case 0x03:
-            ret = ShellBspMailBoxReadData(dev, pstr);
-            break;
-
-        case 0x04:
-            ret = ShellBspMailBoxReadCmd(dev, pstr);
-            break;
-
-        case 0x05:
-            ret = ShellBspMailBoxTestA2B(dev, pstr);
-            break;
-
-        case 0x06:
-            ret = ShellBspMailBoxTestB2A(dev, pstr);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellBspMailBoxName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 
@@ -1975,15 +1939,22 @@ COMMON FUN rk_err_t ShellBspNvic(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellBspNvicName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if(StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
+    {
         return RK_ERROR;
-
+    }
 
     ret = ShellCheckCmd(ShellBspNvicName, pItem, StrCnt);
     if(ret < 0)
@@ -1996,45 +1967,10 @@ COMMON FUN rk_err_t ShellBspNvic(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellBspNvicName[i].CmdDes, pItem);
+    if(ShellBspNvicName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            #ifdef SHELL_HELP
-            ret = ShellBspNvicHelp(dev, pItem);
-            #endif
-            break;
-
-        case 0x01:
-            ret = ShellBspNvicSetInt(dev, pItem);
-            break;
-
-        case 0x02:
-            ret = ShellBspNvicSetPriority(dev, pItem);
-            break;
-
-        case 0x03:
-            ret = ShellBspNvicSetMask(dev, pstr);
-            break;
-
-        case 0x04:
-            ret = ShellBspNvicTestInt(dev, pstr);
-            break;
-
-        case 0x05:
-            ret = ShellBspNvicTestPriority(dev, pstr);
-            break;
-
-        case 0x06:
-            ret = ShellBspNvicResumeM3(dev, pstr);
-            break;
-
-        case 0x07:
-            ret = ShellBspNvicResumeNanoD(dev, pstr);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellBspNvicName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 
@@ -2068,15 +2004,22 @@ COMMON FUN rk_err_t ShellBspMemory(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellBspMemoryName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if(StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
+    {
         return RK_ERROR;
-
+    }
 
     ret = ShellCheckCmd(ShellBspMemoryName, pItem, StrCnt);
     if(ret < 0)
@@ -2089,37 +2032,10 @@ COMMON FUN rk_err_t ShellBspMemory(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellBspMemoryName[i].CmdDes, pItem);
+    if(ShellBspMemoryName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            #ifdef SHELL_HELP
-            ret = ShellBspMemoryHelp(dev, pItem);
-            #endif
-            break;
-
-        case 0x01:
-            ret = ShellBspMemoryTestPower(dev, pItem);
-            break;
-
-        case 0x02:
-            ret = ShellBspMemoryTestClk(dev, pItem);
-            break;
-
-        case 0x03:
-            ret = ShellBspMemoryTestReadWrite(dev, pItem);
-            break;
-
-        case 0x04:
-            ret = ShellBspMemoryTestConsumption(dev, pstr);
-            break;
-
-        case 0x05:
-            ret = ShellBspMemoryTestEffect(dev, pstr);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellBspMemoryName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 
@@ -2146,7 +2062,10 @@ COMMON FUN rk_err_t ShellMemory(HDC dev,  char * pstr)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     if (dev == NULL)
         return RK_ERROR;
 
@@ -2184,7 +2103,10 @@ COMMON FUN rk_err_t ShellRkosIdleTest(HDC dev,  char * pstr)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     IdleTime = 1;
 
     pIdleFunSave = pIdleFun;
@@ -2215,7 +2137,10 @@ COMMON FUN rk_err_t ShellCpuTest(HDC dev,  char * pstr)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     Grf_GpioMuxSet(GPIO_CH2,GPIOPortA_Pin3,IOMUX_GPIO2A3_CLK_OBS);
     OBS_output_Source_sel(obs_clk_sys_core);
 

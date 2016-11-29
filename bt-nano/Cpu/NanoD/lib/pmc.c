@@ -126,7 +126,7 @@ COMMON API void System_Reset(uint32 direct)
     //RebootTag[2] = 0x46746f6f;
     //RebootTag[3] = 0x0067616c;
 
-    //SetPllDefault();
+    SetPllDefault();
 
     //disable all interrupt
     nvic->SysTick.Ctrl     &= ~NVIC_SYSTICKCTRL_TICKINT;

@@ -37,7 +37,11 @@
 #include "DriverInclude.h"
 #include "I2sDevice.h"
 #include "RockCodecDevice.h"
+
+#ifdef _RK_EQ_
 #include "effect.h"
+#endif
+
 #include "audio_globals.h"
 #include "FwAnalysis.h"
 #include "ShellTask.h"
@@ -281,15 +285,14 @@ typedef  struct _RockCodec_DEVICE_CLASS
     SRUCT_CODEC_CONFIG *CodecVolumeTable;
     HDC        hI2S;
 
-    //CodecMode_en_t DacOutMode;
-    CodecMode_en_t AdcinMode;
-    CodecMode_en_t Codecmode;
-    CodecFS_en_t CodecFS;
+    CodecMode_en_t AdcMode;
+    CodecMode_en_t DacMode;
     CodecFS_en_t CurCodecFS;
-    CodecFS_en_t RxCodecFS;
+    CodecFS_en_t AdcFs;
+    CodecFS_en_t DacFs;
     uint8*  stRxBuffer[2];
     uint32  RxItemID;
-    eACodecI2sDATA_WIDTH_t DataWidth;
+    eACodecI2sDATA_WIDTH_t DacDataWidth;
     eACodecI2sDATA_WIDTH_t AdcDataWidth;
 
 }RockCodec_DEVICE_CLASS;
@@ -447,7 +450,8 @@ rk_err_t RockCodecShellRead(HDC dev, uint8 * pstr);
 rk_err_t RockcodecDevConfigI2S(HDC dev, eI2sDATA_WIDTH_t datawdt, I2sFS_en_t i2S_FS);
 rk_err_t RockCodecShellCreate(HDC dev, uint8 * pstr);
 rk_err_t RockCodecShellDel(HDC dev, uint8 * pstr);
-rk_err_t RockCodecShellHelp(HDC dev, uint8 * pstr);
+rk_err_t RockCodecShellPcb(HDC dev, uint8 * pstr);
+rk_err_t RockCodecShellTest(HDC dev, uint8 * pstr);
 #if 1
 rk_err_t RockcodecDevResume(HDC dev);
 rk_err_t RockcodecDevSuspend(HDC dev, uint32 Level);
@@ -475,7 +479,7 @@ COMMON API rk_err_t RockCodecDev_ExitMode(HDC dev, uint32 Type)
     RockCodec_DEVICE_CLASS * pRockCodecDev =  (RockCodec_DEVICE_CLASS *)(dev);
     if(Type <= Codec_DACoutLINE)
     {
-        while(I2sDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS)
+        while(I2sTxDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS)
         {
             rkos_sleep(10);
         }
@@ -509,15 +513,14 @@ COMMON API rk_err_t RockcodecDev_SetAdcDataWidth(HDC dev, eI2sDATA_WIDTH_t adcDa
     {
         rkos_sleep(10);
     }
-    //rkos_sleep(10);
     if(adcDatawdt == ACodec_I2S_DATA_WIDTH16)
     {
-        ACodec_Set_I2S_Mode(TFS_TX_I2S_MODE,I2S_DATA_WIDTH16,IBM_TX_BUS_MODE_NORMAL,I2S_MST_MASTER);
+        ACodec_Set_I2S_TX_Mode(TFS_TX_I2S_MODE,I2S_DATA_WIDTH16,IBM_TX_BUS_MODE_NORMAL,I2S_MST_MASTER);
         I2sDev_Control(pRockCodecDev->hI2S, I2S_DEVICE_SET_RX_DW, (void *)I2S_DATA_WIDTH16);
     }
     else
     {
-        ACodec_Set_I2S_Mode(TFS_TX_I2S_MODE,I2S_DATA_WIDTH24,IBM_TX_BUS_MODE_NORMAL,I2S_MST_MASTER);
+        ACodec_Set_I2S_TX_Mode(TFS_TX_I2S_MODE,I2S_DATA_WIDTH24,IBM_TX_BUS_MODE_NORMAL,I2S_MST_MASTER);
         I2sDev_Control(pRockCodecDev->hI2S, I2S_DEVICE_SET_RX_DW, (void *)I2S_DATA_WIDTH24);
     }
     pRockCodecDev->AdcDataWidth = adcDatawdt;
@@ -526,7 +529,7 @@ COMMON API rk_err_t RockcodecDev_SetAdcDataWidth(HDC dev, eI2sDATA_WIDTH_t adcDa
 }
 
 /*******************************************************************************
-** Name: RockcodecDev_SetAdcInputMode
+** Name: RockcodecDev_SetAdcMode
 ** Input:HDC dev,  CodecMode_en_t Codecmode
 ** Return: rk_err_t
 ** Owner:cjh
@@ -534,7 +537,7 @@ COMMON API rk_err_t RockcodecDev_SetAdcDataWidth(HDC dev, eI2sDATA_WIDTH_t adcDa
 ** Time: 18:53:33
 *******************************************************************************/
 _DRIVER_ROCKCODEC_ROCKCODECDEVICE_COMMON_
-COMMON API rk_err_t RockcodecDev_SetAdcInputMode(HDC dev,  CodecMode_en_t AdcinMode)
+COMMON API rk_err_t RockcodecDev_SetAdcMode(HDC dev,  CodecMode_en_t AdcMode)
 {
     RockCodec_DEVICE_CLASS * pRockCodecDev =  (RockCodec_DEVICE_CLASS *)(dev);
 
@@ -543,16 +546,16 @@ COMMON API rk_err_t RockcodecDev_SetAdcInputMode(HDC dev,  CodecMode_en_t AdcinM
     {
         rkos_sleep(10);
     }
-    //rkos_sleep(10);
-    Codec_SetMode(AdcinMode,pRockCodecDev->CodecFS);
-    pRockCodecDev->AdcinMode = AdcinMode;
+    Codec_SetMode(AdcMode);
+    pRockCodecDev->AdcMode = AdcMode;
     pRockCodecDev->stRxBuffer[0] = NULL;
     pRockCodecDev->stRxBuffer[1] = NULL;
     rkos_semaphore_give(pRockCodecDev->osRockCodecControlReqSem);
     return RK_SUCCESS;
 }
+
 /*******************************************************************************
-** Name: RockcodecDev_SetDataWidth
+** Name: RockcodecDev_SetDacDataWidth
 ** Input:HDC dev, eI2sDATA_WIDTH_t datawdt
 ** Return: rk_err_t
 ** Owner:aaron.sun
@@ -560,16 +563,16 @@ COMMON API rk_err_t RockcodecDev_SetAdcInputMode(HDC dev,  CodecMode_en_t AdcinM
 ** Time: 15:59:39
 *******************************************************************************/
 _DRIVER_ROCKCODEC_ROCKCODECDEVICE_COMMON_
-COMMON API rk_err_t RockcodecDev_SetDataWidth(HDC dev, eI2sDATA_WIDTH_t datawdt)
+COMMON API rk_err_t RockcodecDev_SetDacDataWidth(HDC dev, eI2sDATA_WIDTH_t datawdt)
 {
     RockCodec_DEVICE_CLASS * pRockCodecDev =  (RockCodec_DEVICE_CLASS *)(dev);
 
     rkos_semaphore_take(pRockCodecDev->osRockCodecControlReqSem, MAX_DELAY);
-    while(I2sDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS)
+    while(I2sTxDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS)
     {
         rkos_sleep(10);
     }
-    //rkos_sleep(10);
+
     if(datawdt == ACodec_I2S_DATA_WIDTH16)
     {
         ACodec_Set_I2S_RX_Mode(TFS_RX_I2S_MODE,I2S_DATA_WIDTH16,IBM_RX_BUS_MODE_NORMAL,I2S_MST_MASTER);
@@ -580,13 +583,13 @@ COMMON API rk_err_t RockcodecDev_SetDataWidth(HDC dev, eI2sDATA_WIDTH_t datawdt)
         ACodec_Set_I2S_RX_Mode(TFS_RX_I2S_MODE,I2S_DATA_WIDTH24,IBM_RX_BUS_MODE_NORMAL,I2S_MST_MASTER);
         I2sDev_Control(pRockCodecDev->hI2S, I2S_DEVICE_SET_DW, (void *)I2S_DATA_WIDTH24);
     }
-    pRockCodecDev->DataWidth = datawdt;
+    pRockCodecDev->DacDataWidth = datawdt;
     rkos_semaphore_give(pRockCodecDev->osRockCodecControlReqSem);
     return RK_SUCCESS;
 }
 
 /*******************************************************************************
-** Name: RockcodecDev_SetMode
+** Name: RockcodecDev_SetDacMode
 ** Input:HDC dev,  CodecMode_en_t Codecmode,  CodecFS_en_t CodecFS
 ** Return: rk_err_t
 ** Owner:Aaron
@@ -594,25 +597,24 @@ COMMON API rk_err_t RockcodecDev_SetDataWidth(HDC dev, eI2sDATA_WIDTH_t datawdt)
 ** Time: 13:53:09
 *******************************************************************************/
 _DRIVER_ROCKCODEC_ROCKCODECDEVICE_COMMON_
-rk_err_t RockcodecDev_SetMode(HDC dev, CodecMode_en_t Codecmode)
+rk_err_t RockcodecDev_SetDacMode(HDC dev, CodecMode_en_t Codecmode)
 {
     RockCodec_DEVICE_CLASS * pRockCodecDev =  (RockCodec_DEVICE_CLASS *)(dev);
 
     rkos_semaphore_take(pRockCodecDev->osRockCodecControlReqSem, MAX_DELAY);
-    while(I2sDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS)
+    while(I2sTxDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS)
     {
         rkos_sleep(10);
     }
-    //rkos_sleep(10);
-    Codec_SetMode(Codecmode,pRockCodecDev->CodecFS);
-    pRockCodecDev->Codecmode = Codecmode;
+    Codec_SetMode(Codecmode);
+    pRockCodecDev->DacMode = Codecmode;
     rkos_semaphore_give(pRockCodecDev->osRockCodecControlReqSem);
     return RK_SUCCESS;
 
 }
 
 /*******************************************************************************
-** Name: RockcodecDev_SetRate
+** Name: RockcodecDev_SetDacRate
 ** Input:HDC dev,  CodecFS_en_t CodecFS
 ** Return: rk_err_t
 ** Owner:Aaron
@@ -620,36 +622,39 @@ rk_err_t RockcodecDev_SetMode(HDC dev, CodecMode_en_t Codecmode)
 ** Time: 13:53:09
 *******************************************************************************/
 _DRIVER_ROCKCODEC_ROCKCODECDEVICE_COMMON_
-rk_err_t RockcodecDev_RxSetRate(HDC dev,  CodecFS_en_t CodecFS)
+rk_err_t RockcodecDev_SetDacRate(HDC dev,  CodecFS_en_t CodecFS)
 {
     rk_err_t ret;
     RockCodec_DEVICE_CLASS * pRockCodecDev =  (RockCodec_DEVICE_CLASS *)(dev);
 
     rkos_semaphore_take(pRockCodecDev->osRockCodecControlReqSem, MAX_DELAY);
-    if((pRockCodecDev->CurCodecFS != CodecFS) || (pRockCodecDev->RxCodecFS != CodecFS))
+    if(pRockCodecDev->CurCodecFS != CodecFS)
     {
-        while((I2sDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS) || (I2sRxDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS))
+        while((I2sTxDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS) || (I2sRxDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS))
         {
             rkos_sleep(10);
         }
-        //rkos_sleep(10);
         ret = I2sDev_Control(pRockCodecDev->hI2S, I2S_DEVICE_SET_FS, (void *)CodecFS);
         if (RK_ERROR == ret)
         {
             rkos_semaphore_give(pRockCodecDev->osRockCodecControlReqSem);
             return ret;
         }
-        pRockCodecDev->RxCodecFS = CodecFS;
+        pRockCodecDev->DacFs = CodecFS;
         pRockCodecDev->CurCodecFS = CodecFS;
         Codec_SetSampleRate(CodecFS);
-        //Codec_SetMode(pRockCodecDev->Codecmode, CodecFS);
+    }
+    else if(pRockCodecDev->DacFs != CodecFS)
+    {
+        pRockCodecDev->DacFs = CodecFS;
     }
     rkos_semaphore_give(pRockCodecDev->osRockCodecControlReqSem);
     return RK_SUCCESS;
 }
 
+
 /*******************************************************************************
-** Name: RockcodecDev_SetRate
+** Name: RockcodecDev_SetAdcRate
 ** Input:HDC dev,  CodecFS_en_t CodecFS
 ** Return: rk_err_t
 ** Owner:Aaron
@@ -657,30 +662,31 @@ rk_err_t RockcodecDev_RxSetRate(HDC dev,  CodecFS_en_t CodecFS)
 ** Time: 13:53:09
 *******************************************************************************/
 _DRIVER_ROCKCODEC_ROCKCODECDEVICE_COMMON_
-rk_err_t RockcodecDev_SetRate(HDC dev,  CodecFS_en_t CodecFS)
+rk_err_t RockcodecDev_SetAdcRate(HDC dev,  CodecFS_en_t CodecFS)
 {
     rk_err_t ret;
     RockCodec_DEVICE_CLASS * pRockCodecDev =  (RockCodec_DEVICE_CLASS *)(dev);
 
     rkos_semaphore_take(pRockCodecDev->osRockCodecControlReqSem, MAX_DELAY);
-    if((pRockCodecDev->CurCodecFS != CodecFS)  || (pRockCodecDev->CodecFS != CodecFS))
+    if(pRockCodecDev->CurCodecFS != CodecFS)
     {
-        while((I2sDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS) || (I2sRxDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS))
+        while((I2sTxDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS) || (I2sRxDev_Idle(pRockCodecDev->hI2S) !=  RK_SUCCESS))
         {
             rkos_sleep(10);
         }
-        //rkos_sleep(10);
-
         ret = I2sDev_Control(pRockCodecDev->hI2S, I2S_DEVICE_SET_FS, (void *)CodecFS);
         if (RK_ERROR == ret)
         {
             rkos_semaphore_give(pRockCodecDev->osRockCodecControlReqSem);
             return ret;
         }
-        pRockCodecDev->CodecFS = CodecFS;
+        pRockCodecDev->AdcFs = CodecFS;
         pRockCodecDev->CurCodecFS = CodecFS;
         Codec_SetSampleRate(CodecFS);
-        //Codec_SetMode(pRockCodecDev->Codecmode, CodecFS);
+    }
+    else if(pRockCodecDev->AdcFs != CodecFS)
+    {
+        pRockCodecDev->AdcFs = CodecFS;
     }
     rkos_semaphore_give(pRockCodecDev->osRockCodecControlReqSem);
     return RK_SUCCESS;
@@ -698,7 +704,9 @@ _DRIVER_ROCKCODEC_ROCKCODECDEVICE_COMMON_
 rk_err_t RockcodecDev_SetVol(HDC dev, uint32 userEQMod, uint32 vol)
 {
     RockCodec_DEVICE_CLASS * pRockCodecDev =  (RockCodec_DEVICE_CLASS *)(dev);
+#ifdef _RK_EQ_
     uint32 VolumeMode = EQ_NOR;
+#endif
     //rk_printf("Volume = %d",vol);
     rkos_semaphore_take(pRockCodecDev->osRockCodecControlReqSem, MAX_DELAY);
     //rkos_enter_critical();
@@ -1022,10 +1030,8 @@ rk_err_t RockcodecDev_Read(HDC dev, uint8* buffer, uint32 size,uint8 mode)
     int32  ret = RK_SUCCESS;
     uint32 index;
 
-    if(pstRockCodecDev->CurCodecFS != pstRockCodecDev->RxCodecFS)
-    {
-        RockcodecDev_RxSetRate(pstRockCodecDev,  pstRockCodecDev->RxCodecFS);
-    }
+    RockcodecDev_SetAdcRate(pstRockCodecDev,  pstRockCodecDev->AdcFs);
+
     pstRockCodecDev->stRxBuffer[pstRockCodecDev->RxItemID] = buffer;
     if (mode == SYNC_MODE)
     {
@@ -1048,7 +1054,7 @@ rk_err_t RockcodecDev_Read(HDC dev, uint8* buffer, uint32 size,uint8 mode)
     #if 1
     pstRockCodecDev->RxItemID ^= 1;
     //printf("size%d\n",size);
-    if((pstRockCodecDev->AdcinMode == Codec_Mic1Mono) && (pstRockCodecDev->stRxBuffer[pstRockCodecDev->RxItemID] != NULL))
+    if((pstRockCodecDev->AdcMode == Codec_Mic1Mono) && (pstRockCodecDev->stRxBuffer[pstRockCodecDev->RxItemID] != NULL))
     {
         if(VDW_TX_WIDTH_16BIT == pstRockCodecDev->AdcDataWidth)
         {
@@ -1071,7 +1077,7 @@ rk_err_t RockcodecDev_Read(HDC dev, uint8* buffer, uint32 size,uint8 mode)
             }
         }
     }
-    else if((pstRockCodecDev->AdcinMode == Codec_Mic2Mono) && (pstRockCodecDev->stRxBuffer[pstRockCodecDev->RxItemID] != NULL))
+    else if((pstRockCodecDev->AdcMode == Codec_Mic2Mono) && (pstRockCodecDev->stRxBuffer[pstRockCodecDev->RxItemID] != NULL))
     {
         if(VDW_TX_WIDTH_16BIT == pstRockCodecDev->AdcDataWidth)
         {
@@ -1114,10 +1120,8 @@ rk_err_t RockcodecDev_Write(HDC dev, uint8* buffer, uint32 size,uint8 mode)
     HDC hI2S = pstRockCodecDev->hI2S;
     int32  ret = RK_SUCCESS;
 
-    if(pstRockCodecDev->CurCodecFS != pstRockCodecDev->CodecFS)
-    {
-        RockcodecDev_SetRate(pstRockCodecDev,  pstRockCodecDev->CodecFS);
-    }
+    RockcodecDev_SetDacRate(pstRockCodecDev,  pstRockCodecDev->DacFs);
+
     if (mode == SYNC_MODE)
     {
         ret = I2sDev_Write(hI2S, (uint32 *)buffer, size, SYNC_MODE);
@@ -1255,10 +1259,12 @@ INIT API HDC RockCodecDev_Create(uint32 DevID, void *arg)
     pstDev->resume  = RockcodecDevResume;
 
     psRockCodecDev->hI2S = pstRockCodecArg->hI2s;
-    psRockCodecDev->CodecFS = pstRockCodecArg->arg.SampleRate; //I2S_FS_44100Hz;
-    psRockCodecDev->Codecmode = pstRockCodecArg->arg.DacOutMode;
-    psRockCodecDev->AdcinMode = pstRockCodecArg->arg.AdcinMode;
-    psRockCodecDev->DataWidth = pstRockCodecArg->arg.DataWidth;
+    psRockCodecDev->DacFs = pstRockCodecArg->arg.DacFs; //I2S_FS_44100Hz;
+    psRockCodecDev->AdcFs = pstRockCodecArg->arg.AdcFs; //I2S_FS_44100Hz;
+    psRockCodecDev->DacMode = pstRockCodecArg->arg.DacMode;
+    psRockCodecDev->DacDataWidth = pstRockCodecArg->arg.DacDataWidth;
+    psRockCodecDev->AdcMode = pstRockCodecArg->arg.AdcMode;
+    psRockCodecDev->AdcDataWidth = pstRockCodecArg->arg.AdcDataWidth;
 //    psRockCodecDev->AudioInOutType.EffectCtl.Mode = pstRockCodecArg->eqMode;
 //    psRockCodecDev->CodecVolumeTable = ACodec_HPoutVol_General;//// CodecConfig_General;(SRUCT_CODEC_CONFIG *)(pstRockCodecArg->pCodecVolumeTable);
 
@@ -1397,6 +1403,10 @@ rk_err_t RockcodecDevDeInit(HDC dev)
     Grf_GPIO_SetPinPull(GPIO_CH1, GPIOPortA_Pin0, DISABLE);
 #endif
 
+#ifdef _SUPPORT_PA_EN//jjjhhh---PA_EN
+	Gpio_SetPinLevel(GPIO_CH1, GPIOPortA_Pin0, GPIO_LOW);
+	Grf_GPIO_SetPinPull(GPIO_CH1, GPIOPortA_Pin0, DISABLE);
+#endif
     return RK_SUCCESS;
 }
 
@@ -1420,17 +1430,13 @@ rk_err_t RockcodecDevInit(HDC dev)
         return RK_ERROR;
     }
     Codec_PowerOnInitial();
-    ACodec_Set_I2S_RX_Mode(TFS_RX_I2S_MODE,psRockCodecDev->DataWidth,IBM_RX_BUS_MODE_NORMAL,I2S_MST_MASTER);
-    ACodec_Set_I2S_Mode(TFS_TX_I2S_MODE,psRockCodecDev->DataWidth,IBM_TX_BUS_MODE_NORMAL,I2S_MST_MASTER);
+    ACodec_Set_I2S_RX_Mode(TFS_RX_I2S_MODE,psRockCodecDev->DacDataWidth,IBM_RX_BUS_MODE_NORMAL,I2S_MST_MASTER);
+    ACodec_Set_I2S_TX_Mode(TFS_RX_I2S_MODE,psRockCodecDev->AdcDataWidth,IBM_RX_BUS_MODE_NORMAL,I2S_MST_MASTER);
 
-#ifndef _BROAD_LINE_OUT_
-    Codec_SetSampleRate(psRockCodecDev->CodecFS);
-    Codec_SetMode(Codec_DACoutHP,psRockCodecDev->CodecFS);
-    psRockCodecDev->Codecmode = Codec_DACoutHP;
-#else
-    Codec_SetMode(Codec_DACoutLINE,psRockCodecDev->CodecFS);
-    psRockCodecDev->Codecmode = Codec_DACoutLINE;
-#endif
+    Codec_SetSampleRate(psRockCodecDev->DacFs);
+    Codec_SetSampleRate(psRockCodecDev->AdcFs);
+    Codec_SetMode( psRockCodecDev->DacMode);
+    Codec_SetMode( psRockCodecDev->AdcMode);
 
 #ifdef PA_CS8508L
     //rk_printf("select I2S_DEV1_PA_EN\n");
@@ -1440,6 +1446,12 @@ rk_err_t RockcodecDevInit(HDC dev)
     Grf_GPIO_SetPinPull(GPIO_CH1, GPIOPortA_Pin0, ENABLE);
 #endif
 
+#ifdef _SUPPORT_PA_EN
+	Grf_GpioMuxSet(GPIO_CH1, GPIOPortA_Pin0, IOMUX_GPIO1A0_IO);
+	Gpio_SetPinDirection(GPIO_CH1,GPIOPortA_Pin0,GPIO_OUT);//jjjhhh---PA_EN
+	Gpio_SetPinLevel(GPIO_CH1, GPIOPortA_Pin0, GPIO_HIGH);
+	Grf_GPIO_SetPinPull(GPIO_CH1, GPIOPortA_Pin0, DISABLE);
+#endif
     psRockCodecDev->stRxBuffer[0] = NULL;
     psRockCodecDev->stRxBuffer[1] = NULL;
 
@@ -1459,16 +1471,11 @@ rk_err_t RockcodecDevInit(HDC dev)
 _DRIVER_ROCKCODEC_ROCKCODECDEVICE_SHELL_DATA_
 static SHELL_CMD ShellRockCodecName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "delete",NULL,"NULL","NULL",
-    "suspend",NULL,"NULL","NULL",
-    "resume",NULL,"NULL","NULL",
-    "read",NULL,"NULL","NULL",
-    "write",NULL,"NULL","NULL",
-    "control",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "pcb",RockCodecShellPcb,"list rockcodec device pcb inf","rockcodec.pcb [object id]",
+    "create",RockCodecShellCreate,"create a rockcodec device","rockcodec.create",
+    "test",RockCodecShellTest,"test a rockcodec device","rockcodec.test",
+    "delete",RockCodecShellDel,"delete a rockcodec device","rockcodec.delete",
+    "read",RockCodecShellRead,"read rockcodec device","rockcodec.read",
     "\b", NULL,"NULL","NULL",                         // the end
 };
 
@@ -1486,12 +1493,19 @@ rk_err_t RockCodecDev_Shell(HDC dev,  uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellRockCodecName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1507,52 +1521,14 @@ rk_err_t RockCodecDev_Shell(HDC dev,  uint8 * pstr)
 
     pItem += StrCnt;
     pItem++;                        //remove '.',the point is the useful item
-    switch (i)
+
+
+    ShellHelpDesDisplay(dev, ShellRockCodecName[i].CmdDes, pItem);
+    if(ShellRockCodecName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //pcb
-            ret = RockCodecShellPcb(dev,pItem);
-            break;
-
-        case 0x01:  //create
-            ret = RockCodecShellCreate(dev,pItem);
-            break;
-
-        case 0x02:  //test
-            ret = RockCodecShellTest(dev,pItem);
-            break;
-
-        case 0x03:  //Del
-            ret = RockCodecShellDel(dev,pItem);
-            break;
-
-        case 0x04:  //suspend
-            //ret = RockCodecShellSuspend(dev,pItem);
-            break;
-
-        case 0x05:  //resume
-            //ret = RockCodecShellResume(dev,pItem);
-            break;
-
-        case 0x06:  //read  chad.ma add for test
-            ret = RockCodecShellRead(dev,pItem);
-            break;
-
-        case 0x07:  //write
-            //ret = RockCodecShellWrite(dev,pItem);
-            break;
-
-        case 0x08:  //control
-            //ret = RockCodecShellControl(dev,pItem);
-            break;
-
-        case 0x09:  //help
-            ret = RockCodecShellHelp(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellRockCodecName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 
@@ -1580,28 +1556,22 @@ SHELL FUN rk_err_t RockCodecShellRead(HDC dev, uint8 * pstr)
     uint8  pBuffer[1024]= {0};
     uint32 size;
 
-
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("RockCodec.read : read RockCodec data\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     SetI2SFreq(I2S_DEV0, I2S_XIN12M, NULL);//测试默认12M
     hRockCodec = RKDev_Open(DEV_CLASS_ROCKCODEC,0,NOT_CARE);
 
 #ifndef _BROAD_LINE_OUT_
-    RockcodecDev_SetMode(hRockCodec,Codec_MicStero);
+    RockcodecDev_SetDacMode(hRockCodec,Codec_MicStero);
 #else
-    RockcodecDev_SetMode(hRockCodec,Codec_MicStero);
+    RockcodecDev_SetDacMode(hRockCodec,Codec_MicStero);
 #endif
 
 
@@ -1626,6 +1596,14 @@ SHELL FUN rk_err_t RockCodecShellDel(HDC dev, uint8 * pstr)
     uint32 DevID;
     ROCKCODEC_DEV_ARG stRockCodecDevArg;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     //Get RockCodecDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -1655,38 +1633,6 @@ SHELL FUN rk_err_t RockCodecShellDel(HDC dev, uint8 * pstr)
 
     return RK_SUCCESS;
 }
-/*******************************************************************************
-** Name: RockcodecDevShellHelp
-** Input:HDC dev, const uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.ma
-** Date: 2014.11.3
-** Time: 11:19:43
-*******************************************************************************/
-_DRIVER_ROCKCODEC_ROCKCODECDEVICE_SHELL_
-SHELL FUN rk_err_t RockCodecShellHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
-
-    if ( StrLenA( pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("Rockcodec命令集提供了一系列的命令对Rockcodec进行操作\r\n");
-    rk_print_string("Rockcodec包含的子命令如下:          \r\n");
-    rk_print_string("pcb       显示pcb信息               \r\n");
-    rk_print_string("open      打开Rockcodec             \r\n");
-    rk_print_string("test      测试Rockcodec             \r\n");
-    rk_print_string("close     关闭Rockcodec             \r\n");
-    rk_print_string("suspend   suspend Rockcodec         \r\n");
-    rk_print_string("resume    resume Rockcodec          \r\n");
-    rk_print_string("read      read Rockcodec            \r\n");
-    rk_print_string("write     write Rockcodec           \r\n");
-    rk_print_string("control   control Rockcodec         \r\n");
-    rk_print_string("help      显示Rockcodec命令帮助信息 \r\n");
-
-    return RK_SUCCESS;
-
-}
 
 /*******************************************************************************
 ** Name: RockCodecShellPcb
@@ -1699,23 +1645,17 @@ SHELL FUN rk_err_t RockCodecShellHelp(HDC dev, uint8 * pstr)
 _DRIVER_ROCKCODEC_ROCKCODECDEVICE_SHELL_
 rk_err_t RockCodecShellPcb(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("RockCodec.pcb : pcd info \r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
-
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 /*******************************************************************************
@@ -1737,19 +1677,14 @@ rk_err_t RockCodecShellTest(HDC dev, uint8 * pstr)
     I2S_DEVICE_CONFIG_REQ_ARG stI2sDevArg;
     I2S_DEV_ARG stI2Sarg;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("RockCodec.test : test RockCodec \r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     SetI2SFreq(I2S_DEV0, I2S_XIN12M, NULL);//测试默认12M
     //uint32 SetI2SFreq(UINT32 I2sId,Clock_Source_Sel Clk_Source,UINT32 TargetFreqHz)
 //    #ifdef _JTAG_printf_
@@ -1806,18 +1741,22 @@ rk_err_t RockCodecShellTest(HDC dev, uint8 * pstr)
 
     //RockcodecDevInit(hRockCodec);//Open I2S clk CODEC Initialization is the first configuration step
 
-    RockcodecDev_SetRate(hRockCodec,CodecFS_44100Hz);//Smaple rate PLL  CodecFS_44100Hz
+    RockcodecDev_SetDacRate(hRockCodec,CodecFS_44100Hz);//Smaple rate PLL  CodecFS_44100Hz
     //RockcodecDev_SetVol(hRockCodec,27);
+    #ifdef _RK_EQ_
     RockcodecDev_SetVol(hRockCodec, EQ_NOR, 30);
+    #else
+    RockcodecDev_SetVol(hRockCodec, 0, 30);
+    #endif
 
     //ACodec InitI2S_TX/RX En I2SCLK
-    //ACodec_Set_I2S_Mode(I2S_MASTER_MODE,I2S_DATA_WIDTH16,I2S_NORMAL_MODE,I2S_MASTER_MODE);
+    //ACodec_Set_I2S_TX_Mode(I2S_MASTER_MODE,I2S_DATA_WIDTH16,I2S_NORMAL_MODE,I2S_MASTER_MODE);
 
     //enable ADC power on
 #ifndef _BROAD_LINE_OUT_
-    RockcodecDev_SetMode(hRockCodec,Codec_DACoutHP);
+    RockcodecDev_SetDacMode(hRockCodec,Codec_DACoutHP);
 #else
-    RockcodecDev_SetMode(hRockCodec,Codec_DACoutLINE);
+    RockcodecDev_SetDacMode(hRockCodec,Codec_DACoutLINE);
 #endif
     while (1)
     {
@@ -1852,19 +1791,6 @@ rk_err_t RockCodecShellOpen(HDC dev, uint8 * pstr)
     I2S_DEVICE_CONFIG_REQ_ARG stI2sDevArg;
     I2S_DEV_ARG  stI2Sarg;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("RockCodec.open : openRockCodec \r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 #ifdef __DRIVER_I2S_I2SDEVICE_C__
     stI2Sarg.hDma = RKDev_Open(DEV_CLASS_DMA, DMA_CHN0, NOT_CARE);
     stI2Sarg.Channel = I2S_SEL_DEV1_PA;
@@ -1883,17 +1809,17 @@ rk_err_t RockCodecShellOpen(HDC dev, uint8 * pstr)
     }
 
     stRockCodecDevArg.hI2s = RKDev_Open(DEV_CLASS_I2S, I2S_DEV1, NOT_CARE);
-    stRockCodecDevArg.arg.SampleRate = I2S_FS_44100Hz;
+    stRockCodecDevArg.arg.DacFs = I2S_FS_44100Hz;
 #ifndef _BROAD_LINE_OUT_
-    stRockCodecDevArg.arg.DacOutMode  = Codec_DACoutHP;
+    stRockCodecDevArg.arg.DacMode  = Codec_DACoutHP;
 #else
-    stRockCodecDevArg.arg.DacOutMode  = Codec_DACoutLINE;
+    stRockCodecDevArg.arg.DacMode  = Codec_DACoutLINE;
 #endif
-    stRockCodecDevArg.arg.AdcinMode = Codec_Standby;
+    stRockCodecDevArg.arg.AdcMode = Codec_Standby;
 #ifdef CODEC_24BIT
-    stRockCodecDevArg.arg.DataWidth = VDW_TX_WIDTH_24BIT;
+    stRockCodecDevArg.arg.DacDataWidth = VDW_TX_WIDTH_24BIT;
 #else
-    stRockCodecDevArg.arg.DataWidth = VDW_TX_WIDTH_16BIT;
+    stRockCodecDevArg.arg.DacDataWidth = VDW_TX_WIDTH_16BIT;
 #endif
     ret = RKDev_Create(DEV_CLASS_ROCKCODEC, 0,&stRockCodecDevArg);
 
@@ -1924,33 +1850,27 @@ rk_err_t RockCodecShellCreate(HDC dev, uint8 * pstr)
     ROCKCODEC_DEV_ARG stRockCodecDevArg;
     I2S_DEVICE_CONFIG_REQ_ARG stI2sDevArg;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("RockCodec.open : openRockCodec \r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 #ifdef __DRIVER_I2S_I2SDEVICE_C__
     stRockCodecDevArg.hI2s = RKDev_Open(DEV_CLASS_I2S, I2S_DEV0, NOT_CARE);
-    stRockCodecDevArg.arg.SampleRate = I2S_FS_44100Hz;
+    stRockCodecDevArg.arg.DacFs = I2S_FS_44100Hz;
 #ifndef _BROAD_LINE_OUT_
-    stRockCodecDevArg.arg.DacOutMode  = Codec_DACoutHP;
+    stRockCodecDevArg.arg.DacMode  = Codec_DACoutHP;
 #else
-    stRockCodecDevArg.arg.DacOutMode  = Codec_DACoutLINE;
+    stRockCodecDevArg.arg.DacMode  = Codec_DACoutLINE;
 #endif
-    stRockCodecDevArg.arg.AdcinMode = Codec_Standby;
+    stRockCodecDevArg.arg.AdcMode = Codec_Standby;
 #ifdef CODEC_24BIT
-    stRockCodecDevArg.arg.DataWidth = VDW_TX_WIDTH_24BIT;
+    stRockCodecDevArg.arg.DacDataWidth = VDW_TX_WIDTH_24BIT;
 #else
-    stRockCodecDevArg.arg.DataWidth = VDW_TX_WIDTH_16BIT;
+    stRockCodecDevArg.arg.DacDataWidth = VDW_TX_WIDTH_16BIT;
 #endif
     ret = RKDev_Create(DEV_CLASS_ROCKCODEC, 0,&stRockCodecDevArg);
 

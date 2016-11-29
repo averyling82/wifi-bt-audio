@@ -29,7 +29,10 @@
 
 #ifndef MBEDTLS_CONFIG_H
 #define MBEDTLS_CONFIG_H
+#include "bspconfig.h"
 
+//#ifdef __SSL_MbedTLS__
+#if 1
 /* platform support*/
 #define MBEDTLS_PLATFORM_C
 #define MBEDTLS_NO_PLATFORM_ENTROPY
@@ -100,6 +103,7 @@
 /* For testing with compat.sh */
 //#define MBEDTLS_FS_IO
 //#define MBEDTLS_SELF_TEST
+#endif
 
 #include "mbedtls/check_config.h"
 

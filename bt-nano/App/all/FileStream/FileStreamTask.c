@@ -159,10 +159,14 @@ COMMON API void FileStreamTask_Enter(void)
 {
     HDC hFifo;
     HDC hFile;
+    #ifdef _FS_
     FILE_ATTR stFileAttr;
+    #endif
     rk_err_t ret;
     uint8 Buf[4096];
     uint32 Bank, LBA;
+
+#ifdef USE_LWIP
     struct udp_pcb * udp;
 
     struct netif * netif;
@@ -174,11 +178,10 @@ COMMON API void FileStreamTask_Enter(void)
         rk_printf("not find network");
     }
 
-
     hFifo = RKDev_Open(DEV_CLASS_FIFO, 0, NOT_CARE);
     gpstFileStreamDataBlock->hFifo = hFifo;
 
-#if 1
+
     fifoDev_SetTotalSize(hFifo, 0xffffffff);
 
 
@@ -248,8 +251,11 @@ COMMON API void FileStreamTask_Enter(void)
 
 over:
 
+    #if 0
     FileDev_CloseFile(hFile);
     RKDev_Close(hFifo);
+    #endif
+
     RKTaskDelete(TASK_ID_FILESTREAM, gpstFileStreamDataBlock->TaskObjectID, ASYNC_MODE);
 
     while(1);
@@ -265,6 +271,7 @@ over:
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+#ifdef USE_LWIP
 /*******************************************************************************
 ** Name: UdpRecive
 ** Input:void *arg, struct udp_pcb *pcb, struct pbuf *p,
@@ -293,6 +300,7 @@ COMMON FUN void UdpRecive(void *arg, struct udp_pcb *pcb, struct pbuf *p, ip_add
 
     pbuf_free(p);
 }
+#endif
 
 
 /*

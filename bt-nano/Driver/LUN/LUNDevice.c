@@ -61,7 +61,9 @@ typedef  struct _LUN_DEVICE_CLASS
     uint32 dwEndLBA;
     uint32 dwParNum;
     uint32 dwSupportPar;
+    #ifdef _FS_
     PAR_INF stParInf[PARTION_MAX_NUM];
+    #endif
 
 }LUN_DEVICE_CLASS;
 
@@ -235,8 +237,9 @@ rk_err_t LunDevSuspend(HDC dev, uint32 level);
 rk_err_t AddDPT(LUN_DEVICE_CLASS * pstLunDev,  PART_TABLE_INFO * pstParTableInf, uint32 VolumeType);
 rk_err_t PartionInit(LUN_DEVICE_CLASS * pstLunDev, uint32 MbrLba);
 rk_err_t LunShellDelete(HDC dev, uint8 * pstr);
-rk_err_t LunShellHelp(HDC dev, uint8 * pstr);
 rk_err_t LunShellTest(HDC dev, uint8 * pstr);
+rk_err_t LunShellPcb(HDC dev,  uint8 * pstr);
+rk_err_t LunShellCreate(HDC dev, uint8 * pstr);
 
 
 
@@ -247,6 +250,7 @@ rk_err_t LunShellTest(HDC dev, uint8 * pstr);
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+#ifdef _FS_
 /*******************************************************************************
 ** Name: LunDev_GetParTotalCnt
 ** Input:HDC dev, uint32 * pParTotalCnt
@@ -291,12 +295,13 @@ COMMON API rk_err_t LunDev_GetPar(HDC dev, uint32 ParNum, uint32 * pVolumeType, 
         return RK_ERROR;
     }
 
+
     *pVolumeType = pstLunDev->stParInf[ParNum].dwVolumeType;
     *pStartLBA = pstLunDev->stParInf[ParNum].dwStartLBA;
     *pTotalSize = pstLunDev->stParInf[ParNum].dwParSize;
     return RK_SUCCESS;
 }
-
+#endif
 
 /*******************************************************************************
 ** Name: LunDev_GetSize
@@ -538,6 +543,7 @@ COMMON API HDC LunDev_Create(uint32 DevID, void * arg)
     pstLunDev->dwSupportPar = pstLunArg->dwSupportPar;
     pstLunDev->dwParNum = 0;
 
+    #ifdef _FS_
     if(pstLunDev->dwSupportPar)
     {
         if(PartionInit(pstLunDev, 0) != RK_SUCCESS)
@@ -547,6 +553,7 @@ COMMON API HDC LunDev_Create(uint32 DevID, void * arg)
             return NULL;
         }
     }
+    #endif
 
     gpstLunDevInf[DevID] = pstLunDev;
 
@@ -572,6 +579,7 @@ COMMON API HDC LunDev_Create(uint32 DevID, void * arg)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+#ifdef _FS_
 /*******************************************************************************
 ** Name: AddDPT
 ** Input:LUN_DEVICE_CLASS * pstLunDev
@@ -702,6 +710,7 @@ INIT FUN rk_err_t PartionInit(LUN_DEVICE_CLASS * pstLunDev, uint32 MbrLba)
     return RK_SUCCESS;
 
 }
+#endif
 
 /*******************************************************************************
 ** Name: LUNDev_Delete
@@ -745,11 +754,10 @@ INIT FUN rk_err_t LunDev_Delete(uint32 DevID, void * arg)
 _DRIVER_LUN_LUNDEVICE_SHELL_DATA_
 static SHELL_CMD ShellLunName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "delete",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "pcb",LunShellPcb,"list lcd device pcb inf","lun.pcb [lun device object id]",
+    "create",LunShellCreate,"create a lun device","lun.create </emmc | /sd | /spi | /usb>",
+    "delete",LunShellDelete,"delete a lun device","lun.delete",
+    "test",LunShellTest,"test lun device","lun.test [lun device object id]",
     "\b",NULL,"NULL","NULL",                         // the end
 };
 
@@ -775,13 +783,19 @@ rk_err_t LunDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellLunName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -797,36 +811,12 @@ rk_err_t LunDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                                            //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellLunName[i].CmdDes, pItem);
+    if(ShellLunName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = LunShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = LunShellCreate(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = LunShellDelete(dev,pItem);
-            break;
-
-        case 0x03:
-            ret = LunShellTest(dev,pItem);
-            break;
-
-        case 0x04:  //help
-            ret = LunShellHelp(dev,pItem);
-            break;
-
-        case 0x05:
-            //ret = ;
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellLunName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 
@@ -854,20 +844,15 @@ SHELL FUN rk_err_t LunShellDelete(HDC dev, uint8 * pstr)
     rk_err_t ret;
     uint32 StorageSise;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("lun.delete : lun delete cmd.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-    pstr++;
-#endif
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     if(RKDev_Delete(DEV_CLASS_LUN, 4, NULL) != RK_SUCCESS)
     {
@@ -876,31 +861,7 @@ SHELL FUN rk_err_t LunShellDelete(HDC dev, uint8 * pstr)
     return RK_SUCCESS;
 
 }
-/*******************************************************************************
-** Name: LunShellHelp
-** Input:HDC dev, const uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.ma
-** Date: 2014.11.3
-** Time: 15:27:05
-*******************************************************************************/
-_DRIVER_LUN_LUNDEVICE_SHELL_
-SHELL FUN rk_err_t LunShellHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
 
-    if( StrLenA((uint8 *) pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("lun命令集提供了一系列的命令对lun进行操作\r\n");
-    rk_print_string("lun包含的子命令如下:           \r\n");
-    rk_print_string("pcb       显示pcb信息          \r\n");
-    rk_print_string("mc        创建                 \r\n");
-    rk_print_string("test      测试                 \r\n");
-    rk_print_string("help      显示lun命令帮助信息  \r\n");
-
-    return RK_SUCCESS;
-}
 /*******************************************************************************
 ** Name: LunShellTest
 ** Input:HDC dev, uint8 * pstr
@@ -920,20 +881,15 @@ SHELL FUN rk_err_t LunShellTest(HDC dev, uint8 * pstr)
     rk_err_t ret;
     uint32 DevID;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("lun.test : lun test.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-    pstr++;
-#endif
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     DevID = String2Num(pstr);
 
@@ -1096,23 +1052,19 @@ rk_err_t LunShellPcb(HDC dev,  uint8 * pstr)
     LUN_DEVICE_CLASS * pstLunDev;
     uint32 i;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA((uint8 *)pstr, "help", 4) == 0)
-        {
-            rk_print_string("lun.pcb : lun pcb info cmd.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-    pstr++;
-#endif
     // TODO:
     //add other code below:
     //...
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     DevID = String2Num(pstr);
 
@@ -1146,6 +1098,7 @@ rk_err_t LunShellPcb(HDC dev,  uint8 * pstr)
     rk_printf_no_time("    .dwParNum = %d",pstLunDev->dwParNum);
     rk_printf_no_time("    .dwSupportPar = %d",pstLunDev->dwSupportPar);
 
+    #ifdef _FS_
     for(i = 0; i < PARTION_MAX_NUM; i++)
     {
         rk_printf_no_time("    .stParInf[%d]", i);
@@ -1153,6 +1106,7 @@ rk_err_t LunShellPcb(HDC dev,  uint8 * pstr)
         rk_printf_no_time("        .dwParSize = %d", pstLunDev->stParInf[i].dwParSize);
         rk_printf_no_time("        .dwVolumeType = %d", pstLunDev->stParInf[i].dwVolumeType);
     }
+    #endif
 
     return RK_SUCCESS;
 }
@@ -1174,20 +1128,11 @@ rk_err_t LunShellCreate(HDC dev, uint8 * pstr)
     rk_err_t ret;
     uint32 StorageSise;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("lun.mc : lun mc cmd.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-    pstr++;
-#endif
+
 
     if(StrCmpA(pstr, "/emmc", 5) == 0)
     {

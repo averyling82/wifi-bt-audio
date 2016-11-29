@@ -790,14 +790,13 @@ INIT FUN rk_err_t MailBoxDevInit(MAILBOX_DEVICE_CLASS * pstMailBoxDev)
 _DRIVER_MAILBOX_MAILBOXDEVICE_SHELL_
 static SHELL_CMD ShellMailBoxName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "wb2a",NULL,"NULL","NULL",
-    "ra2b",NULL,"NULL","NULL",
-    "dmawa2b",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "pcb",MailBoxDevShellPcb,"NULL","NULL",
+    "create",MailBoxDevShellMc,"NULL","NULL",
+    "del",MailBoxDevShellDel,"NULL","NULL",
+    "test",MailBoxDevShellTest,"NULL","NULL",
+    "wb2a",MailBoxDevShellWrite,"NULL","NULL",
+    "ra2b",MailBoxDevShellRead,"NULL","NULL",
+    "dmawa2b",MailBoxDevShellDMA_Write,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -822,12 +821,18 @@ SHELL API rk_err_t MailBoxDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellMailBoxName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
 
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -842,44 +847,13 @@ SHELL API rk_err_t MailBoxDev_Shell(HDC dev, uint8 * pstr)
 
     pItem += StrCnt;
     pItem++;
-    switch (i)
+
+    ShellHelpDesDisplay(dev, ShellMailBoxName[i].CmdDes, pItem);
+    if(ShellMailBoxName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = MailBoxDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = MailBoxDevShellMc(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = MailBoxDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:
-            ret = MailBoxDevShellTest(dev,pItem);
-            break;
-
-        case 0x04:
-            ret = MailBoxDevShellWrite(dev,pItem);
-            break;
-
-        case 0x05:
-            ret = MailBoxDevShellRead(dev,pItem);
-            break;
-
-        case 0x06:
-            ret = MailBoxDevShellDMA_Write(dev,pItem);
-            break;
-
-        case 0x07:
-            ret = MailBoxDevShellHelp(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellMailBoxName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 
 }
@@ -893,42 +867,6 @@ SHELL API rk_err_t MailBoxDev_Shell(HDC dev, uint8 * pstr)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-/*******************************************************************************
-** Name: MailBoxDevShellHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:cjh
-** Date: 2015.5.21
-** Time: 14:21:19
-*******************************************************************************/
-_DRIVER_MAILBOX_MAILBOXDEVICE_SHELL_
-SHELL FUN rk_err_t MailBoxDevShellHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
-
-    if (StrLenA(pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("mailbox命令集提供了一系列的命令对sdmmc进行操作\r\n");
-    rk_print_string("mailbox包含的子命令如下:           \r\n");
-    rk_print_string("pcb       显示pcb信息         \r\n");
-    rk_print_string("mc        mc命令       \r\n");
-    rk_print_string("del       删除mailbox device     \r\n");
-    rk_print_string("test      测试命令    \r\n");
-    rk_print_string("wb2a.0    mailbox write channle 0 test   \r\n");
-    rk_print_string("wb2a.1    mailbox write channle 1 test  \r\n");
-    rk_print_string("wb2a.2    mailbox write channle 2 test  \r\n");
-    rk_print_string("wb2a.3    mailbox write channle 3 test   \r\n");
-    rk_print_string("ra2b.0    mailbox read channle 0 test   \r\n");
-    rk_print_string("ra2b.1    mailbox read channle 1 test  \r\n");
-    rk_print_string("ra2b.2    mailbox read channle 2 test  \r\n");
-    rk_print_string("wa2b.3    mailbox read channle 3 test   \r\n");
-    rk_print_string("dmawa2b   A core Dma write test  \r\n");
-
-    rk_print_string("help      显示mailbox命令帮助信息  \r\n");
-
-    return RK_SUCCESS;
-}
 
 /*******************************************************************************
 ** Name: MailBoxDevShellWrite
@@ -945,6 +883,17 @@ SHELL FUN rk_err_t MailBoxDevShellWrite(HDC dev, uint8 * pstr)
     MAILBOX_DEV_ARG stMailBoxArg;
     MAILBOX_DEVICE_CLASS *devMailBox;
     HDC hMailBoxDev;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     //Get MailBoxDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -1016,6 +965,17 @@ SHELL FUN rk_err_t MailBoxDevShellRead(HDC dev, uint8 * pstr)
     MAILBOX_DEVICE_CLASS *devMailBox;
     HDC hMailBoxDev;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
+
     //Get MailBoxDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -1083,6 +1043,17 @@ SHELL FUN rk_err_t MailBoxDevShellDMA_Write(HDC dev, uint8 * pstr)
     MAILBOX_DEV_ARG stMailBoxArg;
     MAILBOX_DEVICE_CLASS *devMailBox;
     HDC hMailBoxDev;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
 
     //Set MailBoxArg...
     stMailBoxArg.TypeA2BB2A = MAILBOX_A2B_TYPE;
@@ -1182,6 +1153,16 @@ SHELL FUN rk_err_t MailBoxDevShellTest(HDC dev, uint8 * pstr)
     uint32 ret;
     MAILBOX_DEV_ARG stMailBoxArg;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     //Get MailBoxDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -1243,6 +1224,16 @@ SHELL FUN rk_err_t MailBoxDevShellDel(HDC dev, uint8 * pstr)
 {
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     //Get MailBoxDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -1286,6 +1277,17 @@ SHELL FUN rk_err_t MailBoxDevShellMc(HDC dev, uint8 * pstr)
     MAILBOX_DEV_ARG stMailBoxDevArg;
     rk_err_t ret;
     uint32 DevID;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
 
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -1334,6 +1336,16 @@ SHELL FUN rk_err_t MailBoxDevShellPcb(HDC dev, uint8 * pstr)
 {
     HDC hMailBoxDev;
     uint32 DevID;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     //Get MailBoxDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)

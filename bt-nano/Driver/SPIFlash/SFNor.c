@@ -757,7 +757,19 @@ int32 SNOR_Write(uint32 sec, uint32 nSec, void *pData)
                     return ret;
                 }
 
+                #ifdef _SPI_BOOT_
+                if(sec_s < ((SPI_LUN0_SIZE + SPI_LUN1_SIZE) << 11))
+                {
+                    cnt = 0;
+                }
+                else
+                {
+                    cnt = pDev->BlockSize - cnt;
+                }
+                #else
                 cnt = pDev->BlockSize - cnt;
+                #endif
+
 
                 //rk_printf("2sec_s = %d, sec_t = %d, cnt = %d", sec_s, sec_t, cnt);
 

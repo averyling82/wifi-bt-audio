@@ -576,7 +576,8 @@ uint32 Grf_CheckVbus(void)
 #endif
 #ifndef _BROAD_LINE_OUT_
     //return Grf->GRF_SOC_USB_STATUS;
-    return ((Grf->GRF_SOC_USB_STATUS & 0x2)==0x2)? TRUE : FALSE;
+    //rk_printf(">>>>>>>>>>>>>>Grf->GRF_SOC_USB_STATUS=0x%x\n",Grf->GRF_SOC_USB_STATUS);
+    return ((Grf->GRF_SOC_USB_STATUS & 0x2)==0x2)? TRUE : FALSE;//connetc usb:0xe,disconnect usb:0x0
 #else
     return 0;
 #endif

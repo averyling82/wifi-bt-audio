@@ -55,29 +55,20 @@ typedef struct _SDIO_FUNC
     HDC     hSdio;  /*SDM_CARD_INFO the card this device belongs to */
 
     sdio_irq_handler_t * irq_handler;    /* IRQ callback */
-
-    uint        num;        /* function number */
-
-    uint8        func_class;        /* standard interface class */
-    uint16        vendor;        /* vendor id */
-    uint16        device;        /* device id */
-
     uint        max_blksize;    /* maximum block size */
     uint        cur_blksize;    /* current block size */
-
     uint        enable_timeout;    /* max enable timeout in msec */
-
-    uint        state;            /* function state */
-
-    uint8        tmpbuf[4];    /* DMA:able scratch buffer */
-
+    uint        num;        /* function number */
+    uint16        vendor;        /* vendor id */
+    uint16        device;        /* device id */
     uint        num_info;    /* number of info strings */
-
     const char    **info;        /* info strings */
-
+    uint8        func_class;        /* standard interface class */
+    uint        state;            /* function state */
+    uint8        tmpbuf[4];    /* DMA:able scratch buffer */
+    void *driver_data;   /* struct if_sdio_card */
     SDIO_FUNC_TUPLE * tuples;
 
-    void *driver_data;   /* struct if_sdio_card */
 
 }SDIO_FUNC;
 
@@ -450,7 +441,6 @@ int process_sdio_pending_irqs(SDIO_DEVICE_CLASS* card);
 static int sdio_card_irq_get(SDIO_DEVICE_CLASS * card);
 static int sdio_card_irq_put(SDIO_DEVICE_CLASS * card);
 int SdioDev_Claim_irq(void *_func, sdio_irq_handler_t * handler);
-int sdio_release_irq(SDIO_FUNC *func);
 void SdioIrqTask(void);
 HDC SdioIntIrq(HDC hSdc, void *arg);
 /*
@@ -509,11 +499,145 @@ static const unsigned int speed_unit[8] =
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *
-*                                                   API(read) define
+*                                                   API(common) define
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-#if 0
+#ifdef _REALTEK_
+/*******************************************************************************
+** Name: SdioDev_Memcpy_FromIo
+** Input:HDC hSdioFun, void *dst, uint32 addr, uint32 count
+** Return: rk_err_t
+** Owner:aaron.sun
+** Date: 2016.10.26
+** Time: 18:22:03
+*******************************************************************************/
+_DRIVER_SDIO_SDIODEVICE_COMMON_
+COMMON API rk_err_t SdioDev_Memcpy_FromIo(HDC hSdioFun, void *dst, uint32 addr, uint32 count)
+{
+    SDIO_FUNC * pstFunc = (SDIO_FUNC *)hSdioFun;
+
+    if (pstFunc == NULL)
+    {
+        return RK_ERROR;
+    }
+
+    return sdio_memcpy_fromio(pstFunc, dst, addr, count);
+}
+/*******************************************************************************
+** Name: SdioDev_Memcpy_ToIo
+** Input:HDC hSdioFun, uint32 addr, void *src, uint32 count
+** Return: rk_err_t
+** Owner:aaron.sun
+** Date: 2016.10.26
+** Time: 18:19:30
+*******************************************************************************/
+_DRIVER_SDIO_SDIODEVICE_COMMON_
+COMMON API rk_err_t SdioDev_Memcpy_ToIo(HDC hSdioFun, uint32 addr, void *src, uint32 count)
+{
+    SDIO_FUNC * pstFunc = (SDIO_FUNC *)hSdioFun;
+
+    if (pstFunc == NULL)
+    {
+        return RK_ERROR;
+    }
+
+    return sdio_memcpy_toio(pstFunc, addr, src, count);
+}
+
+/*******************************************************************************
+** Name: SdioDev_Writew
+** Input:HDC hSdioFun, uint32 b, uint32 addr
+** Return: rk_err_t
+** Owner:Aaron.sun
+** Date: 2014.6.17
+** Time: 10:39:50
+*******************************************************************************/
+_DRIVER_SDIO_SDIODEVICE_COMMON_
+COMMON API rk_err_t SdioDev_Writew(HDC hSdioFun, uint32 b, uint32 addr)
+{
+
+    SDIO_FUNC * pstFunc = (SDIO_FUNC *)hSdioFun;
+
+    if (pstFunc == NULL)
+    {
+        return RK_ERROR;
+    }
+
+    *(uint16 *)pstFunc->tmpbuf = b;
+
+    return sdio_memcpy_toio(hSdioFun, addr, pstFunc->tmpbuf, 2);
+
+}
+
+/*******************************************************************************
+** Name: SdioDev_Writel
+** Input:HDC hSdioFun, uint32 b, uint32 addr
+** Return: rk_err_t
+** Owner:Aaron.sun
+** Date: 2014.6.14
+** Time: 17:36:12
+*******************************************************************************/
+_DRIVER_SDIO_SDIODEVICE_COMMON_
+COMMON API rk_err_t SdioDev_Writel(HDC hSdioFun, uint32 b, uint32 addr)
+{
+    SDIO_FUNC * pstFunc = (SDIO_FUNC *)hSdioFun;
+    if (pstFunc == NULL)
+    {
+        return RK_ERROR;
+    }
+
+    *(uint32 *)pstFunc->tmpbuf = b;
+
+    return sdio_memcpy_toio(pstFunc, addr, pstFunc->tmpbuf, 4);
+}
+
+/*******************************************************************************
+** Name: SdioDev_WriteSb
+** Input:HDC hSdioFun, void *src, uint32 addr, uint32 count
+** Return: rk_err_t
+** Owner:Aaron.sun
+** Date: 2014.6.14
+** Time: 17:21:56
+*******************************************************************************/
+_DRIVER_SDIO_SDIODEVICE_COMMON_
+COMMON API rk_err_t SdioDev_WriteSb(HDC hSdioFun,uint32 addr, void *src, uint32 count)
+{
+    SDIO_FUNC * pstFunc = (SDIO_FUNC *)hSdioFun;
+    if (pstFunc == NULL)
+    {
+        return RK_ERROR;
+    }
+
+    return sdio_io_rw_ext_helper(pstFunc, SDIO_W, addr, 0, src, count);
+}
+
+
+/*******************************************************************************
+** Name: SdioDev_Writeb
+** Input:HDC hSdioFunc, uint8 b, uint32 addr
+** Return: rk_err_t
+** Owner:Aaron.sun
+** Date: 2014.6.14
+** Time: 16:22:16
+*******************************************************************************/
+_DRIVER_SDIO_SDIODEVICE_COMMON_
+COMMON API rk_err_t SdioDev_Writeb(HDC hSdioFunc, uint8 b, uint32 addr)
+{
+    SDIO_FUNC * pstFunc = (SDIO_FUNC *)hSdioFunc;
+    SDIO_DEVICE_CLASS * pstSdioDev;
+    rk_err_t ret;
+
+    if (pstFunc == NULL)
+    {
+        return RK_ERROR;
+    }
+
+    pstSdioDev = pstFunc->hSdio;
+
+    ret = mmc_io_rw_direct(pstSdioDev, SDIO_W, pstFunc->num, addr, b, NULL);
+    return ret;
+}
 /*******************************************************************************
 ** Name: SdioDev_ReadW
 ** Input:HDC hSdioFunc, uint32 addr
@@ -723,15 +847,28 @@ err:
 
 }
 #endif
-
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *
-*                                                   local function(read) define
+*                                                   local function(commom) define
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-#if 0
+/*******************************************************************************
+** Name: sdio_memcpy_toio
+** Input:SDIO_FUNC *func, uint32 addr, void *src, uint32 count
+** Return: rk_err_t
+** Owner:Aaron.sun
+** Date: 2014.6.14
+** Time: 17:14:29
+*******************************************************************************/
+_DRIVER_SDIO_SDIODEVICE_COMMON_
+COMMON FUN rk_err_t sdio_memcpy_toio(SDIO_FUNC *func, uint32 addr, void *src, uint32 count)
+{
+    return sdio_io_rw_ext_helper(func, SDIO_W, addr, 1, src, count);
+}
+
+
 /*******************************************************************************
 ** Name: sdio_memcpy_fromio
 ** Input:(SDIO_FUNC *func, uint32 addr, void *src, uint32 count)
@@ -758,6 +895,8 @@ _DRIVER_SDIO_SDIODEVICE_COMMON_
 COMMON FUN uint32 sdio_max_byte_size(SDIO_FUNC * func)
 {
     uint32 mval =    min(func->cur_blksize, func->max_blksize);
+
+    //rk_printf("func %d, %d", func->cur_blksize, func->max_blksize);
 
     return min(mval, 512u); /* maximum size for byte mode */
 }
@@ -829,7 +968,6 @@ COMMON FUN rk_err_t sdio_io_rw_ext_helper(SDIO_FUNC *func, uint32 write, uint32 
 
     return RK_SUCCESS;
 }
-#endif
 
 /*******************************************************************************
 ** Name: mmc_io_rw_extended
@@ -850,6 +988,8 @@ COMMON FUN rk_err_t mmc_io_rw_extended(SDIO_DEVICE_CLASS * pstSdioDev, uint32 wr
     int              sdioc_try = 2;
 
     SDC_CMD_ARG stCmdArg;
+
+    //rk_printf("%d, %d, %d", fn,blocks, blksz);
 
     if ((fn > 7) || (blocks == 1 && blksz > 512) || (blocks == 0) || (blksz == 0))
         return -EINVAL;
@@ -974,6 +1114,8 @@ COMMON FUN rk_err_t mmc_io_rw_direct(SDIO_DEVICE_CLASS * pstSdioDev, int32 write
         return RK_ERROR;
     }
 
+    //rk_printf("write = %d status = %d, addr = %d in = %d", write, status, addr, in);
+
     if (status & R5_ERROR)
         return -EIO;
     if (status & R5_FUNCTION_NUMBER)
@@ -1001,136 +1143,6 @@ COMMON FUN void SdioDevIntIsr(void)
 {
 
 }
-
-
-
-/*
-*---------------------------------------------------------------------------------------------------------------------
-*
-*                                                   API(write) define
-*
-*---------------------------------------------------------------------------------------------------------------------
-*/
-#if 0
-/*******************************************************************************
-** Name: SdioDev_Writew
-** Input:HDC hSdioFun, uint32 b, uint32 addr
-** Return: rk_err_t
-** Owner:Aaron.sun
-** Date: 2014.6.17
-** Time: 10:39:50
-*******************************************************************************/
-_DRIVER_SDIO_SDIODEVICE_COMMON_
-COMMON API rk_err_t SdioDev_Writew(HDC hSdioFun, uint32 b, uint32 addr)
-{
-
-    SDIO_FUNC * pstFunc = (SDIO_FUNC *)hSdioFun;
-
-    if (pstFunc == NULL)
-    {
-        return RK_ERROR;
-    }
-
-    *(uint16 *)pstFunc->tmpbuf = b;
-
-    return sdio_memcpy_toio(hSdioFun, addr, pstFunc->tmpbuf, 2);
-
-}
-
-/*******************************************************************************
-** Name: SdioDev_Writel
-** Input:HDC hSdioFun, uint32 b, uint32 addr
-** Return: rk_err_t
-** Owner:Aaron.sun
-** Date: 2014.6.14
-** Time: 17:36:12
-*******************************************************************************/
-_DRIVER_SDIO_SDIODEVICE_COMMON_
-COMMON API rk_err_t SdioDev_Writel(HDC hSdioFun, uint32 b, uint32 addr)
-{
-    SDIO_FUNC * pstFunc = (SDIO_FUNC *)hSdioFun;
-    if (pstFunc == NULL)
-    {
-        return RK_ERROR;
-    }
-
-    *(uint32 *)pstFunc->tmpbuf = b;
-
-    return sdio_memcpy_toio(pstFunc, addr, pstFunc->tmpbuf, 4);
-}
-
-/*******************************************************************************
-** Name: SdioDev_WriteSb
-** Input:HDC hSdioFun, void *src, uint32 addr, uint32 count
-** Return: rk_err_t
-** Owner:Aaron.sun
-** Date: 2014.6.14
-** Time: 17:21:56
-*******************************************************************************/
-_DRIVER_SDIO_SDIODEVICE_COMMON_
-COMMON API rk_err_t SdioDev_WriteSb(HDC hSdioFun,uint32 addr, void *src, uint32 count)
-{
-    SDIO_FUNC * pstFunc = (SDIO_FUNC *)hSdioFun;
-    if (pstFunc == NULL)
-    {
-        return RK_ERROR;
-    }
-
-    return sdio_io_rw_ext_helper(pstFunc, SDIO_W, addr, 0, src, count);
-}
-
-/*******************************************************************************
-** Name: sdio_memcpy_toio
-** Input:SDIO_FUNC *func, uint32 addr, void *src, uint32 count
-** Return: rk_err_t
-** Owner:Aaron.sun
-** Date: 2014.6.14
-** Time: 17:14:29
-*******************************************************************************/
-_DRIVER_SDIO_SDIODEVICE_COMMON_
-COMMON FUN rk_err_t sdio_memcpy_toio(SDIO_FUNC *func, uint32 addr, void *src, uint32 count)
-{
-    return sdio_io_rw_ext_helper(func, SDIO_W, addr, 1, src, count);
-}
-
-
-/*******************************************************************************
-** Name: SdioDev_Writeb
-** Input:HDC hSdioFunc, uint8 b, uint32 addr
-** Return: rk_err_t
-** Owner:Aaron.sun
-** Date: 2014.6.14
-** Time: 16:22:16
-*******************************************************************************/
-_DRIVER_SDIO_SDIODEVICE_COMMON_
-COMMON API rk_err_t SdioDev_Writeb(HDC hSdioFunc, uint8 b, uint32 addr)
-{
-    SDIO_FUNC * pstFunc = (SDIO_FUNC *)hSdioFunc;
-    SDIO_DEVICE_CLASS * pstSdioDev;
-    rk_err_t ret;
-
-    if (pstFunc == NULL)
-    {
-        return RK_ERROR;
-    }
-
-    pstSdioDev = pstFunc->hSdio;
-
-    ret = mmc_io_rw_direct(pstSdioDev, SDIO_W, pstFunc->num, addr, b, NULL);
-    return ret;
-}
-#endif
-
-
-/*
-*---------------------------------------------------------------------------------------------------------------------
-*
-*                                                   local function(write) define
-*
-*---------------------------------------------------------------------------------------------------------------------
-*/
-
-
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -1398,7 +1410,7 @@ INIT API HDC SdioDev_Create(uint32 DevID, void * arg)
     {
         gSdioDeviceHost->osSdioIrqSem = rkos_semaphore_create(0xffff,0);
 
-        RKTaskCreate(TASK_ID_SDIO_IRQ_TASK,0,NULL, SYNC_MODE);
+        RKTaskCreate(TASK_ID_SDIO_IRQ_TASK,0,NULL, ASYNC_MODE);
     }
     gSdioDeviceHost->devCnt++;
     return pstDev;
@@ -2475,8 +2487,9 @@ void SdioIrqTask(void)
             {
                // if(gpstSdioDevISR[i]->irqcnt)
                 {
-                   //printf("SdioIrqTask 01\r\n");
+                   //rk_printf("SdioIrqTask 01");
                    process_sdio_pending_irqs(gpstSdioDevISR[i]) ;
+                   //rk_printf("SdioIrqTask 02");
                    //gpstSdioDevISR[i]->irqcnt--;
 
                 }
@@ -2593,7 +2606,9 @@ int process_sdio_pending_irqs(SDIO_DEVICE_CLASS* card)
             else if (func->irq_handler)
             {
                 /* IRQHandlerF2 IRQHandler->dhdsdio_isr->dhdsdio_dpc->dhdsdio_readframes */
+                //rk_printf("func = %x", func->irq_handler);
                 func->irq_handler(func);
+                //rk_printf("y");
                 count++;
             }
             else
@@ -2773,10 +2788,12 @@ int SdioDev_Claim_irq(void *_func, sdio_irq_handler_t * handler)
  * --------------------
  ******************************************************************************/
 _DRIVER_SDIO_SDIODEVICE_COMMON_
-int sdio_release_irq(SDIO_FUNC *func)
+int sdio_release_irq(void *_func)
 {
     int ret;
     uint8 reg;
+
+    SDIO_FUNC * func = _func;
 
     if (!func || !func->hSdio)
         return -EPERM;
@@ -2840,11 +2857,10 @@ INIT FUN rk_err_t SdioDevSuspend(HDC dev)
 _DRIVER_SDIO_SDIODEVICE_SHELL_DATA_
 static SHELL_CMD ShellSdioName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "delete",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "pcb",SdioDevShellPcb,"list sdio device pcb inf","sdio.pcb [object id]",
+    "create",SdioDevShellCreate,"create a sdio device","sdio.create",
+    "delete",SdioDevShellDel,"delete a sdio device","sdio.delete",
+    "test",SdioDevShellTest,"test sdio device","sdio.test",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -2869,13 +2885,19 @@ SHELL API rk_err_t SdioDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellSdioName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -2891,31 +2913,10 @@ SHELL API rk_err_t SdioDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                                            //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellSdioName[i].CmdDes, pItem);
+    if(ShellSdioName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00: //pcb
-            ret = SdioDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01: //mc
-            ret = SdioDevShellCreate(dev,pItem);
-            break;
-
-        case 0x02://del
-            ret = SdioDevShellDel(dev, pItem);
-            break;
-
-        case 0x03://test
-            ret = SdioDevShellTest(dev, pItem);
-            break;
-
-        case 0x04://help
-            ret = SdioDevShellHelp(dev, pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellSdioName[i].ShellCmdParaseFun(dev, pItem);
     }
 
     return ret;
@@ -2929,32 +2930,6 @@ SHELL API rk_err_t SdioDev_Shell(HDC dev, uint8 * pstr)
 *---------------------------------------------------------------------------------------------------------------------
 */
 /*******************************************************************************
-** Name: SdioDevShellHelp
-** Input:HDC dev, const uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.Ma
-** Date: 2014.11.3
-** Time: 17:06:13
-*******************************************************************************/
-_DRIVER_SDIO_SDIODEVICE_SHELL_
-SHELL FUN rk_err_t SdioDevShellHelp(HDC dev,  uint8 * pstr)
-{
-    pstr--;
-
-    if ( StrLenA((uint8 *) pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("sdio 命令集提供了一系列的命令对sdio device 进行操作\r\n");
-    rk_print_string("sdio 包含的子命令如下:           \r\n");
-    rk_print_string("pcb       显示sdio device信息    \r\n");
-    rk_print_string("mc        创建sdio device命令    \r\n");
-    rk_print_string("del       删除sdio device命令    \r\n");
-    rk_print_string("test      测试sdio device命令    \r\n");
-    rk_print_string("help      显示sdio device命令帮助信息  \r\n");
-
-    return RK_SUCCESS;
-}
-/*******************************************************************************
 ** Name: SdioDevShellTest
 ** Input:HDC dev, uint8 * pstr
 ** Return: rk_err_t
@@ -2965,20 +2940,14 @@ SHELL FUN rk_err_t SdioDevShellHelp(HDC dev,  uint8 * pstr)
 _DRIVER_SDIO_SDIODEVICE_SHELL_
 SHELL FUN rk_err_t SdioDevShellTest(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("sdio.test : 测试sdio设备命令.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     // TODO:
     //add other code below:
     //...
@@ -2999,19 +2968,18 @@ SHELL FUN rk_err_t SdioDevShellDel(HDC dev, uint8 * pstr)
 {
     SDIO_DEVICE_CLASS * pstSdioDev = (SDIO_DEVICE_CLASS *)dev;
     SDIO_DEV_ARG pstSdioArg;
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("sdio.del : 删除sdio 设备命令.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
+    #ifdef _WICE_
     Grf_GpioMuxSet(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, Type_Gpio);
     Gpio_SetPinDirection(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_OUT);
     Gpio_SetPinLevel(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_LOW);
@@ -3019,6 +2987,7 @@ SHELL FUN rk_err_t SdioDevShellDel(HDC dev, uint8 * pstr)
     Grf_GpioMuxSet(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, Type_Gpio);
     Gpio_SetPinDirection(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_OUT);
     Gpio_SetPinLevel(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_HIGH);
+    #endif
 
     if (RKDev_Delete(DEV_CLASS_SDIO, 0, &pstSdioArg) != RK_SUCCESS)
     {
@@ -3057,20 +3026,16 @@ SHELL FUN rk_err_t SdioDevShellCreate(HDC dev, uint8 * pstr)
     SDIO_DEV_ARG stSdioArg;
     rk_err_t ret;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("sdio.mc : 创建sdio device命令.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
+    #ifdef _WICE_
     Grf_GpioMuxSet(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, Type_Gpio);
     Gpio_SetPinDirection(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_OUT);
     Gpio_SetPinLevel(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_LOW);
@@ -3078,7 +3043,7 @@ SHELL FUN rk_err_t SdioDevShellCreate(HDC dev, uint8 * pstr)
     Grf_GpioMuxSet(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, Type_Gpio);
     Gpio_SetPinDirection(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_OUT);
     Gpio_SetPinLevel(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_HIGH);
-
+    #endif
 
     hSdc = RKDev_Open(DEV_CLASS_SDC, 1, NOT_CARE);
 
@@ -3096,15 +3061,7 @@ SHELL FUN rk_err_t SdioDevShellCreate(HDC dev, uint8 * pstr)
         return RK_ERROR;
     }
     rk_print_string("sdio0 Device Create Success\n");
-/*
-    if (RKDev_Close(hSdc) != RK_SUCCESS)
-    {
-        printf("sdc1 close failure\n");
-        return RK_ERROR;
-    }
 
-    printf("sdc1 delete over successDevID\n");
-*/
     return RK_SUCCESS;
 
 }
@@ -3121,28 +3078,20 @@ SHELL FUN rk_err_t SdioDevShellCreate(HDC dev, uint8 * pstr)
 _DRIVER_SDIO_SDIODEVICE_SHELL_
 SHELL FUN rk_err_t SdioDevShellPcb(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("sdio.pcb : sdio pcb info.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
-    // TODO:
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+//  TODO:
     //add other code below:
     //...
 
     return RK_SUCCESS;
 }
-
-
-
 #endif
 #endif
 

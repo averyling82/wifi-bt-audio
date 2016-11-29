@@ -460,7 +460,9 @@ COMMON API void SystemSetTask_Enter(void * arg)
         }
         else
         {
-            if((gpstSystemSetData->curCmd == SID_WIFICONFIG_ON) || (gpstSystemSetData->curCmd == SID_APCONFIG)
+            if((gpstSystemSetData->curCmd == SID_WIFICONFIG_ON_AP)
+                || (gpstSystemSetData->curCmd == SID_WIFICONFIG_ON_STA)
+                || (gpstSystemSetData->curCmd == SID_APCONFIG)
                 || (gpstSystemSetData->curCmd == SID_BLUETOOTH_ON))
             {
                 //rk_printf("..");
@@ -881,11 +883,11 @@ COMMON FUN rk_err_t SystemTask_EvnetOper(uint32 menuTextID)
 #endif
 
 #ifdef _DRIVER_WIFI__
-        case SID_WIFICONFIG_ON:
+        case SID_WIFICONFIG_ON_STA:
             #ifdef  _BLUETOOTH_
             if(MainTask_GetStatus(MAINTASK_BT_OK) == 1)
             {
-                if(gpstSystemSetData->curCmd != SID_WIFICONFIG_ON)
+                if(gpstSystemSetData->curCmd != SID_WIFICONFIG_ON_STA)
                 {
                     //text = TEXT("please close BT");
                     SystemTask_SetPopupWindow((void *)SID_BT_TURN_OFF, TEXT_CMD_ID);
@@ -899,7 +901,7 @@ COMMON FUN rk_err_t SystemTask_EvnetOper(uint32 menuTextID)
                 //gSysConfig.SelPlayType = SOURCE_FROM_NET;
                 if(RKTaskFind(TASK_ID_WIFI_APPLICATION, 0) == NULL )
                 {
-                    if(gpstSystemSetData->curCmd != SID_WIFICONFIG_ON)
+                    if(gpstSystemSetData->curCmd != SID_WIFICONFIG_ON_STA)
                     {
                         if(gpstSystemSetData->hWait == NULL)
                         {
@@ -915,7 +917,7 @@ COMMON FUN rk_err_t SystemTask_EvnetOper(uint32 menuTextID)
                             gpstSystemSetData->hWait = GUITask_CreateWidget(GUI_CLASS_CHAIN, &pstChainArg);
                         }
                         rk_printf("create hWait = 0x%x, gpstSystemSetData->curCmd = %d",gpstSystemSetData->hWait,gpstSystemSetData->curCmd);
-                        gpstSystemSetData->curCmd = SID_WIFICONFIG_ON;
+                        gpstSystemSetData->curCmd = SID_WIFICONFIG_ON_STA;
                     }
 
                     RKTaskCreate(TASK_ID_WIFI_APPLICATION, 0, (void *)WLAN_MODE_STA, SYNC_MODE);
@@ -928,6 +930,7 @@ COMMON FUN rk_err_t SystemTask_EvnetOper(uint32 menuTextID)
                 if(wifi_init_flag() == WICED_TRUE)
                 {
 #if 1
+                    #if 0
                     if(MainTask_GetStatus(MAINTASK_WIFI_CONNECT_OK) != 1)
                     {
                         if(wifi_join_flag() == WICED_TRUE)
@@ -953,6 +956,8 @@ COMMON FUN rk_err_t SystemTask_EvnetOper(uint32 menuTextID)
                             return RK_SUCCESS;
                         }
                     }
+                    #endif
+
                     //printf("connect_flag=%d",wifi_join_flag());
 #ifdef __APP_SYSTEMSET_SYSTEMSETWIFISELECTTASK_C__
                     if(RKTaskFind(TASK_ID_SYSTEMSETWIFISELECT, 0) == NULL)
@@ -983,7 +988,7 @@ COMMON FUN rk_err_t SystemTask_EvnetOper(uint32 menuTextID)
                     else
                     {
                         printf("WIFISELECT  exist...");
-                        gpstSystemSetData->curCmd = SID_WIFICONFIG_ON;
+                        gpstSystemSetData->curCmd = SID_WIFICONFIG_ON_STA;
                     }
 #endif
 #endif
@@ -991,6 +996,69 @@ COMMON FUN rk_err_t SystemTask_EvnetOper(uint32 menuTextID)
             }
 
             break;
+
+
+        case SID_WIFICONFIG_ON_AP:
+            #ifdef  _BLUETOOTH_
+            if(MainTask_GetStatus(MAINTASK_BT_OK) == 1)
+            {
+                if(gpstSystemSetData->curCmd != SID_WIFICONFIG_ON_STA)
+                {
+                    //text = TEXT("please close BT");
+                    SystemTask_SetPopupWindow((void *)SID_BT_TURN_OFF, TEXT_CMD_ID);
+                }
+                gpstSystemSetData->curCmd = 0xFF;
+                return RK_SUCCESS;
+            }
+            #endif
+
+            {
+                //gSysConfig.SelPlayType = SOURCE_FROM_NET;
+                if(RKTaskFind(TASK_ID_WIFI_APPLICATION, 0) == NULL )
+                {
+                    if(gpstSystemSetData->curCmd != SID_WIFICONFIG_ON_AP)
+                    {
+                        if(gpstSystemSetData->hWait == NULL)
+                        {
+                            RKGUI_CHAIN_ARG pstChainArg;
+                            pstChainArg.x= 20;
+                            pstChainArg.y= 40;
+                            pstChainArg.resource = IMG_ID_WAIT0;
+                            pstChainArg.num = 16;
+                            pstChainArg.delay = 10;
+                            pstChainArg.level = 0;
+                            pstChainArg.display = 1;
+                            pstChainArg.blurry = 1;
+                            gpstSystemSetData->hWait = GUITask_CreateWidget(GUI_CLASS_CHAIN, &pstChainArg);
+                        }
+                        gpstSystemSetData->curCmd = SID_WIFICONFIG_ON_AP;
+                    }
+
+                    RKTaskCreate(TASK_ID_WIFI_APPLICATION, 0, (void *)WLAN_MODE_AP, SYNC_MODE);
+                }
+            }
+
+            if(wifi_init_flag() == WICED_TRUE)
+            {
+
+                if(gpstSystemSetData->hWait != NULL)
+                {
+                    printf("hWait del...\n");
+                    GuiTask_OperWidget(gpstSystemSetData->hWait, OPERATE_SET_DISPLAY, (void *)0, SYNC_MODE);
+                    GuiTask_DeleteWidget(gpstSystemSetData->hWait);
+                    gpstSystemSetData->hWait = NULL;
+                }
+
+                if(gpstSystemSetData->hMsgBox != NULL)
+                {
+                    GuiTask_OperWidget(gpstSystemSetData->hMsgBox, OPERATE_SET_DISPLAY, (void *)0, SYNC_MODE);
+                    GuiTask_DeleteWidget(gpstSystemSetData->hMsgBox);
+                    gpstSystemSetData->hMsgBox = NULL;
+                }
+                gpstSystemSetData->curCmd = 0xFF;
+            }
+            break;
+
 
         case SID_WIFICONFIG_OFF:
             gpstSystemSetData->curCmd = SID_WIFICONFIG_OFF;
@@ -1073,7 +1141,7 @@ COMMON FUN rk_err_t SystemTask_EvnetOper(uint32 menuTextID)
                                     gpstSystemSetData->smartConfigStart = AP_CONFIGOFF;
                                 }
 #endif
-                                //gSysConfig.SelPlayType = SOURCE_FROM_DLNA;
+                                //gSysConfig.SelPlayType = SOURCE_FROM_HTTP;
                                 rk_printf("11smart config connect ok\n");
                                 gpstSystemSetData->curCmd = 0xFF;
                             }
@@ -1238,7 +1306,10 @@ COMMON FUN rk_err_t SystemTask_EvnetOper(uint32 menuTextID)
                     rk_printf("set SHUFFLE_ON  fail");
                 }
             }
+
+            #ifdef _RK_EQ_
             gSysConfig.MusicConfig.Eq.Mode = EqMode_Value[CurEqMode];
+            #endif
             /*System_GoToFatherList();*/
             bl_parameter.itemNum = SID_EQ_CUSTOM - SID_EQ_NONE+1;//7
             GuiTask_OperWidget(gpstSystemSetData->hSelect, OPERATE_SET_CONTENT, &bl_parameter, SYNC_MODE);
@@ -1364,6 +1435,8 @@ COMMON FUN rk_err_t SystemTask_ChangeSelectList(uint32 SelectID, uint32 CursorID
         stSelectArg.Cursor = CursorID;
         stSelectArg.ItemStartOffset= 0;
     }
+
+
     if(SelectID == SID_BLUETOOTH)
     {
         if(MainTask_GetStatus(MAINTASK_BT_OK))
@@ -1381,9 +1454,13 @@ COMMON FUN rk_err_t SystemTask_ChangeSelectList(uint32 SelectID, uint32 CursorID
         {
             stSelectArg.Cursor = 0;
         }
-        else
+        else if(MainTask_GetStatus(MAINTASK_WIFI_AP_OPEN_OK))
         {
             stSelectArg.Cursor = 1;
+        }
+        else
+        {
+            stSelectArg.Cursor = 2;
         }
     }
     else if(SelectID == SID_MUSIC_REPEAT_MODE)
@@ -1418,11 +1495,13 @@ COMMON FUN rk_err_t SystemTask_ChangeSelectList(uint32 SelectID, uint32 CursorID
         {
             if(RKTaskFind(TASK_ID_AUDIOCONTROL, 0) != NULL)
             {
+                #ifdef RK_EQ_
                 ret = AudioControlTask_SendCmd(AUDIO_CMD_EQSET, (void *)gSysConfig.MusicConfig.Eq.Mode, SYNC_MODE);
                 if(ret != RK_SUCCESS)
                 {
                     rk_printf("set SHUFFLE_ON  fail");
                 }
+                #endif
             }
         }
         gpstSystemSetData->eqmode_set = 0;
@@ -1550,6 +1629,7 @@ COMMON FUN rk_err_t SystemTask_SelectCallBack(HGC pGc, eSELECT_EVENT_TYPE event_
             //eq mode
             if (gpstSystemSetData->eqmode_set == 1)
             {
+                #ifdef _RK_EQ_
                 if(gSysConfig.MusicConfig.Eq.Mode == EQ_NOR)
                 {
                     Cursor = 0;
@@ -1578,6 +1658,7 @@ COMMON FUN rk_err_t SystemTask_SelectCallBack(HGC pGc, eSELECT_EVENT_TYPE event_
                 {
                     Cursor = 6;
                 }
+                #endif
 
                 rk_printf ("Cursor=%d offset=%d\n",Cursor,offset);
                 if (offset == Cursor)
@@ -1682,7 +1763,7 @@ INIT API rk_err_t SystemSetTask_DeInit(void *pvParameters)
         rk_easy_smartconfig_stop();
         #endif
     }
-    printf("SystemSetTask_DeInit...\n");
+
 #ifdef __APP_SYSTEMSET_SYSTEMSETWIFISELECTTASK_C__
     if(RKTaskFind(TASK_ID_SYSTEMSETWIFISELECT, 0) != NULL)
     {
@@ -1704,7 +1785,6 @@ INIT API rk_err_t SystemSetTask_DeInit(void *pvParameters)
     }
     if(gpstSystemSetData->hSelect != NULL)
     {
-        printf("\n- del hSelect \n");
         //GuiTask_OperWidget(gpstSystemSetData->hSelect, OPERATE_SET_DISPLAY, (void *)0, SYNC_MODE);
         GuiTask_DeleteWidget(gpstSystemSetData->hSelect);
         gpstSystemSetData->hSelect = NULL;
@@ -1721,7 +1801,6 @@ INIT API rk_err_t SystemSetTask_DeInit(void *pvParameters)
 #endif
     gpstSystemSetData = NULL;
 #endif
-    printf("\nSystemSetTask_DeInit Success\n");
     return RK_SUCCESS;
 }
 /*******************************************************************************
@@ -1739,17 +1818,14 @@ INIT API rk_err_t SystemSetTask_Init(void *pvParameters, void *arg)
     RK_TASK_CLASS* pSystemSetTask = (RK_TASK_CLASS*)pvParameters;
     SYSTEMSET_TASK_DATA_BLOCK*  pSystemSetTaskData;
 
-    printf("SystemSetTask_Init\n");
     if(pSystemSetTask == NULL)
     {
-        rk_printf("RK_PARA_ERR\n");
         return RK_PARA_ERR;
     }
 
     pSystemSetTaskData = rkos_memory_malloc(sizeof(SYSTEMSET_TASK_DATA_BLOCK));
     if(pSystemSetTaskData == NULL)
     {
-        printf("pSystemSetTaskData NULL\n");
         return RK_ERROR;
     }
     memset(pSystemSetTaskData, NULL, sizeof(SYSTEMSET_TASK_DATA_BLOCK));
@@ -1774,7 +1850,7 @@ INIT API rk_err_t SystemSetTask_Init(void *pvParameters, void *arg)
 #ifdef _USE_GUI_
     GuiTask_AppReciveMsg(SystemSetTask_ButtonCallBack);
 #endif
-    printf("SystemSetTask_Init Success\n");
+
     return RK_SUCCESS;
 }
 

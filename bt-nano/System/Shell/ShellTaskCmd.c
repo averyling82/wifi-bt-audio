@@ -64,11 +64,12 @@ rk_err_t ShellTaskList(HDC dev, uint8 * pstr);
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+_SYSTEM_SHELL_SHELLTASKCMD_COMMON_
 static SHELL_CMD ShellTaskName[] =
 {
-    "list",ShellTaskList,"NULL","NULL",
+    "list",ShellTaskList,"list current all thread","task.list",
 #ifdef _MEMORY_LEAK_CHECH_
-    "lw",ShellMemoryLeakWatch,"NULL","NULL",
+    "lw",ShellMemoryLeakWatch,"list syste heap user","task.lw [/s | /a]",
 #endif
     "\b",NULL,"NULL","NULL",
 };
@@ -137,15 +138,22 @@ COMMON API rk_err_t ShellTaskParsing(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret =  RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellTaskName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
+    {
         return RK_ERROR;
-
+    }
 
     ret = ShellCheckCmd(ShellTaskName, pItem, StrCnt);
     if (ret < 0)
@@ -177,6 +185,20 @@ COMMON API rk_err_t ShellTaskParsing(HDC dev, uint8 * pstr)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+typedef  struct _MEMORY_BLOCK_LIST
+{
+    struct _MEMORY_BLOCK_LIST * pNext;
+    uint32 hTask;
+    uint32 addr;
+    uint32 size;
+    uint32 flag;
+    uint32 flag1;
+
+}MEMORY_BLOCK_LIST;
+
+extern const size_t xTotalHeapSize[2];
+extern const size_t xHeapFirstAddr[2];
+
 /*******************************************************************************
 ** Name: memory_leak_check_watch
 ** Input:void
@@ -188,23 +210,62 @@ COMMON API rk_err_t ShellTaskParsing(HDC dev, uint8 * pstr)
 _SYSTEM_SHELL_SHELLTASKCMD_COMMON_
 COMMON FUN void memory_leak_check_watch(uint32 oder)
 {
-    MEMORY_BLOCK * pPrev, * pCur;
+    MEMORY_BLOCK_LIST * pPrev, * pCur, *pFirst;
     uint16 BuffSize = 0;
     uint8 buf[512];
-    uint32 totalsize, remainsize;
-
+    uint32 totalsize, totalsize1, remainsize, remainsize1, totalCnt;
+    MEMORY_BLOCK * p;
     uint32 i, j, err;
+    uint8 * pbuf;
 
     totalsize = 0;
     remainsize = 0;
+    i = 0;
 
+    //search
     rkos_enter_critical();
 
+    totalCnt = UsedMemoryCnt + 1;
+
+    pbuf = rkos_memory_malloc(totalCnt * sizeof(MEMORY_BLOCK_LIST));
+
+    remainsize1 = RKTaskHeapFree();
+    totalsize1 = RKTaskHeapTotal() - RKTaskHeapFree();
+
+    if(pbuf == NULL)
+    {
+        rk_printf("memory report maloc fail");
+        rk_printf_no_time("    total block cnt = %d, check block cnt = %d, totalsize = %d, check totalsize = %d,  remain = %d, check remain = %d", totalCnt, i, totalsize1,totalsize, remainsize1, remainsize);
+        return;
+    }
+
+    pCur = (MEMORY_BLOCK_LIST *)pbuf;
+    pFirst = pCur;
+
+    pCur->pNext = NULL;
+
+    for(p = pFirstMemoryBlock; p != NULL; p = p->pNext)
+    {
+        pCur->pNext = pCur + 1;
+        pCur->hTask = p->hTask;
+        pCur->addr = (uint32)p;
+        pCur->flag = p->flag;
+        pCur->flag1 = *(uint32*)((uint8 *)p + p->size + sizeof(MEMORY_BLOCK));
+        pCur->size = p->size;
+        pCur++;
+    }
+
+    pCur--;
+    pCur->pNext = NULL;
+
+    rkos_exit_critical();
+
+    //sort
     if(oder != 0)
     {
-        for(i = (UsedMemoryCnt - 1); i > 0;  i--)
+        for(i = (totalCnt - 1); i > 0;  i--)
         {
-            pCur = pFirstMemoryBlock;
+            pCur = pFirst;
             pPrev = NULL;
             j = 0;
 
@@ -216,10 +277,10 @@ COMMON FUN void memory_leak_check_watch(uint32 oder)
                     {
                         if(pPrev == NULL)
                         {
-                            pFirstMemoryBlock = pCur->pNext;
+                            pFirst = pCur->pNext;
                             pCur->pNext = pCur->pNext->pNext;
-                            pFirstMemoryBlock->pNext = pCur;
-                            pPrev = pFirstMemoryBlock;
+                            pFirst->pNext = pCur;
+                            pPrev = pFirst;
                         }
                         else
                         {
@@ -242,10 +303,10 @@ COMMON FUN void memory_leak_check_watch(uint32 oder)
                     {
                         if(pPrev == NULL)
                         {
-                            pFirstMemoryBlock = pCur->pNext;
+                            pFirst = pCur->pNext;
                             pCur->pNext = pCur->pNext->pNext;
-                            pFirstMemoryBlock->pNext = pCur;
-                            pPrev = pFirstMemoryBlock;
+                            pFirst->pNext = pCur;
+                            pPrev = pFirst;
                         }
                         else
                         {
@@ -271,11 +332,11 @@ COMMON FUN void memory_leak_check_watch(uint32 oder)
             }
         }
     }
-    rkos_exit_critical();
 
+    //display
     rk_print_string("\r\n");
 
-    pCur = pFirstMemoryBlock;
+    pCur = pFirst;
     i = 0;
     err = 0;
 
@@ -283,7 +344,7 @@ COMMON FUN void memory_leak_check_watch(uint32 oder)
     {
         totalsize += pCur->size;
 
-        if(*(uint32*)((uint8 *)pCur + pCur->size + sizeof(MEMORY_BLOCK)) != 0x55aa55aa)
+        if(pCur->flag1 != 0x55aa55aa)
         {
             err = 1;
             break;
@@ -295,7 +356,7 @@ COMMON FUN void memory_leak_check_watch(uint32 oder)
             break;
         }
 
-        BuffSize = sprintf(buf,"%d\t\t",pCur->size);
+        BuffSize = sprintf(buf,"%d\t%d\t\t",i, pCur->size);
         UartDev_Write(UartHDC,buf,BuffSize,SYNC_MODE,NULL);
 
         BuffSize = sprintf(buf,"0x%08x\t\t",(uint8 *)pCur + sizeof(MEMORY_BLOCK));
@@ -304,54 +365,55 @@ COMMON FUN void memory_leak_check_watch(uint32 oder)
         BuffSize = GetRKTaskName((void *)pCur->hTask, buf);
         UartDev_Write(UartHDC,buf,BuffSize,SYNC_MODE,NULL);
 
-        i++;
-
         if(oder == 2)
         {
             if(pCur->pNext == NULL)
             {
-                if(remainsize > RKTaskHeapFree())
+                if(remainsize > remainsize1)
                 {
-                    rk_printf("queue use space = %d", remainsize - RKTaskHeapFree());
+                    rk_printf("check free memory err, %d %d", remainsize1, remainsize);
                 }
-                else if(remainsize < RKTaskHeapFree())
+                else if(remainsize < remainsize1)
                 {
-                   BuffSize = sprintf(buf,"%d\t\t",RKTaskHeapFree() - remainsize);
+                   BuffSize = sprintf(buf,"%d\t%d\t\t",i,(xHeapFirstAddr[1] + xTotalHeapSize[1]) - (uint32)((uint8 *)pCur->addr + pCur->size + sizeof(MEMORY_BLOCK) + 12));
                    UartDev_Write(UartHDC,buf,BuffSize,SYNC_MODE,NULL);
-                   BuffSize = sprintf(buf,"0x%08x\t\t",(uint8 *)pCur + pCur->size + sizeof(MEMORY_BLOCK));
+                   BuffSize = sprintf(buf,"0x%08x\t\t",(uint8 *)pCur->addr + pCur->size + sizeof(MEMORY_BLOCK) + 12);
                    UartDev_Write(UartHDC,buf,BuffSize,SYNC_MODE,NULL);
                    UartDev_Write(UartHDC,"+\r\n",3,SYNC_MODE,NULL);
+                   remainsize += ((xHeapFirstAddr[1] + xTotalHeapSize[1]) - (uint32)((uint8 *)pCur->addr + pCur->size + sizeof(MEMORY_BLOCK) + 12));
                 }
             }
-            else if((uint8 *)pCur->pNext > ((uint8 *)pCur + pCur->size + sizeof(MEMORY_BLOCK) + 12))
+            else if((uint8 *)pCur->pNext->addr > ((uint8 *)pCur->addr + pCur->size + sizeof(MEMORY_BLOCK) + 12))
             {
-                BuffSize = sprintf(buf,"%d\t\t",(uint8 *)pCur->pNext - ((uint8 *)pCur + pCur->size + sizeof(MEMORY_BLOCK) + 12));
+                BuffSize = sprintf(buf,"%d\t%d\t\t",i,(uint8 *)pCur->pNext->addr - ((uint8 *)pCur->addr + pCur->size + sizeof(MEMORY_BLOCK) + 12));
                 UartDev_Write(UartHDC,buf,BuffSize,SYNC_MODE,NULL);
 
-                BuffSize = sprintf(buf,"0x%08x\t\t",(uint8 *)pCur + pCur->size + sizeof(MEMORY_BLOCK) + 12);
+                BuffSize = sprintf(buf,"0x%08x\t\t",(uint8 *)pCur->addr + pCur->size + sizeof(MEMORY_BLOCK) + 12);
                 UartDev_Write(UartHDC,buf,BuffSize,SYNC_MODE,NULL);
 
                 UartDev_Write(UartHDC,"+\r\n",3,SYNC_MODE,NULL);
-                remainsize += ((uint8 *)pCur->pNext - ((uint8 *)pCur + pCur->size+ sizeof(MEMORY_BLOCK) + 12));
+                remainsize += ((uint8 *)pCur->pNext->addr - ((uint8 *)pCur->addr + pCur->size+ sizeof(MEMORY_BLOCK) + 12));
             }
-            else if((uint8 *)pCur->pNext < ((uint8 *)pCur + pCur->size + sizeof(MEMORY_BLOCK) + 12))
+            else if((uint8 *)pCur->pNext->addr < ((uint8 *)pCur->addr + pCur->size + sizeof(MEMORY_BLOCK) + 12))
             {
                 rk_printf("memory sort error");
             }
         }
 
+        i++;
         pCur = pCur->pNext;
 
 
     }
 
-    rk_printf_no_time("    total block cnt = %d, check block cnt = %d, totalsize = %d,  Remaining = %d", UsedMemoryCnt, i, totalsize, RKTaskHeapFree());
+    rk_printf_no_time("    total block cnt = %d, check block cnt = %d, totalsize = %d, check totalsize = %d,  remain = %d, check remain = %d", totalCnt, i, totalsize1,totalsize, remainsize1, remainsize);
 
     if(err)
     {
-        rk_printf("heap destoried in 0x%08x by %s used", (uint8 *)pCur + sizeof(MEMORY_BLOCK), "unknown");
+        rk_printf("heap destoried in 0x%08x by %s used", (uint8 *)pCur->addr + sizeof(MEMORY_BLOCK), "unknown");
     }
 
+    rkos_memory_free(pbuf);
 }
 #ifdef _MEMORY_LEAK_CHECH_
 /*******************************************************************************
@@ -372,6 +434,10 @@ COMMON FUN rk_err_t ShellMemoryLeakWatch(HDC dev, char * pstr)
         return RK_SUCCESS;
     }
 
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     order = 0;
 
@@ -412,6 +478,11 @@ COMMON FUN rk_err_t ShellTaskList(HDC dev, uint8 * pstr)
     if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
         return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
     }
 
     TempTaskHandler = RKTaskGetFirstHandle(0xffffffff);

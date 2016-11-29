@@ -872,6 +872,9 @@ COMMON FUN rk_err_t RecodTask_GuiInit(void)
     pstTextArg.align= TEXT_ALIGN_X_LEFT;
     pstTextArg.x= 100;
     pstTextArg.BackdropX= 100;
+    pstTextArg.xSize = -1;
+
+
     if(gpstRecodData->RecordInf.bitpersample== 24)
     {
         pstTextArg.resource= SID_RECODING_BIT24;

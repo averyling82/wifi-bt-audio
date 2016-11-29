@@ -29,15 +29,29 @@
 */
 #include "RKOS.h"
 #include "BSP.h"
+
+#ifdef _RK_EQ_
 #include "effect.h"
+#endif
+
+#ifdef _RK_SPECTRUM_
 #include "Spectrum.h"
+#endif
 #include "audio_globals.h"
 #include "SysInfoSave.h"
+#ifdef _MEDIA_MODULE_
 #include "AddrSaveMacro.h"
+#endif
 #include "AudioControlTask.h"
 #include "audio_file_access.h"
+
+#ifdef _FADE_PROCESS_
 #include "Fade.h"
+#endif
+
+#ifdef _USE_GUI_
 #include "FileInfo.h"
+#endif
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -82,7 +96,9 @@ typedef  struct _AUDIOCONTROL_ASK_QUEUE
 }AUDIOCONTROL_ASK_QUEUE;
 
 typedef rk_err_t (* P_AUDIO_PLAY_LIST_INIT)(void * pAudioFileInfo);      //audio callback funciton
+
 typedef rk_err_t (* P_AUDIO_PLAY_NEXT_FILE)(void * pAudioFileInfo, int direct);      //audio callback funciton
+
 
 typedef struct _SYS_FILE_INFO
 {
@@ -144,8 +160,14 @@ typedef  struct _AUDIOCONTROL_TASK_DATA_BLOCK
     TRACK_INFO     pAudioRegKey;
     SYS_FILE_INFO  AudioFileInfo;
 
+#ifdef _USE_GUI_
     SUB_DIR_INFO    SubDirInfo; //Floder -> All files, Dir info
+#endif
+
+#ifdef _MEDIA_MODULE_
     MEDIA_FLODER_INFO_STRUCT    MediaFloderInfo;
+#endif
+
 #ifdef _RK_SPECTRUM_
     uint8 SpectrumOut[SPECTRUM_LINE_M];//存放转换过后的M根谱线的能量
     uint32 SpectrumEn;
@@ -156,6 +178,8 @@ typedef  struct _AUDIOCONTROL_TASK_DATA_BLOCK
     uint32 TrackSegment;
     uint32 TrackSize;
     uint32 TrackTime;
+    uint32 SaveMemory;
+    uint32 DirctPlay;
 
 }AUDIOCONTROL_TASK_DATA_BLOCK;
 
@@ -168,8 +192,11 @@ typedef  struct _AUDIOCONTROL_TASK_DATA_BLOCK
 *---------------------------------------------------------------------------------------------------------------------
 */
 static AUDIOCONTROL_TASK_DATA_BLOCK * gpstAudioControlData;
+
+#ifdef _RK_EQ_
 static uint8 EqMode[8] = {EQ_HEAVY,EQ_POP,EQ_JAZZ,EQ_UNIQUE,EQ_USER,EQ_USER,EQ_NOR,EQ_BASS};
 static short UseEqTable[CUSTOMEQ_LEVELNUM] = {-10, -6, -3, 0, 3, 6, 10};
+#endif
 
 
 
@@ -232,7 +259,6 @@ rk_err_t MediaGetFilePathByCurNum(uint16 * path, uint32 CurNum);
 rk_err_t MediaPlayListNextFile(SYS_FILE_INFO * pAudioFileInfo, int direct);
 rk_err_t DirPlayListNextFile(SYS_FILE_INFO * pAudioFileInfo, int direct);
 rk_err_t DirPlayListInit(SYS_FILE_INFO * pAudioFileInfo);
-rk_err_t GetFileInfoSetNewMusic(FILE_ATTR *stFileAttr, int32 fileNum, TRACK_INFO* tackInfo);
 void AudioFREQDeInit(void);
 void AudioFileClose(void);
 void AudioWaitBBStop(void);
@@ -268,6 +294,7 @@ rk_err_t AudioControlTask_Suspend(void);
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+#ifdef _MEDIA_MODULE_
 /*******************************************************************************
 ** Name: AudioPlayer_SetFloderInfo
 ** Input:void
@@ -279,13 +306,12 @@ rk_err_t AudioControlTask_Suspend(void);
 _APP_AUDIO_AUDIOCONTROLTASK_COMMON_
 COMMON API void AudioPlayer_SetFloderInfo(void)
 {
-#ifdef _MEDIA_MODULE_
     if(gpstAudioControlData->AudioFileInfo.Range == FIND_FILE_RANGE_ALL)//All files
     {
         MediaSetFloderInfo();
     }
-#endif
 }
+#endif
 
 /*******************************************************************************
 ** Name: AudioPlayer_GetAudioInfo
@@ -314,8 +340,9 @@ COMMON API uint32 AudioPlayer_GetAudioInfo(AUDIO_INFO * AudioInfo)
         AudioInfo->playerr = gpstAudioControlData->AudioCodecOpenErr;
         AudioInfo->EqMode = gpstAudioControlData->EqMode;
         AudioInfo->BaseID = gpstAudioControlData->AudioFileInfo.BaseID;
-
+        #ifdef _MEDIA_MODULE_
         memcpy((UINT8*) &(AudioInfo->MediaFloderInfo), (UINT8*) &(gpstAudioControlData->MediaFloderInfo), sizeof(MEDIA_FLODER_INFO_STRUCT));
+        #endif
     }
 
     return gpstAudioControlData->AudioPlayerState;
@@ -445,7 +472,7 @@ COMMON API void AudioStart(void)
         gpstAudioControlData->AudioPlayState = AUDIO_STATE_PLAY;
         AudioStop(Audio_Stop_Force);
         DEBUG("Codec Open Error1");
-        if((gpstAudioControlData->ucSelPlayType == SOURCE_FROM_DLNA)
+        if((gpstAudioControlData->ucSelPlayType == SOURCE_FROM_HTTP)
         ||(gpstAudioControlData->ucSelPlayType == SOURCE_FROM_BT)
         ||(gpstAudioControlData->ucSelPlayType == SOURCE_FROM_XXX))
         {
@@ -483,7 +510,8 @@ COMMON API void AudioStart(void)
 
     AudioFREQInit();
 
-    if(((gpstAudioControlData->AudioLen * 1000) / gpstAudioControlData->pAudioRegKey.samplerate) > 100)
+    if((((gpstAudioControlData->AudioLen * 1000) / gpstAudioControlData->pAudioRegKey.samplerate) > 100)
+        && (gpstAudioControlData->SaveMemory == 0))
     {
         uint32 i;
 
@@ -529,7 +557,9 @@ COMMON API void AudioStart(void)
     //rk_printf(">>>bitpersample =%d",gpstAudioControlData->pAudioRegKey.bitpersample);
     AudioDev_SetBit(gpstAudioControlData->hAudio, gpstAudioControlData->TrackNo, gpstAudioControlData->pAudioRegKey.bitpersample);
 
-    AudioDev_SetSampleRate(gpstAudioControlData->hAudio, gpstAudioControlData->TrackNo, gpstAudioControlData->pAudioRegKey.samplerate);
+    AudioDev_SetTxSampleRate(gpstAudioControlData->hAudio, gpstAudioControlData->TrackNo, gpstAudioControlData->pAudioRegKey.samplerate);
+
+    AudioDev_SetByPass(gpstAudioControlData->hAudio, gpstAudioControlData->SaveMemory);
 
     #ifdef _RK_EQ_
     rk_printf("eq = %d", gSysConfig.MusicConfig.Eq.Mode);
@@ -586,6 +616,10 @@ COMMON API void AudioStop(int ReqType)
     AudioDev_SetEQ(gpstAudioControlData->hAudio, EQ_NOR);
     #endif
 
+    if(gpstAudioControlData->SaveMemory)
+    {
+        rkos_sleep(500);
+    }
 
     AudioSetVolume(0);
 
@@ -601,7 +635,7 @@ COMMON API void AudioStop(int ReqType)
 
     gpstAudioControlData->AudioPlayState = AUDIO_STATE_STOP;
 
-    if((gpstAudioControlData->ucSelPlayType == SOURCE_FROM_DLNA)
+    if((gpstAudioControlData->ucSelPlayType == SOURCE_FROM_HTTP)
         ||(gpstAudioControlData->ucSelPlayType == SOURCE_FROM_BT)
         ||(gpstAudioControlData->ucSelPlayType == SOURCE_FROM_XXX))
     {
@@ -1210,7 +1244,7 @@ COMMON API void AudioControlTask_Enter(void)
     AUDIOCONTROL_RESP_QUEUE AudioControlResQue;
     HTC hSelf;
 
-    rk_printf("audio control task enter...");
+    rk_printf("11audio control task enter...");
 
     while (RKTaskCreate(TASK_ID_STREAMCONTROL, 0, NULL, SYNC_MODE) != RK_SUCCESS)
     {
@@ -1221,7 +1255,7 @@ COMMON API void AudioControlTask_Enter(void)
 
     gpstAudioControlData->AudioPlayState = AUDIO_STATE_STOP;
 
-    if((gpstAudioControlData->ucSelPlayType != SOURCE_FROM_DLNA)
+    if((gpstAudioControlData->ucSelPlayType != SOURCE_FROM_HTTP)
         && (gpstAudioControlData->ucSelPlayType != SOURCE_FROM_BT)
         && (gpstAudioControlData->ucSelPlayType != SOURCE_FROM_XXX))
     {
@@ -1297,14 +1331,33 @@ replay:
             {
                 CodecGetTime(&gpstAudioControlData->pAudioRegKey.CurrentTime);
 
-                DecodeErr = CodecGetDecBuffer((short*)&gpstAudioControlData->AudioPtr, &gpstAudioControlData->AudioLen);
+                if(gpstAudioControlData->SaveMemory)
+                {
+                    DecodeErr = CodecDecode();
+                    CodecGetDecBuffer((short*)&gpstAudioControlData->AudioPtr, &gpstAudioControlData->AudioLen);
+                }
+                else
+                {
+                    DecodeErr = CodecGetDecBuffer((short*)&gpstAudioControlData->AudioPtr, &gpstAudioControlData->AudioLen);
+                }
 
                 if (0 == DecodeErr)   // Decoding end or error
                 {
                     if (gpstAudioControlData->StreamEnd == 0)
                     {
                         //rk_printf("------1 file error------ ");
-                        memset((uint8*)gpstAudioControlData->AudioPtr, 0x00, (gpstAudioControlData->AudioLen * 2 * gpstAudioControlData->pAudioRegKey.bitpersample) / 8);
+                        if(gpstAudioControlData->SaveMemory)
+                        {
+                            #ifdef CODEC_24BIT
+                            memset((uint8*)gpstAudioControlData->AudioPtr, 0x00, (gpstAudioControlData->AudioLen * 8));
+                            #else
+                            memset((uint8*)gpstAudioControlData->AudioPtr, 0x00, (gpstAudioControlData->AudioLen * 4));
+                            #endif
+                        }
+                        else
+                        {
+                            memset((uint8*)gpstAudioControlData->AudioPtr, 0x00, (gpstAudioControlData->AudioLen * 2 * gpstAudioControlData->pAudioRegKey.bitpersample) / 8);
+                        }
                         #if 0
                         {
                             AUDIO_CALLBACK * pCur;
@@ -1322,7 +1375,18 @@ replay:
                     else
                     {
                         //rk_printf("------2 decode end------ ");
-                        memset((uint8*)gpstAudioControlData->AudioPtr, 0x00, (gpstAudioControlData->AudioLen * 2 * gpstAudioControlData->pAudioRegKey.bitpersample) / 8);
+                        if(gpstAudioControlData->SaveMemory)
+                        {
+                            #ifdef CODEC_24BIT
+                            memset((uint8*)gpstAudioControlData->AudioPtr, 0x00, (gpstAudioControlData->AudioLen * 8));
+                            #else
+                            memset((uint8*)gpstAudioControlData->AudioPtr, 0x00, (gpstAudioControlData->AudioLen * 4));
+                            #endif
+                        }
+                        else
+                        {
+                            memset((uint8*)gpstAudioControlData->AudioPtr, 0x00, (gpstAudioControlData->AudioLen * 2 * gpstAudioControlData->pAudioRegKey.bitpersample) / 8);
+                        }
                     }
 
 
@@ -1420,7 +1484,9 @@ replay:
                 }
                 else
                 {
+                    #ifdef _FADE_PROCESS_
                     gpstAudioControlData->AudioFadeInStart = 0;
+                    #endif
                 }
             }
 
@@ -2114,7 +2180,7 @@ COMMON FUN rk_err_t MediaGetFilePathByCurNum(uint16 * path, uint32 CurNum)
 _APP_AUDIO_AUDIOCONTROLTASK_COMMON_
 COMMON FUN rk_err_t MediaPlayListNextFile(SYS_FILE_INFO * pstAudioFileInfo, int direct)
 {
-#ifdef _MEDIA_MODULE_
+
     uint16 MaxDispItem = 0;
     MaxDispItem = pstAudioFileInfo->TotalFiles < MAX_DISP_ITEM_NUM ? pstAudioFileInfo->TotalFiles : MAX_DISP_ITEM_NUM;
 
@@ -2152,12 +2218,12 @@ COMMON FUN rk_err_t MediaPlayListNextFile(SYS_FILE_INFO * pstAudioFileInfo, int 
     gSysConfig.MediaDirTreeInfo.CurItemId[gSysConfig.MediaDirTreeInfo.MusicDirDeep] = pstAudioFileInfo->CurrentFileNum;
 
     MediaGetFilePathByCurNum(pstAudioFileInfo->path, pstAudioFileInfo->CurrentFileNum);
-#endif
 
     return RK_SUCCESS;
 }
 #endif
 
+#ifdef _FS_
 /*******************************************************************************
 ** Name: DirPlayListNextFile
 ** Input:SYS_FILE_INFO * pAudioFileInfo, int next
@@ -2319,6 +2385,7 @@ COMMON FUN rk_err_t DirPlayListInit(SYS_FILE_INFO * pstAudioFileInfo)
     }
 
 }
+#endif
 
 /*******************************************************************************
 ** Name: AudioFREQDeInit
@@ -2509,36 +2576,41 @@ COMMON FUN void AudioFREQDeInit(void)
 _APP_AUDIO_AUDIOCONTROLTASK_COMMON_
 COMMON FUN void AudioFileClose(void)
 {
-    FileDev_CloseFile(gpstAudioControlData->hFile[0]);
-    gpstAudioControlData->hFile[0] = NULL;
+    #ifdef _FS_
+    if(gpstAudioControlData->hFifo == NULL)
+    {
+        FileDev_CloseFile(gpstAudioControlData->hFile[0]);
+        gpstAudioControlData->hFile[0] = NULL;
 
 #ifdef FLAC_DEC_INCLUDE
-    if (CurrentDecCodec == CODEC_FLAC_DEC)
-    {
-        FileDev_CloseFile(gpstAudioControlData->hFile[1]);
-        gpstAudioControlData->hFile[1] = NULL;
-    }
+        if (CurrentDecCodec == CODEC_FLAC_DEC)
+        {
+            FileDev_CloseFile(gpstAudioControlData->hFile[1]);
+            gpstAudioControlData->hFile[1] = NULL;
+        }
 #endif
 
 #ifdef AAC_DEC_INCLUDE
-    if (CurrentDecCodec == CODEC_AAC_DEC)
-    {
-        FileDev_CloseFile(gpstAudioControlData->hFile[1]);
-        gpstAudioControlData->hFile[1] = NULL;
+        if (CurrentDecCodec == CODEC_AAC_DEC)
+        {
+            FileDev_CloseFile(gpstAudioControlData->hFile[1]);
+            gpstAudioControlData->hFile[1] = NULL;
 
-        FileDev_CloseFile(gpstAudioControlData->hFile[2]);
-        gpstAudioControlData->hFile[2] = NULL;
-    }
+            FileDev_CloseFile(gpstAudioControlData->hFile[2]);
+            gpstAudioControlData->hFile[2] = NULL;
+        }
 #endif
 
 #ifdef HIFI_AlAC_DECODE
-    if (CurrentDecCodec == CODEC_HIFI_ALAC_DEC)
-    {
-        FileDev_CloseFile(gpstAudioControlData->hFile[1]);
-        gpstAudioControlData->hFile[1] = NULL;
+        if (CurrentDecCodec == CODEC_HIFI_ALAC_DEC)
+        {
+            FileDev_CloseFile(gpstAudioControlData->hFile[1]);
+            gpstAudioControlData->hFile[1] = NULL;
 
-        FileDev_CloseFile(gpstAudioControlData->hFile[2]);
-        gpstAudioControlData->hFile[2] = NULL;
+            FileDev_CloseFile(gpstAudioControlData->hFile[2]);
+            gpstAudioControlData->hFile[2] = NULL;
+        }
+#endif
     }
 #endif
 
@@ -3050,7 +3122,10 @@ COMMON FUN void AudioDecodeProc(AUDIO_CMD id, void * msg)
             break;
 
         case AUDIO_CMD_SEEKTO:
-            AudioSeekTo((int)msg);
+            if(gpstAudioControlData->DirctPlay == 0)
+            {
+                AudioSeekTo((int)msg);
+            }
             break;
 #if 0
         case AUDIO_CMD_ABPLAY:
@@ -3380,7 +3455,9 @@ COMMON FUN void AudioCheckStreamType(uint16 * path,  HDC hFile)
     }
     else
     {
+        #ifdef _FS_
         FileDev_ReadFile(hFile,char_buf, 512);
+        #endif
     }
 #if 0
     {
@@ -3415,7 +3492,9 @@ COMMON FUN void AudioCheckStreamType(uint16 * path,  HDC hFile)
             }
             else
             {
+                #ifdef _FS_
                 FileDev_FileSeek(hFile, 0, ID3_Length);
+                #endif
             }
 
             if(gpstAudioControlData->hFifo != NULL)
@@ -3424,7 +3503,9 @@ COMMON FUN void AudioCheckStreamType(uint16 * path,  HDC hFile)
             }
             else
             {
+                #ifdef _FS_
                 FileDev_ReadFile(hFile,char_buf, 512);
+                #endif
             }
         }
         rk_printf("ID3 len = 0x%x",ID3_Length);
@@ -3481,7 +3562,9 @@ COMMON FUN void AudioCheckStreamType(uint16 * path,  HDC hFile)
                     }
                     else
                     {
+                        #ifdef _FS_
                         FileDev_FileSeek(hFile, SEEK_SET, framesec * 512+ID3_Length);
+                        #endif
                     }
 
                     if(gpstAudioControlData->hFifo != NULL)
@@ -3490,7 +3573,9 @@ COMMON FUN void AudioCheckStreamType(uint16 * path,  HDC hFile)
                     }
                     else
                     {
+                        #ifdef _FS_
                         FileDev_ReadFile(hFile, char_buf, 512);
+                        #endif
                     }
 
                     buf = char_buf;
@@ -3566,8 +3651,18 @@ COMMON FUN void AudioCheckStreamType(uint16 * path,  HDC hFile)
                 if ((buf[tempcnt] == 'm') && (buf[tempcnt + 1] == 'd') && (buf[tempcnt + 2] == 'a') && (buf[tempcnt + 3] == 't'))
                 {
                     aac_moovstart = (buf[tempcnt - 4] << 24) + (buf[tempcnt - 3] << 16) + (buf[tempcnt - 2] << 8) + buf[tempcnt - 1];
-                    FileDev_FileSeek(hFile, SEEK_SET, aac_moovstart + 0x80);
-                    FileDev_ReadFile(hFile, char_buf, 512);
+                    if(gpstAudioControlData->hFifo != NULL)
+                    {
+                        fifoDev_ReadSeek(hFile, SEEK_SET, aac_moovstart + 0x80, 0);
+                        fifoDev_Read(hFile, char_buf, 512, 0, SYNC_MODE, NULL);
+                    }
+                    else
+                    {
+                        #ifdef _FS_
+                        FileDev_FileSeek(hFile, SEEK_SET, aac_moovstart + 0x80);
+                        FileDev_ReadFile(hFile, char_buf, 512);
+                        #endif
+                    }
 
                     for (tempcnt = 0; tempcnt < 512; tempcnt++)
                     {
@@ -3682,7 +3777,9 @@ COMMON FUN void AudioCheckStreamType(uint16 * path,  HDC hFile)
             }
             else
             {
+                #ifdef _FS_
                 ret = FileDev_ReadFile(hFile,char_buf, 512);
+                #endif
             }
 
             if (ret < 512)
@@ -3708,7 +3805,9 @@ COMMON FUN void AudioCheckStreamType(uint16 * path,  HDC hFile)
     }
     else
     {
+        #ifdef _FS_
         FileDev_FileSeek(hFile, SEEK_SET, 0);
+        #endif
     }
 
 }
@@ -4061,7 +4160,7 @@ COMMON FUN void AudioFREQInit(void)
 _APP_AUDIO_AUDIOCONTROLTASK_COMMON_
 COMMON FUN rk_err_t AudioCodecOpen(void)
 {
-    if (1 != CodeOpenDec())
+    if (1 != CodeOpenDec(gpstAudioControlData->DirctPlay, gpstAudioControlData->SaveMemory))
     {
         rk_printfA("CodeOpenDec != 1\n");
         return ERROR;
@@ -4074,10 +4173,13 @@ COMMON FUN rk_err_t AudioCodecOpen(void)
     CodecGetFrameLen(&gpstAudioControlData->AudioLen);
 
 #ifdef _MEMORY_LEAK_CHECH_
-    if(gpstAudioControlData->AudioLen * 8 > 12 * 1024)
+    if(gpstAudioControlData->ucSelPlayType == SOURCE_FROM_HTTP)
     {
-        rk_printfA("sampels per frame too large");
-        return ERROR;
+        if(gpstAudioControlData->AudioLen * 8 > 12 * 1024)
+        {
+            rk_printfA("sampels per frame too large");
+            return ERROR;
+        }
     }
 #endif
 
@@ -4176,8 +4278,10 @@ COMMON FUN void AudioHWInit(void)
                 }
                 else
                 {
+                    #ifdef _FS_
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[0], &gFileHandle.curfileoffset[0]);
+                    #endif
                 }
                 AudioWaitBBStart();
             }
@@ -4233,8 +4337,10 @@ COMMON FUN void AudioHWInit(void)
                 }
                 else
                 {
+                    #ifdef _FS_
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[0], &gFileHandle.curfileoffset[0]);
+                    #endif
                 }
                 AudioWaitBBStart();
             }
@@ -4277,8 +4383,10 @@ COMMON FUN void AudioHWInit(void)
                 }
                 else
                 {
+                    #ifdef _FS_
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[0], &gFileHandle.curfileoffset[0]);
+                    #endif
                 }
                 AudioWaitBBStart();
             }
@@ -4315,6 +4423,7 @@ COMMON FUN void AudioHWInit(void)
                 //Others
                 if(gpstAudioControlData->hFifo == NULL)
                 {
+                    #ifdef _FS_
                     memset(&gFileHandle,0,sizeof(FILE_HANDLE_t));
                     gFileHandle.handle1 = (unsigned char)0;
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
@@ -4325,7 +4434,7 @@ COMMON FUN void AudioHWInit(void)
 
                     gFileHandle.handle3 = (unsigned char)2;
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[2], &gFileHandle.curfileoffset[2]);
-
+                    #endif
                 }
                 else
                 {
@@ -4378,8 +4487,10 @@ COMMON FUN void AudioHWInit(void)
                 }
                 else
                 {
+                    #ifdef _FS_
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[0], &gFileHandle.curfileoffset[0]);
+                    #endif
                 }
                 AudioWaitBBStart();
             }
@@ -4424,10 +4535,12 @@ COMMON FUN void AudioHWInit(void)
                 }
                 else
                 {
+                    #ifdef _FS_
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
                     printf("audioHWinit amr gFileHandle.filesize=%d\n",gFileHandle.filesize);
                     gpMediaBlock.Total_length = gFileHandle.filesize;
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[0], &gFileHandle.curfileoffset[0]);
+                    #endif
                 }
                 AudioWaitBBStart();
                 printf("audioHWinit AudioWaitBBStart....\n");
@@ -4471,8 +4584,10 @@ COMMON FUN void AudioHWInit(void)
                 }
                 else
                 {
+                    #ifdef _FS_
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[0], &gFileHandle.curfileoffset[0]);
+                    #endif
                 }
                 AudioWaitBBStart();
             }
@@ -4494,7 +4609,7 @@ COMMON FUN void AudioHWInit(void)
                 //Others
                 //...
                 //AudioCodecGetBufferSize(CurrentDecCodec, FS_44100Hz);
-                        AudioCodec(gpstAudioControlData->AudioFileInfo.path, (UINT8 *)AudioFileExtString);
+                AudioCodec(gpstAudioControlData->AudioFileInfo.path, (UINT8 *)AudioFileExtString);
             }
 #else
             {
@@ -4512,13 +4627,14 @@ COMMON FUN void AudioHWInit(void)
                 gFileHandle.handle1 = (unsigned char)0;
                 if(gpstAudioControlData->hFifo == NULL)
                 {
+                    #ifdef _FS_
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[0], &gFileHandle.curfileoffset[0]);
 
 
                     gFileHandle.handle2 = (unsigned char)1;
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[1], &gFileHandle.curfileoffset[1]);
-
+                    #endif
                 }
                 else
                 {
@@ -4550,7 +4666,7 @@ COMMON FUN void AudioHWInit(void)
                 //Others
                 //...
                 //AudioCodecGetBufferSize(CurrentDecCodec, FS_44100Hz);
-                        AudioCodec(gpstAudioControlData->AudioFileInfo.path, (UINT8 *)AudioFileExtString);
+                AudioCodec(gpstAudioControlData->AudioFileInfo.path, (UINT8 *)AudioFileExtString);
             }
 #else
             {
@@ -4568,10 +4684,12 @@ COMMON FUN void AudioHWInit(void)
                 else
                 {
                    //Others
+                    #ifdef _FS_
                     memset(&gFileHandle,0,sizeof(FILE_HANDLE_t));
                     gFileHandle.handle1 = (unsigned char)0;
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[0], &gFileHandle.curfileoffset[0]);
+                    #endif
                 }
                 AudioWaitBBStart();
             }
@@ -4593,7 +4711,7 @@ COMMON FUN void AudioHWInit(void)
                 //Others
                 //...
                 //AudioCodecGetBufferSize(CurrentDecCodec, FS_44100Hz);
-                        AudioCodec(gpstAudioControlData->AudioFileInfo.path, (UINT8 *)AudioFileExtString);
+                AudioCodec(gpstAudioControlData->AudioFileInfo.path, (UINT8 *)AudioFileExtString);
             }
 #else
             {
@@ -4614,8 +4732,10 @@ COMMON FUN void AudioHWInit(void)
                 }
                 else
                 {
+                    #ifdef _FS_
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[0], &gFileHandle.curfileoffset[0]);
+                    #endif
                 }
                 AudioWaitBBStart();
             }
@@ -4637,7 +4757,7 @@ COMMON FUN void AudioHWInit(void)
                 //Others
                 //...
                 //AudioCodecGetBufferSize(CurrentDecCodec, FS_44100Hz);
-                        AudioCodec(gpstAudioControlData->AudioFileInfo.path, (UINT8 *)AudioFileExtString);
+                AudioCodec(gpstAudioControlData->AudioFileInfo.path, (UINT8 *)AudioFileExtString);
             }
 #else
             {
@@ -4657,8 +4777,10 @@ COMMON FUN void AudioHWInit(void)
                 }
                 else
                 {
+                    #ifdef _FS_
                     FileDev_GetFileSize(gpstAudioControlData->hFile[0], &gFileHandle.filesize);
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[0], &gFileHandle.curfileoffset[0]);
+                    #endif
                 }
                 AudioWaitBBStart();
             }
@@ -4704,6 +4826,7 @@ COMMON FUN void AudioHWInit(void)
                 }
                 else
                 {
+                    #ifdef _FS_
                     //Others
                     memset(&gFileHandle,0,sizeof(FILE_HANDLE_t));
                     gFileHandle.handle1 = (unsigned char)0;
@@ -4714,6 +4837,8 @@ COMMON FUN void AudioHWInit(void)
                     gFileHandle.handle3 = (unsigned char)2;
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[1], &gFileHandle.curfileoffset[1]);
                     FileDev_GetFileOffset(gpstAudioControlData->hFile[2], &gFileHandle.curfileoffset[2]);
+
+                    #endif
                 }
 
                 AudioWaitBBStart();
@@ -4737,7 +4862,10 @@ COMMON FUN void AudioHWInit(void)
 _APP_AUDIO_AUDIOCONTROLTASK_COMMON_
 COMMON FUN rk_err_t AudioFileOpen(void)
 {
+    #ifdef _FS_
     FILE_ATTR stFileAttr;
+    #endif
+
     rk_err_t ret;
     uint16 PathLen;
     uint32 TotalSize;
@@ -4745,8 +4873,9 @@ COMMON FUN rk_err_t AudioFileOpen(void)
 
     int CurrentCodecSave;
 
-
+    #ifdef _FS_
     stFileAttr.ShortName[11] = 0;
+    #endif
 
 
     PathLen = StrLenW(gpstAudioControlData->AudioFileInfo.path);
@@ -4760,6 +4889,7 @@ COMMON FUN rk_err_t AudioFileOpen(void)
         gpstAudioControlData->ucSelPlayType == SOURCE_FROM_DB_FLODER ||
         (gpstAudioControlData->ucSelPlayType == SOURCE_FROM_RECORD))
     {
+        #ifdef _FS_
         stFileAttr.Path = gpstAudioControlData->AudioFileInfo.path;
         stFileAttr.FileName = NULL;
 
@@ -4777,10 +4907,11 @@ COMMON FUN rk_err_t AudioFileOpen(void)
 
         AudioCheckStreamType(ExtendName, gpstAudioControlData->hFile[0]);
         AudioCodec(ExtendName, (UINT8 *)AudioFileExtString);
+        #endif
 
 
     }
-    else if(gpstAudioControlData->ucSelPlayType == SOURCE_FROM_DLNA)
+    else if(gpstAudioControlData->ucSelPlayType == SOURCE_FROM_HTTP)
     {
         memcpy(gpstAudioControlData->AudioFileInfo.path, L"C:\\dlna.demo", 26);
         CurrentDecCodec = gpstAudioControlData->defaultCodecType;
@@ -4789,21 +4920,26 @@ COMMON FUN rk_err_t AudioFileOpen(void)
         TotalSize = 0;
 
         ret = fifoDev_GetTotalSize(gpstAudioControlData->hFifo, &TotalSize);
+        rk_printf("TotalSize = %d", TotalSize);
 
         if(ret == RK_ERROR)
         {
             return RK_ERROR;
         }
 
-        //fifoDev_SetFIFOLevel(gpstAudioControlData->hFifo, 10 * 1024, 2 * 1024);
-        fifoDev_SetFIFOLevel(gpstAudioControlData->hFifo, 100 * 1024, 6 * 1024);
-        rk_printf("TotalSize = %d", TotalSize);
-
-        DEBUG("CurrentDecCodec = %d",CurrentDecCodec);
-
-        AudioCheckStreamType(ExtendName, gpstAudioControlData->hFifo);
-        AudioCodec(ExtendName, (UINT8 *)AudioFileExtString);
-
+        if(gpstAudioControlData->DirctPlay)
+        {
+            fifoDev_SetFIFOLevel(gpstAudioControlData->hFifo, 30 * 1024, 6 * 1024);
+            CurrentDecCodec = gpstAudioControlData->defaultCodecType;
+            CurrentCodecSave = CurrentDecCodec;
+        }
+        else
+        {
+            fifoDev_SetFIFOLevel(gpstAudioControlData->hFifo, 100 * 1024, 6 * 1024);
+            AudioCheckStreamType(ExtendName, gpstAudioControlData->hFifo);
+            DEBUG("CurrentDecCodec = %d",CurrentDecCodec);
+            AudioCodec(ExtendName, (UINT8 *)AudioFileExtString);
+        }
     }
     else if(gpstAudioControlData->ucSelPlayType == SOURCE_FROM_XXX)
     {
@@ -4913,7 +5049,9 @@ COMMON FUN rk_err_t AudioFileOpen(void)
 #endif
 
     rk_printf("short name:");
+    #if 0//def _FS_//jjjhhh 20161126
     UartDev_Write(UartHDC, stFileAttr.ShortName, 11, SYNC_MODE, NULL);
+    #endif
 
     return OK;
 }
@@ -5123,7 +5261,7 @@ INIT API rk_err_t AudioControlTask_Init(void *pvParameters, void *arg)
     }
 
 
-    if (pArg->ucSelPlayType == SOURCE_FROM_DLNA)
+    if (pArg->ucSelPlayType == SOURCE_FROM_HTTP)
     {
         pAudioControlTaskData->hFifo = RKDev_Open(DEV_CLASS_FIFO, 0, NOT_CARE);
 
@@ -5137,6 +5275,15 @@ INIT API rk_err_t AudioControlTask_Init(void *pvParameters, void *arg)
             while(1);
         }
         pAudioControlTaskData->AudioFileInfo.CurrentFileNum = -1;
+
+        pAudioControlTaskData->SaveMemory = pArg->SaveMemory;
+        pAudioControlTaskData->DirctPlay = pArg->DirectPlay;
+
+        if(pAudioControlTaskData->DirctPlay)
+        {
+            pAudioControlTaskData->defaultCodecType = pArg->CodecType;
+        }
+
     }
     else if(pArg->ucSelPlayType == SOURCE_FROM_BT)
     {
@@ -5154,6 +5301,8 @@ INIT API rk_err_t AudioControlTask_Init(void *pvParameters, void *arg)
 
         pAudioControlTaskData->AudioFileInfo.CurrentFileNum = -1;
     }
+
+    #ifdef _FS_
     else if((pArg->ucSelPlayType == SOURCE_FROM_FILE_BROWSER) || (pArg->ucSelPlayType == SOURCE_FROM_RECORD))
     {
         pAudioControlTaskData->AudioFileInfo.hDirDev = RKDev_Open(DEV_CLASS_DIR, 0 ,NOT_CARE);
@@ -5176,6 +5325,8 @@ INIT API rk_err_t AudioControlTask_Init(void *pvParameters, void *arg)
         pAudioControlTaskData->AudioFileInfo.pPlayListInit(&pAudioControlTaskData->AudioFileInfo);
 
     }
+    #endif
+
 #ifdef _MEDIA_MODULE_
     else if(pArg->ucSelPlayType == SOURCE_FROM_MEDIA_LIBRARY)
     {
@@ -5247,7 +5398,10 @@ INIT API rk_err_t AudioControlTask_Init(void *pvParameters, void *arg)
 
     pAudioControlTaskData->AudioFileInfo.PlayOrder = gSysConfig.MusicConfig.PlayOrder;
     pAudioControlTaskData->playVolume = gSysConfig.OutputVolume;
+
+    #ifdef _RK_EQ_
     pAudioControlTaskData->EqMode = gSysConfig.MusicConfig.Eq.Mode;
+    #endif
 
 #if 0
 
@@ -5340,66 +5494,68 @@ INIT API rk_err_t AudioControlTask_Init(void *pvParameters, void *arg)
 
     rk_printf("RegMBoxDecodeSvc  \n");
 
-
-    if((pArg->ucSelPlayType == SOURCE_FROM_DLNA) || (pArg->ucSelPlayType == SOURCE_FROM_BT))
+    if(pAudioControlTaskData->SaveMemory == 0)
     {
-        #ifdef _MEMORY_LEAK_CHECH_
-        DecDataBuf[0] = rkos_memory_malloc(1024 * 12);
-        #else
-        DecDataBuf[0] = rkos_memory_malloc(1024 * 32);
-        #endif
+        if((pArg->ucSelPlayType == SOURCE_FROM_HTTP) || (pArg->ucSelPlayType == SOURCE_FROM_BT))
+        {
+            #ifdef _MEMORY_LEAK_CHECH_
+            DecDataBuf[0] = rkos_memory_malloc(1024 * 12);
+            #else
+            DecDataBuf[0] = rkos_memory_malloc(1024 * 32);
+            #endif
 
-        if(NULL == DecDataBuf[0])
-        {
-            rk_printf("ERROR: DecDataBuf[0] malloc faile\n");
-            return RK_ERROR;
-        }
+            if(NULL == DecDataBuf[0])
+            {
+                rk_printf("ERROR: DecDataBuf[0] malloc faile\n");
+                return RK_ERROR;
+            }
 
-        #ifdef _MEMORY_LEAK_CHECH_
-        DecDataBuf[1] = rkos_memory_malloc(1024 * 12);
-        #else
-        DecDataBuf[1] = rkos_memory_malloc(1024 * 32);
-        #endif
+            #ifdef _MEMORY_LEAK_CHECH_
+            DecDataBuf[1] = rkos_memory_malloc(1024 * 12);
+            #else
+            DecDataBuf[1] = rkos_memory_malloc(1024 * 32);
+            #endif
 
-        if(NULL == DecDataBuf[1])
-        {
-            rk_printf("ERROR: DecDataBuf[1] malloc faile\n");
-            rkos_memory_free(DecDataBuf[0]);
-            return RK_ERROR;
+            if(NULL == DecDataBuf[1])
+            {
+                rk_printf("ERROR: DecDataBuf[1] malloc faile\n");
+                rkos_memory_free(DecDataBuf[0]);
+                return RK_ERROR;
+            }
         }
-    }
-    else if(pArg->ucSelPlayType == SOURCE_FROM_XXX)
-    {
-        DecDataBuf[0] = rkos_memory_malloc(1024 * 3 * 10);
-        if(NULL == DecDataBuf[0])
+        else if(pArg->ucSelPlayType == SOURCE_FROM_XXX)
         {
-            rk_printf("ERROR: DecDataBuf[0] malloc faile\n");
-            return RK_ERROR;
-        }
+            DecDataBuf[0] = rkos_memory_malloc(1024 * 3 * 10);
+            if(NULL == DecDataBuf[0])
+            {
+                rk_printf("ERROR: DecDataBuf[0] malloc faile\n");
+                return RK_ERROR;
+            }
 
-        DecDataBuf[1] = rkos_memory_malloc(1024 * 3 * 10);
-        if(NULL == DecDataBuf[1])
-        {
-            rk_printf("ERROR: DecDataBuf[1] malloc faile\n");
-            rkos_memory_free(DecDataBuf[0]);
-            return RK_ERROR;
+            DecDataBuf[1] = rkos_memory_malloc(1024 * 3 * 10);
+            if(NULL == DecDataBuf[1])
+            {
+                rk_printf("ERROR: DecDataBuf[1] malloc faile\n");
+                rkos_memory_free(DecDataBuf[0]);
+                return RK_ERROR;
+            }
         }
-    }
-    else
-    {
-        DecDataBuf[0] = rkos_memory_malloc(1024 * 36);
-        if(NULL == DecDataBuf[0])
+        else
         {
-            rk_printf("ERROR: DecDataBuf[0] malloc faile\n");
-            return RK_ERROR;
-        }
+            DecDataBuf[0] = rkos_memory_malloc(1024 * 36);
+            if(NULL == DecDataBuf[0])
+            {
+                rk_printf("ERROR: DecDataBuf[0] malloc faile\n");
+                return RK_ERROR;
+            }
 
-        DecDataBuf[1] = rkos_memory_malloc(1024 * 36);
-        if(NULL == DecDataBuf[1])
-        {
-            rk_printf("ERROR: DecDataBuf[1] malloc faile\n");
-            rkos_memory_free(DecDataBuf[0]);
-            return RK_ERROR;
+            DecDataBuf[1] = rkos_memory_malloc(1024 * 36);
+            if(NULL == DecDataBuf[1])
+            {
+                rk_printf("ERROR: DecDataBuf[1] malloc faile\n");
+                rkos_memory_free(DecDataBuf[0]);
+                return RK_ERROR;
+            }
         }
     }
 

@@ -83,64 +83,6 @@
 *---------------------------------------------------------------------------------------------------------------------
 */
 /*******************************************************************************
-** Name: WatchDogStart
-** Input:void
-** Return: void
-** Owner:wrm
-** Date: 2015.5.19
-** Time: 10:50:13
-*******************************************************************************/
-_CPU_NANOD_LIB_WDT_COMMON_
-COMMON API rk_err_t WatchDogStart(void)
-{
-    int backup = Wdt->WDT_CR;
-    Wdt->WDT_CR = 1 |backup;
-    return RK_SUCCESS;
-}
-
-/*******************************************************************************
-** Name: WatchDogClearIntFlag
-** Input:void
-** Return: void
-** Owner:wrm
-** Date: 2015.5.19
-** Time: 10:50:13
-*******************************************************************************/
-_CPU_NANOD_LIB_WDT_COMMON_
-COMMON API rk_err_t WatchDogClearIntFlag(void)
-{
-    uint32 eoi;
-    eoi = Wdt->WDT_EOI;
-    return eoi;
-}
-/*******************************************************************************
-** Name: WatchDogGetCurrentValue
-** Input:void
-** Return: void
-** Owner:wrm
-** Date: 2015.5.19
-** Time: 10:50:13
-*******************************************************************************/
-_CPU_NANOD_LIB_WDT_COMMON_
-COMMON API rk_size_t WatchDogGetCurrentValue(void)
-{
-    return Wdt->WDT_CCVR;
-}
-/*******************************************************************************
-** Name: WatchDogSetPeriod
-** Input:WdtTimeoutPeriod_t
-** Return: OK
-** Owner:wrm
-** Date: 2015.5.19
-** Time: 10:50:13
-*******************************************************************************/
-_CPU_NANOD_LIB_WDT_COMMON_
-COMMON API rk_err_t WatchDogSetPeriod(WdtTimeoutPeriod_t period)
-{
-    Wdt->WDT_TORR = period;
-    return RK_SUCCESS;
-}
-/*******************************************************************************
 ** Name: WatchDogReload
 ** Input:void
 ** Return: void
@@ -153,19 +95,6 @@ COMMON API rk_err_t WatchDogReload(void)
 {
     Wdt->WDT_CRR = 0x76;
     return RK_SUCCESS;
-}
-/*******************************************************************************
-** Name: WatchDogGetStat
-** Input:void
-** Return: void
-** Owner:wrm
-** Date: 2015.5.19
-** Time: 10:50:13
-*******************************************************************************/
-_CPU_NANOD_LIB_WDT_COMMON_
-COMMON API rk_size_t WatchDogGetStat(void)
-{
-    return Wdt->WDT_STAT;
 }
 
 
@@ -180,9 +109,9 @@ COMMON API rk_size_t WatchDogGetStat(void)
 COMMON API rk_err_t WatchDogInit(WdtRespMode_t mode , WdtRstPluseLenth_t RstPluse, WdtTimeoutPeriod_t period)
 {
     Wdt->WDT_CR = (mode << WDT_RESP_MODE_OFFSET) | (RstPluse << WDT_RST_PLUSE_LENGT_OFFSET);
-
-    WatchDogSetPeriod(period);
-    WatchDogReload();
+    Wdt->WDT_TORR = period;
+    Wdt->WDT_CRR = 0x76;
+    Wdt->WDT_CR |= 0x01;
 
     return RK_SUCCESS;
 }

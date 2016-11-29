@@ -615,6 +615,7 @@ COMMON FUN rk_err_t LineIn_PlayerSetPopupWindow(void * text, uint16 text_cmd)
     return RK_SUCCESS;
 }
 
+#ifdef _RK_EQ_
 /*******************************************************************************
 ** Name: LineIn_PlayerMusicEqDisplay
 ** Input:void
@@ -666,6 +667,7 @@ COMMON FUN void LineIn_PlayerMusicEqDisplay(void)
     }
 #endif
 }
+#endif
 
 /*******************************************************************************
 ** Name: LineIn_PlayerVolumeDisplay
@@ -1069,7 +1071,9 @@ COMMON FUN rk_err_t LineInTask_GuiInit(void)
     GuiTask_ScreenLock();
     LineIn_PlayerBackGroundDisplay();
     LineIn_PlayerVolumeDisplay();
+    #ifdef _RK_EQ_
     LineIn_PlayerMusicEqDisplay();
+    #endif
     LineIn_PlayerDisplayAll();
     if(gpstLineInData->LineInInf.playerr)
     {
@@ -1106,12 +1110,16 @@ COMMON FUN rk_err_t LineInTask_KeyEvent(uint32 KeyVal)
                     //int16 resource;
                     if(gpstLineInData->RecordState == RECORD_STATE_BEING)
                     {
+                        #ifdef _RECORD_
                         RecordControlTask_SendCmd(RECORD_CMD_PAUSE, NULL, SYNC_MODE);
+                        #endif
                         gpstLineInData->PlayerState = LINEIN_PLAYER_STATE_PAUSE_RECORD;
                     }
                     else if(gpstLineInData->RecordState == RECORD_STATE_PAUSE)
                     {
+                        #ifdef _RECORD_
                         RecordControlTask_SendCmd(RECORD_CMD_RESUME, NULL, SYNC_MODE);
+                        #endif
                         gpstLineInData->PlayerState = LINEIN_PLAYER_STATE_RECORDING;
                     }
                     //printf("LineIn_PlayerTitle= %d RecordState=%d\n",gpstLineInData->PlayerState ,gpstLineInData->RecordState);
@@ -1127,7 +1135,9 @@ COMMON FUN rk_err_t LineInTask_KeyEvent(uint32 KeyVal)
                     if(RKTaskFind(TASK_ID_RECORDCONTROL, 0) != NULL)
                     {
                         LineInControlTask_SendCmd(LINEIN_CMD_RECORD_STOP, (void *)0, SYNC_MODE);
+                        #ifdef _RECORD_
                         RecordControlTask_SendCmd(RECORD_CMD_STOP, (void *)1, SYNC_MODE);
+                        #endif
                         gpstLineInData->CurMode = LINE_IN_PLAY_MOD;
                         #ifdef _USE_GUI_
                         if (gpstLineInData->hFileName!= NULL)
@@ -1260,6 +1270,7 @@ COMMON FUN rk_err_t LineInTask_KeyEvent(uint32 KeyVal)
                     {
                         if(gpstLineInData->PlayerState == LINEIN_PLAYER_STATE_PLAY)
                         {
+                            #ifdef _RECORD_
                             RK_TASK_RECORDCONTROL_ARG Arg;
 
                             Arg.RecordEncodeType     = RECORD_ENCODE_TYPE_WAV;
@@ -1281,31 +1292,38 @@ COMMON FUN rk_err_t LineInTask_KeyEvent(uint32 KeyVal)
                                 rkos_sleep(10);
                             }
 
+                            #ifdef _RECORD_
                             RecordControlTask_SendCmd(RECORD_CMD_START, (void *)1, SYNC_MODE);
+                            #endif
+
                             LineInControlTask_SendCmd(LINEIN_CMD_RECORD, (void *)0, SYNC_MODE);
                             LineIn_RecordFileNameDisplay();
                             gpstLineInData->PlayerState = LINEIN_PLAYER_STATE_RECORDING;
                             gpstLineInData->RecordState == RECORD_STATE_BEING;
                             LineIn_StateDisplay();
                             gpstLineInData->CurMode = LINE_IN_RECORD_MOD;
+                            #endif
+
                         }
                     }
                     else
                     {
                         if(gpstLineInData->PlayerState == LINEIN_PLAYER_STATE_PLAY)
                         {
+                            #ifdef _RECORD_
                             while(Recorder_GetRecordInf(&gpstLineInData->RecordInf) != RECORD_STATE_PREPARE)
                             {
                                 rkos_sleep(10);
                             }
-
                             RecordControlTask_SendCmd(RECORD_CMD_START, (void *)1, SYNC_MODE);
+
                             LineInControlTask_SendCmd(LINEIN_CMD_RECORD, (void *)0, SYNC_MODE);
                             LineIn_RecordFileNameDisplay();
                             gpstLineInData->PlayerState = LINEIN_PLAYER_STATE_RECORDING;
                             gpstLineInData->RecordState == RECORD_STATE_BEING;
                             LineIn_StateDisplay();
                             gpstLineInData->CurMode = LINE_IN_RECORD_MOD;
+                            #endif
                         }
                     }
                     break;

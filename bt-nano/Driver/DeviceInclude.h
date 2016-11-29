@@ -25,7 +25,9 @@
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+#ifdef _RADIO_
 #include "FmDevice.h"
+#endif
 #include "PwmDevice.h"
 #include "KeyDevice.h"
 #include "AdcDevice.h"
@@ -34,14 +36,22 @@
 
 #include "BcoreDevice.h"
 #include "MsgDevice.h"
+#ifdef _FS_
 #include "DirDevice.h"
+#include "PartionDevice.h"
+#include "FileDevice.h"
+#include "FATDevice.h"
+#endif
 #include "RockCodecDevice.h"
 #include "I2sDevice.h"
 #include "AudioDevice.h"
+#ifdef _USB_
 #include "UsbMscDevice.h"
+#include "UsbOtgDev.h"
+#endif
 #include "MailBoxDevice.h"
 #include "SdDevice.h"
-#include "UsbOtgDev.h"
+
 #include "SpiDevice.h"
 #include "UartDevice.h"
 #include "FIFODevice.h"
@@ -49,19 +59,17 @@
 #include "EmmcDevice.h"
 #include "SdMmcDevice.h"
 #include "LUNDevice.h"
-#include "PartionDevice.h"
-#include "FileDevice.h"
-#include "FATDevice.h"
-#include "UsbOtgDev.h"
 #include "I2cDevice.h"
 #include "RockCodecDevice.h"
 #include "DmaDevice.h"
 #include "SdioDevice.h"
 #include "UartDevice.h"
 #include "WatchDogDevice.h"
+#ifdef _USE_GUI_
 #include "VopDevice.h"
 #include "LCDDriver.h"
 #include "DisplayDevice.h"
+#endif
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *

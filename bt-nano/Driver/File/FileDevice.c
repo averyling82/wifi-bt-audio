@@ -203,6 +203,11 @@ COMMON API rk_err_t FileDev_GetFirstPos(HDC dev)
 
     pstVolume = pstFileOper->pstVolume;
 
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
+
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
        return FatDev_GetFirstPos(pstFileOper->hOper);
@@ -401,7 +406,12 @@ COMMON API rk_err_t FileDev_FileSeek(HDC dev, uint32 pos, uint32 Offset)
        return RK_PARA_ERR;
     }
 
-    //rk_printf("pos = %d, Offset = %d pstVolume->VolumeType=%d\n", pos, Offset,pstVolume->VolumeType);
+    //rk_printf("pos = %d, Offset = %d", pos, Offset);
+
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
@@ -546,6 +556,17 @@ COMMON API rk_err_t  FileDev_DeleteVolume(HDC dev, VOLUME_INF * pstVolumeInf)
      pstVolumeInf->hVolume = pstVolumeClass->hVolume;
      pstVolumeClass->VolumeType = 0;
 
+
+    for (i = 0; i < MAX_FILE_HANDLE; i++)
+    {
+        if (pstFileDev->stFileOper[i].pstVolume == pstVolumeClass)
+        {
+            pstFileDev->stFileOper[i].pstVolume = NULL;
+        }
+    }
+
+
+
      return RK_SUCCESS;
 
 }
@@ -681,6 +702,11 @@ COMMON API rk_err_t FileDev_GetTotalFile(HDC dev, uint8 * ExtName, uint8 Attr)
 
     pstVolume = pstFileOper->pstVolume;
 
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
+
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
        return FatDev_GetTotalFile(pstFileOper->hOper, ExtName, Attr);
@@ -709,6 +735,11 @@ COMMON API rk_err_t FileDev_GetTotalDir(HDC dev, uint8 * ExtName, uint8 Attr)
     }
 
     pstVolume = pstFileOper->pstVolume;
+
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
@@ -742,6 +773,11 @@ COMMON API rk_err_t FileDev_CloseDir(HDC dev)
     }
 
     pstVolume = pstFileOper->pstVolume;
+
+    if(pstVolume == NULL)
+    {
+        return RK_ERROR;
+    }
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
@@ -777,6 +813,11 @@ COMMON API rk_err_t FileDev_CloseFile(HDC dev)
     }
 
     pstVolume = pstFileOper->pstVolume;
+
+    if(pstVolume == NULL)
+    {
+        return RK_ERROR;
+    }
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
@@ -832,6 +873,11 @@ COMMON API HDC FileDev_OpenFile(HDC dev, HDC hFather, uint32 Mode, FILE_ATTR * p
     }
 
     pstFileOper->CurOffset = 0;
+
+    if(pstVolume ==  NULL)
+    {
+        return (HDC)RK_ERROR;
+    }
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
@@ -890,6 +936,11 @@ COMMON API HDC FileDev_OpenDir(HDC dev, HDC hFather, uint32 Mode, FILE_ATTR * ps
         pstVolume = &pstFileDev->stVolume[pstFileAttr->Path[0] - 'A'];
     }
 
+    if(pstVolume ==  NULL)
+    {
+        return (HDC)RK_ERROR;
+    }
+
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
        pstFileOper->hOper = FatDev_OpenDir(pstVolume->hVolume,((FILE_OPER_CLASS *)hFather)->hOper, pstFileAttr);
@@ -929,6 +980,11 @@ COMMON API rk_err_t FileDev_GetFileName(HDC dev,  uint16 * FileName)
 
     pstVolume = pstFileOper->pstVolume;
 
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
+
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
        return FatDev_GetFileName(pstFileOper->hOper, FileName);
@@ -957,6 +1013,11 @@ COMMON API rk_err_t FileDev_NextFile(HDC dev, uint8 FileMaskAttr, uint8 * ExtNam
     }
 
     pstVolume = pstFileOper->pstVolume;
+
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
@@ -987,6 +1048,11 @@ COMMON API rk_err_t FileDev_PrevFile(HDC dev, uint8 FileMaskAttr, uint8 * ExtNam
 
     pstVolume = pstFileOper->pstVolume;
 
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
+
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
        return FatDev_PrevFile(pstFileOper->hOper,FileMaskAttr, ExtName, pstFileAttr);
@@ -1016,6 +1082,11 @@ COMMON API rk_err_t FileDev_NextDir(HDC dev, uint8 DirMaskAttr, FILE_ATTR * pstF
 
     pstVolume = pstFileOper->pstVolume;
 
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
+
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
        return FatDev_NextDir(pstFileOper->hOper,DirMaskAttr, pstFileAttr);
@@ -1044,6 +1115,11 @@ COMMON API rk_err_t FileDev_PrevDir(HDC dev, uint8 DirMaskAttr, FILE_ATTR * pstF
     }
 
     pstVolume = pstFileOper->pstVolume;
+
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
@@ -1079,6 +1155,11 @@ COMMON API rk_err_t FileDev_DeleteFile(HDC dev,  HDC hFather, FILE_ATTR * pstFil
     else
     {
         pstVolume = &pstFileDev->stVolume[pstFileAttr->Path[0] - 'A'];
+    }
+
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
     }
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
@@ -1117,6 +1198,11 @@ COMMON API rk_err_t FileDev_DeleteDir(HDC dev,  HDC hFather, FILE_ATTR * pstFile
         pstVolume = &pstFileDev->stVolume[pstFileAttr->Path[0] - 'A'];
     }
 
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
+
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
        return FatDev_DeleteDir(pstVolume->hVolume, hFather, pstFileAttr);
@@ -1151,6 +1237,11 @@ COMMON API rk_err_t FileDev_CreateFile(HDC dev, HDC hFather, FILE_ATTR * pstFile
     else
     {
         pstVolume = &pstFileDev->stVolume[pstFileAttr->Path[0] - 'A'];
+    }
+
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
     }
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
@@ -1189,6 +1280,11 @@ COMMON API rk_err_t FileDev_CreateDir(HDC dev, HDC hFather, FILE_ATTR * pstFileA
         pstVolume = &pstFileDev->stVolume[pstFileAttr->Path[0] - 'A'];
     }
 
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
+
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
        return FatDev_CreateDir(pstVolume->hVolume, hFather, pstFileAttr);
@@ -1219,6 +1315,11 @@ COMMON FUN rk_err_t FileDev_WriteFile(HDC dev, uint8* buffer, uint32 len)
     }
 
     pstVolume = pstFileOper->pstVolume;
+
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
 
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
@@ -1386,6 +1487,11 @@ COMMON FUN rk_err_t FileDev_ReadFile(HDC dev, uint8* buffer, uint32 len)
 
     pstVolume = pstFileOper->pstVolume;
 
+    if(pstVolume ==  NULL)
+    {
+        return RK_ERROR;
+    }
+
     if(pstVolume->VolumeType == VOLUME_TYPE_FAT)
     {
         ret = FatDev_ReadFile(pstFileOper->hOper, buffer, len);
@@ -1527,7 +1633,7 @@ SHELL API rk_err_t FileDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
@@ -1539,7 +1645,7 @@ SHELL API rk_err_t FileDev_Shell(HDC dev, uint8 * pstr)
 
 
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }

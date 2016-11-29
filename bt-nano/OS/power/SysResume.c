@@ -481,12 +481,13 @@ COMMON FUN void MemResume(void)
 _SYSTEM_SYSSEVER_SYSRESUME_SHELL_DATA_
 static SHELL_CMD ShellSysResumeName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "mc",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "bsp",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "pcb",SysResumeShellPcb,"NULL","NULL",
+    "mc",SysResumeShellMc,"NULL","NULL",
+    "del",SysResumeShellDel,"NULL","NULL",
+    "test",SysResumeShellTest,"NULL","NULL",
+#ifdef SHELL_BSP
+    "bsp",SysResumeShellBsp,"NULL","NULL",
+#endif
     "\b",NULL,"NULL","NULL",
 };
 
@@ -494,11 +495,10 @@ static SHELL_CMD ShellSysResumeName[] =
 _SYSTEM_SYSSEVER_SYSRESUME_SHELL_DATA_
 static SHELL_CMD ShellSysResumeBspName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "reset",NULL,"NULL","NULL",
-    "maskrom",NULL,"NULL","NULL",
-    "elect",NULL,"NULL","NULL",
-    "sysresume",NULL,"NULL","NULL",
+    "reset",ShellSysResumeBspReset,"NULL","NULL",
+    "maskrom",ShellSysResumeBspMaskRom,"NULL","NULL",
+    "elect",ShellSysResumeBspElect,"NULL","NULL",
+    "sysresume",ShellSysResumeBspSysResume,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -525,13 +525,19 @@ SHELL API rk_err_t SysResume_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellSysResumeName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -548,38 +554,10 @@ SHELL API rk_err_t SysResume_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                      //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellSysResumeName[i].CmdDes, pItem);
+    if(ShellSysResumeName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //pcb
-            ret = SysResumeShellPcb(dev,pItem);
-            break;
-
-        case 0x01:  //mc
-            ret = SysResumeShellMc(dev,pItem);
-            break;
-
-        case 0x02:  //del
-            ret = SysResumeShellDel(dev,pItem);
-            break;
-
-        case 0x03:  //test
-            ret = SysResumeShellTest(dev,pItem);
-            break;
-
-        case 0x04:  //bsp
-            #ifdef SHELL_BSP
-            ret = SysResumeShellBsp(dev,pItem);
-            #endif
-            break;
-         case 0x05: //help
-           #ifdef SHELL_HELP
-           ret = SysResumeShellHelp(dev,pItem);
-           #endif
-           break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellSysResumeName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 }
@@ -647,21 +625,6 @@ SHELL FUN rk_err_t ShellSysResumeBspReset(HDC dev, uint8 * pstr)
     return RK_SUCCESS;
 }
 
-#ifdef SHELL_HELP
-/*******************************************************************************
-** Name: ShellSysResumeBspHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:aaron.sun
-** Date: 2014.11.11
-** Time: 11:46:11
-*******************************************************************************/
-_SYSTEM_SYSSEVER_SYSRESUME_SHELL_
-SHELL FUN rk_err_t ShellSysResumeBspHelp(HDC dev, uint8 * pstr)
-{
-    return RK_SUCCESS;
-}
-#endif
 
 /*******************************************************************************
 ** Name: SysResumeShellBsp
@@ -677,13 +640,19 @@ SHELL FUN rk_err_t SysResumeShellBsp(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellSysResumeBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -700,53 +669,16 @@ SHELL FUN rk_err_t SysResumeShellBsp(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                      //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellSysResumeBspName[i].CmdDes, pItem);
+    if(ShellSysResumeBspName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //help
-            #ifdef SHELL_HELP
-            ret = ShellSysResumeBspHelp(dev,pItem);
-            #endif
-            break;
-
-        case 0x01:  //reset
-            ret = ShellSysResumeBspReset(dev,pItem);
-            break;
-
-        case 0x02:  //maskrom
-            ret = ShellSysResumeBspMaskRom(dev,pItem);
-            break;
-
-        case 0x03:  //elect
-            ret = ShellSysResumeBspElect(dev,pItem);
-            break;
-
-        case 0x04:  //sysresume
-            ret = ShellSysResumeBspSysResume(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellSysResumeBspName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 #endif
 
-#ifdef SHELL_HELP
-/*******************************************************************************
-** Name: SysResumeShellHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:aaron.sun
-** Date: 2014.11.10
-** Time: 17:52:07
-*******************************************************************************/
-_SYSTEM_SYSSEVER_SYSRESUME_SHELL_
-SHELL FUN rk_err_t SysResumeShellHelp(HDC dev, uint8 * pstr)
-{
-    return RK_SUCCESS;
-}
-#endif
 
 /*******************************************************************************
 ** Name: SysResumeShellTest
@@ -759,6 +691,14 @@ SHELL FUN rk_err_t SysResumeShellHelp(HDC dev, uint8 * pstr)
 _SYSTEM_SYSSEVER_SYSRESUME_SHELL_
 SHELL FUN rk_err_t SysResumeShellTest(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 
@@ -773,6 +713,14 @@ SHELL FUN rk_err_t SysResumeShellTest(HDC dev, uint8 * pstr)
 _SYSTEM_SYSSEVER_SYSRESUME_SHELL_
 SHELL FUN rk_err_t SysResumeShellDel(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 
@@ -787,6 +735,14 @@ SHELL FUN rk_err_t SysResumeShellDel(HDC dev, uint8 * pstr)
 _SYSTEM_SYSSEVER_SYSRESUME_SHELL_
 SHELL FUN rk_err_t SysResumeShellMc(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 /*******************************************************************************
@@ -800,6 +756,14 @@ SHELL FUN rk_err_t SysResumeShellMc(HDC dev, uint8 * pstr)
 _SYSTEM_SYSSEVER_SYSRESUME_SHELL_
 SHELL FUN rk_err_t SysResumeShellPcb(HDC dev, uint8 * pstr)
 {
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 #endif

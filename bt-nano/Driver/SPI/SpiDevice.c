@@ -64,9 +64,9 @@ typedef struct _SPI_CONFIG
 
 typedef  struct _SPI_DEVICE_CLASS
 {
-	DEVICE_CLASS stSpiDevice;
-	pSemaphore osSpiOperReqSem;
-	pSemaphore osSpiOperSem;
+    DEVICE_CLASS stSpiDevice;
+    pSemaphore osSpiOperReqSem;
+    pSemaphore osSpiOperSem;
     pSemaphore lock;
     uint32 CurCh;
     SPI_CONFIG stConfig[SPI_MAX_CH];
@@ -718,24 +718,24 @@ INIT FUN rk_err_t SpiDevSuspend(HDC dev)
 _DRIVER_SPI_SPIDEVICE_SHELL_
 static SHELL_CMD ShellSpiName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "mc",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
-    "bsp",NULL,"NULL","NULL",
+    "pcb",SpiDevShellPcb,"list spidev pcb inf","spi.pcb [object id]",
+    "create",SpiDevShellMc,"create spidevice","spi.create",
+    "delete",SpiDevShellDel,"delete spidevice","spi.delete",
+    "test",SpiDevShellTest,"test spidevice","spi.test",
+#ifdef SHELL_BSP
+    "bsp",SpiDevShellBsp,"NULL","NULL",
+#endif
     "\b",NULL,"NULL","NULL",
 };
 #ifdef SHELL_BSP
 static SHELL_CMD ShellSpiBspName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "init",NULL,"NULL","NULL",
-    "deinit",NULL,"NULL","NULL",
-    "dmaw",NULL,"NULL","NULL",
-    "dmawr",NULL,"NULL","NULL",
-    "piow",NULL,"NULL","NULL",
-    "piowr",NULL,"NULL","NULL",
+    "init",SpiDevShellBspInit,"NULL","NULL",
+    "deinit",SpiDevShellBspDeinit,"NULL","NULL",
+    "dmaw",SpiDevShellBspDMA_Write,"NULL","NULL",
+    "dmawr",SpiDevShellBspDMA_ReadWrite,"NULL","NULL",
+    "piow",SpiDevShellBspPIO_Write,"NULL","NULL",
+    "piowr",SpiDevShellBspPIO_ReadWrite,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 #endif
@@ -786,13 +786,19 @@ SHELL API rk_err_t SpiDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellSpiName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -808,35 +814,10 @@ SHELL API rk_err_t SpiDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                                            //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellSpiName[i].CmdDes, pItem);
+    if(ShellSpiName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00: //pcb
-            ret = SpiDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01: //mc
-            ret = SpiDevShellMc(dev,pItem);
-            break;
-
-        case 0x02://del
-            ret = SpiDevShellDel(dev, pItem);
-            break;
-
-        case 0x03://test
-            ret = SpiDevShellTest(dev, pItem);
-            break;
-
-        case 0x04://help
-            ret = SpiDevShellHelp(dev, pItem);
-            break;
-#ifdef SHELL_BSP
-        case 0x05://bsp
-            ret = SpiDevShellBsp(dev, pItem);
-            break;
-#endif
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellSpiName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 
@@ -1378,61 +1359,6 @@ SHELL FUN rk_err_t SpiDevShellBspInit(HDC dev, uint8 * pstr)
 }
 #endif
 
-#ifdef SHELL_HELP
-/*******************************************************************************
-** Name: SpiDevShellBspHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:hj
-** Date: 2014.11.11
-** Time: 15:31:56
-*******************************************************************************/
-_DRIVER_SPI_SPIDEVICE_SHELL_
-SHELL FUN rk_err_t SpiDevShellBspHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
-
-    if( StrLenA((uint8 *) pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("Spi.Bsp命令集提供了一系列的命令对SPI板级驱动接口进行测试\r\n");
-    rk_print_string("测试命令如下:\r\n");
-    rk_print_string("init      初始化 Spi          \r\n");
-    rk_print_string("deinit    反初始化 Spi        \r\n");
-    //rk_print_string("start     测试I2S             \r\n");
-    //rk_print_string("stop      关闭I2S             \r\n");
-
-    return RK_SUCCESS;
-}
-
-/*******************************************************************************
-** Name: SpiDevShellHelp
-** Input:HDC dev, const uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.Ma
-** Date: 2014.11.4
-** Time: 9:39:50
-*******************************************************************************/
-_DRIVER_SPI_SPIDEVICE_SHELL_
-SHELL FUN rk_err_t SpiDevShellHelp(HDC dev,  uint8 * pstr)
-{
-    pstr--;
-
-    if( StrLenA((uint8 *) pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("spi命令集提供了一系列的命令对spi进行操作\r\n");
-    rk_print_string("spi包含的子命令如下:           \r\n");
-    rk_print_string("pcb       显示pcb信息         \r\n");
-    rk_print_string("mc        创建spi device         \r\n");
-    rk_print_string("del       删除spi device         \r\n");
-    rk_print_string("test      测试spi device命令    \r\n");
-    rk_print_string("help      显示spi device命令帮助信息  \r\n");
-    rk_print_string("bsp       板级支持包命令  \r\n");
-
-    return RK_SUCCESS;
-}
-#endif
 #ifdef SHELL_BSP
 
 /*******************************************************************************
@@ -1449,13 +1375,19 @@ SHELL FUN rk_err_t SpiDevShellBsp(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellSpiBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1470,37 +1402,11 @@ SHELL FUN rk_err_t SpiDevShellBsp(HDC dev, uint8 * pstr)
 
     pItem += StrCnt;
     pItem++;                                            //remove '.',the point is the useful item
-    //DEBUG("I2sDevShellBsp: %d",i);
-    switch (i)
+
+    ShellHelpDesDisplay(dev, ShellSpiBspName[i].CmdDes, pItem);
+    if(ShellSpiBspName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //bsp help
-        #ifdef SHELL_HELP
-            ret = SpiDevShellBspHelp(dev,pItem);
-        #endif
-            break;
-
-        case 0x01:  //init
-            ret = SpiDevShellBspInit(dev,pItem);
-            break;
-
-        case 0x02:  //deinit
-            ret = SpiDevShellBspDeinit(dev,pItem);
-            break;
-        case 0x03:  //DMA_Write
-            ret = SpiDevShellBspDMA_Write(dev,pItem);
-            break;
-        case 0x04:  //DMA_Read
-            ret = SpiDevShellBspDMA_ReadWrite(dev,pItem);
-            break;
-        case 0x05:  //PIO_Write
-            ret = SpiDevShellBspPIO_Write(dev,pItem);
-            break;
-        case 0x06:  //PIO_ReadWrite
-            ret = SpiDevShellBspPIO_ReadWrite(dev,pItem);
-            break;
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellSpiBspName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 }
@@ -1517,24 +1423,20 @@ SHELL FUN rk_err_t SpiDevShellBsp(HDC dev, uint8 * pstr)
 _DRIVER_SPI_SPIDEVICE_SHELL_
 SHELL FUN rk_err_t SpiDevShellTest(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("spi.test : test cmd.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
-	return RK_SUCCESS;
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
+    return RK_SUCCESS;
 }
 /*******************************************************************************
 ** Name: SpiDevShellDel
@@ -1547,22 +1449,18 @@ SHELL FUN rk_err_t SpiDevShellTest(HDC dev, uint8 * pstr)
 _DRIVER_SPI_SPIDEVICE_SHELL_
 SHELL FUN rk_err_t SpiDevShellDel(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("spi.del : del cmd.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
 	return RK_SUCCESS;
 }
@@ -1580,21 +1478,16 @@ SHELL FUN rk_err_t SpiDevShellMc(HDC dev, uint8 * pstr)
      SPI_DEV_ARG stSpiArg;
      rk_err_t ret;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("spi.mc : mc cmd.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
+     if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+     {
+         return RK_SUCCESS;
+     }
 
-	return RK_SUCCESS;
+     if(*(pstr - 1) == '.')
+     {
+        return RK_ERROR;
+     }
+
      stSpiArg.Ch = 0;
      stSpiArg.CtrlMode = SPI_CTL_MODE;
      stSpiArg.SpiRate = SPI_BUS_CLK;
@@ -1619,24 +1512,19 @@ SHELL FUN rk_err_t SpiDevShellMc(HDC dev, uint8 * pstr)
 _DRIVER_SPI_SPIDEVICE_SHELL_
 SHELL FUN rk_err_t SpiDevShellPcb(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("spi.pcb : pcb info cmd.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
-	return RK_SUCCESS;
+    return RK_SUCCESS;
 }
 
 

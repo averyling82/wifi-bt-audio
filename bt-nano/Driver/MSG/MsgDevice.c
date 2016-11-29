@@ -465,10 +465,10 @@ INIT FUN rk_err_t MsgDevInit(MSG_DEVICE_CLASS * pstMsgDev)
 _DRIVER_MSG_MSGDEVICE_SHELL_DATA_
 static SHELL_CMD ShellMsgName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
+    "pcb",MsgDevShellPcb,"list msg device pcb inf","msg.pcb [msg device object id]",
+    "create",MsgDevShellCreate,"create a msg device","msg.create [msg device object id]",
+    "del",MsgDevShellDel,"delete a msg device","msg.delete [msg device object id]",
+    "test",MsgDevShellTest,"test msg device","msg.test [msg device object id]",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -493,10 +493,17 @@ SHELL API rk_err_t MsgDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellMsgName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -511,28 +518,13 @@ SHELL API rk_err_t MsgDev_Shell(HDC dev, uint8 * pstr)
 
     pItem += StrCnt;
     pItem++;
-    switch (i)
+
+    ShellHelpDesDisplay(dev, ShellMsgName[i].CmdDes, pItem);
+    if(ShellMsgName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = MsgDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = MsgDevShellCreate(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = MsgDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:
-            ret = MsgDevShellTest(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellMsgName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 
 }
@@ -559,6 +551,16 @@ SHELL FUN rk_err_t MsgDevShellTest(HDC dev, uint8 * pstr)
 {
     HDC hMsgDev;
     uint32 DevID;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     //Get MsgDev ID...
     if(StrCmpA(pstr, "0", 1) == 0)
@@ -602,6 +604,16 @@ SHELL FUN rk_err_t MsgDevShellDel(HDC dev, uint8 * pstr)
 {
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     //Get MsgDev ID...
     if(StrCmpA(pstr, "0", 1) == 0)
     {
@@ -636,6 +648,17 @@ SHELL FUN rk_err_t MsgDevShellCreate(HDC dev, uint8 * pstr)
     MSG_DEV_ARG stMsgDevArg;
     rk_err_t ret;
     uint32 DevID;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     if(StrCmpA(pstr, "0", 1) == 0)
     {
@@ -677,23 +700,18 @@ SHELL FUN rk_err_t MsgDevShellPcb(HDC dev, uint8 * pstr)
     MSG_DEVICE_CLASS * pstMsgDev;
     uint32 i;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA((uint8 *)pstr, "help", 4) == 0)
-        {
-            rk_print_string("msg.pcb : msg pcb info cmd.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-    pstr++;
-#endif
     // TODO:
     //add other code below:
     //...
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     DevID = String2Num(pstr);
 

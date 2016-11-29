@@ -773,7 +773,7 @@ rk_err_t I2sRxDev_Idle(HDC dev)
     }
 }
 
-rk_err_t I2sDev_Idle(HDC dev)
+rk_err_t I2sTxDev_Idle(HDC dev)
 {
     I2S_DEVICE_CLASS * pstI2SDev =  (I2S_DEVICE_CLASS *)(dev);
     if(pstI2SDev->WriteBusy == 0)
@@ -1356,7 +1356,7 @@ rk_err_t I2sDevSuspend(HDC dev, uint32 Level)
 
     }
 
-    while(I2sDev_Idle(pstI2sDev) == RK_ERROR)
+    while(I2sTxDev_Idle(pstI2sDev) == RK_ERROR)
     {
 
     }
@@ -1386,7 +1386,7 @@ rk_err_t I2SDev_Delete(uint32 DevID, void * arg)
 
     }
 
-    while(I2sDev_Idle(gpstI2sDevISRHandler[DevID]) == RK_ERROR)
+    while(I2sTxDev_Idle(gpstI2sDevISRHandler[DevID]) == RK_ERROR)
     {
 
     }
@@ -1461,37 +1461,36 @@ rk_err_t I2sDevInit(I2S_DEVICE_CLASS * pstI2SDev)
 #ifdef CODEC_24BIT //24bit
     ret = I2sDev_Control(pstI2SDev, I2S_DEVICE_INIT_CMD, &stI2sDevArg);
 #else
-    //ACodec_Set_I2S_Mode(TFS_TX_I2S_MODE,I2S_DATA_WIDTH16,IBM_TX_BUS_MODE_NORMAL,I2S_MST_MASTER);
+    //ACodec_Set_I2S_TX_Mode(TFS_TX_I2S_MODE,I2S_DATA_WIDTH16,IBM_TX_BUS_MODE_NORMAL,I2S_MST_MASTER);
     ret = I2sDev_Control(pstI2SDev, I2S_DEVICE_INIT_CMD, &stI2sDevArg);
 #endif
     return ret;
 }
+
+
 
 #ifdef _I2S_DEV_SHELL_
 
 _DRIVER_I2S_I2SDEVICE_SHELL_DATA_
 static SHELL_CMD ShellI2SName[] =
 {
-    "pcb",I2SShellPcb,"I2s.pcb show I2s pcb info","NULL",
-    "create",I2SDevShellCreate,"create I2s device","NULL",
-    "delete",I2SDevShellDel,"delete I2s device","NULL",
-    "test",I2sDevShellTest,"I2s test","NULL",
-    "help",I2SShellHelp,"list for I2s shell cmd","NULL",
+    "pcb",I2SShellPcb,"I2s.pcb show I2s pcb info","i2s.pcb [device object id]",
+    "create",I2SDevShellCreate,"create I2s device","i2s.create [device object id]",
+    "delete",I2SDevShellDel,"delete I2s device","i2s.delete [device object id]",
+    "test",I2sDevShellTest,"I2s test","i2s.test",
     "\b",NULL,"NULL","NULL",                          // the end
 };
 
 #ifdef SHELL_BSP
 static SHELL_CMD ShellI2sBspName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "init",NULL,"NULL","NULL",
-    "deinit",NULL,"NULL","NULL",
-    "dmaw",NULL,"NULL","NULL",
-    "dmar",NULL,"NULL","NULL",
-    "piow",NULL,"NULL","NULL",
-    "pior",NULL,"NULL","NULL",
-    "SampleRate",NULL,"NULL","NULL",
-    "alc5633q",NULL,"NULL","NULL",,//8
+    "init",I2sDevShellBspInit,"NULL","NULL",
+    "deinit",I2sDevShellBspDeinit,"NULL","NULL",
+    "dmaw",I2sDevShellBspDMA_Write,"NULL","NULL",
+    "dmar",I2sDevShellBspDMA_RW,"NULL","NULL",
+    "piow",I2sDevShellBspPIO_Write,"NULL","NULL",
+    "pior",I2sDevShellBspPIO_Read,"NULL","NULL",
+    "SampleRate",I2sDevShellSampleRateTest,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 #endif
@@ -1516,18 +1515,24 @@ I2S_mode_t I2S_TEST_MODE;
 eI2s_DEV I2S_DEV_TEST;
 
 _DRIVER_I2S_I2SDEVICE_SHELL_
-SHELL API rk_err_t I2SShell(HDC dev,  uint8 * pstr)
+SHELL API rk_err_t I2SDev_Shell(HDC dev,  uint8 * pstr)
 {
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellI2SName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1543,56 +1548,12 @@ SHELL API rk_err_t I2SShell(HDC dev,  uint8 * pstr)
     pItem += StrCnt;
     pItem++;                  //remove '.',the point is the useful item
 
-    ShellI2SName[i].ShellCmdParaseFun(dev, pItem);
-/*
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellI2SName[i].CmdDes, pItem);
+    if(ShellI2SName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //pcb
-            ret = I2SShellPcb(dev,pItem);
-            break;
-
-        case 0x01:  //open
-            ret = I2SShellOpen(dev,pItem);
-            break;
-
-        case 0x02:  //test
-            ret = I2sDevShellTest(dev,pItem);
-            break;
-
-        case 0x03:  //bsp
-#ifdef SHELL_BSP
-            ret = I2sDevShellBsp(dev,pItem);
-#endif
-            break;
-
-        case 0x04:  //help
-#ifdef SHELL_HELP
-            ret = I2SShellHelp(dev,pItem);
-#endif
-            break;
-
-        case 0x05:  //resume
-            //ret = I2SShellResume(dev,pItem);
-            break;
-
-        case 0x06:  //read
-            //ret = I2SShellRead(dev,pItem);
-            break;
-
-        case 0x07:  //write
-            //ret = I2SShellWrite(dev,pItem);
-            break;
-
-        case 0x08:  //control
-            //ret = I2SShellControl(dev,pItem);
-            break;
-
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellI2SName[i].ShellCmdParaseFun(dev, pItem);
     }
-*/
+
     return ret;
 }
 
@@ -2820,69 +2781,7 @@ SHELL FUN rk_err_t I2sDevShellBspInit(HDC dev, uint8 * pstr)
 
 }
 #endif
-#ifdef SHELL_HELP
-/*******************************************************************************
-** Name: I2sDevShellBspHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:hj
-** Date: 2014.11.11
-** Time: 14:56:46
-*******************************************************************************/
-_DRIVER_I2S_I2SDEVICE_SHELL_
-SHELL FUN rk_err_t I2sDevShellBspHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
 
-    if (StrLenA(pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("I2s.Bsp?????????????I2S??????????\r\n");
-    rk_print_string("??????:\r\n");
-    rk_print_string("init      ??? I2S                                    \r\n");
-    rk_print_string("deinit    ???? I2S                                  \r\n");
-    rk_print_string("test SampleRate      ??I2S master  ???             \r\n");
-    rk_print_string("start     ??I2S                                       \r\n");
-    rk_print_string("stop      ??I2S                                       \r\n");
-    return RK_SUCCESS;
-}
-/*******************************************************************************
-** Name: I2SShellHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.ma
-** Date: 2014.11.3
-** Time: 10:57:25
-*******************************************************************************/
-_DRIVER_I2S_I2SDEVICE_SHELL_
-SHELL FUN rk_err_t I2SShellHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
-
-    if ( StrLenA( pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("usage: I2s [.pcb] [.create] [.delete] [.help]   \r\n\n");
-
-    rk_print_string("The most commonly used I2s commands are:\r\n");
-
-    rk_print_string("pcb        I2s pcb info\r\n");
-    rk_print_string("create     create I2s device\r\n");
-    rk_print_string("delete     delete I2s device\r\n");
-    rk_print_string("help       I2s the most commonly used I2s commands list\r\n");
-
-    //rk_print_string("test      ??i2s             \r\n");
-    //rk_print_string("close     ??i2s             \r\n");
-    //rk_print_string("suspend   suspend i2s         \r\n");
-    //rk_print_string("resume    resume i2s          \r\n");
-    //rk_print_string("read      read                \r\n");
-    //rk_print_string("write     write               \r\n");
-    //rk_print_string("control   control i2s         \r\n");
-
-    return RK_SUCCESS;
-
-}
-#endif
 #ifdef SHELL_BSP
 
 /*******************************************************************************
@@ -2899,13 +2798,19 @@ SHELL FUN rk_err_t I2sDevShellBsp(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellI2sBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -2921,47 +2826,16 @@ SHELL FUN rk_err_t I2sDevShellBsp(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                                                 //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellI2sBspName[i].CmdDes, pItem);
+    if(ShellI2sBspName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //bsp help
-#ifdef SHELL_HELP
-            ret = I2sDevShellBspHelp(dev,pItem);
-#endif
-            break;
-
-        case 0x01:  //init
-            ret = I2sDevShellBspInit(dev,pItem);
-            //ret = I2sDevShellSampleRateTest(dev,pItem);
-            break;
-
-        case 0x02:  //deinit
-            ret = I2sDevShellBspDeinit(dev,pItem);
-            break;
-        case 0x03:  //DMA_Wtite
-            ret = I2sDevShellBspDMA_Write(dev,pItem);
-            break;
-        case 0x04:  //DMA_Read
-            ret = I2sDevShellBspDMA_RW(dev,pItem);
-            break;
-        case 0x05:  //PIO_Wtite
-            ret = I2sDevShellBspPIO_Write(dev,pItem);
-            break;
-        case 0x06:  //PIO_Read
-            ret = I2sDevShellBspPIO_Read(dev,pItem);
-            break;
-        case 0x07:  //SampleRateTest
-            ret = I2sDevShellSampleRateTest(dev,pItem);
-            break;
-        //case 0x08:  //5633test
-        //    ret = I2sDevShell5633_Test(dev,pItem);
-        //    break;
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellI2sBspName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 #endif
+
 /*******************************************************************************
 ** Name: I2SShellPcb
 ** Input:HDC dev, uint8 * pstr
@@ -2975,19 +2849,16 @@ rk_err_t I2SShellPcb(HDC dev, uint8 * pstr)
 {
     uint32 DevID;
     I2S_DEVICE_CLASS * pstI2sDev;
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2s.pcb : pcb info\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     DevID = String2Num(pstr);
 
@@ -3064,19 +2935,16 @@ rk_err_t I2sDevShellTest(HDC dev, uint8 * pstr)
     HDC hExDev;
     I2S_DEVICE_CONFIG_REQ_ARG stArg;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2s.test : test i2s    \r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
 #if 1
 
@@ -3132,20 +3000,6 @@ rk_err_t I2SShellOpen(HDC dev,  uint8 * pstr)
     uint32 i,j;
     HDC hExDev;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2s.open : open i2s    \r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     pDev = RKDev_Open(DEV_CLASS_I2S, I2S_DEV0, NOT_CARE);
     if(pDev != NULL)
     {
@@ -3168,6 +3022,17 @@ SHELL FUN rk_err_t I2SDevShellDel(HDC dev, uint8 * pstr)
     uint32 DevID;
     I2S_DEV_ARG stI2Sarg;
     //Get I2SDev ID...
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     if (StrCmpA(pstr, "0", 1) == 0)
     {
         DevID = 0;
@@ -3214,19 +3079,15 @@ SHELL FUN rk_err_t I2SDevShellCreate(HDC dev, uint8 * pstr)
     rk_err_t ret;
     uint32 DevID;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("usbotg.mc : usbotgdev mc cmd.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -3270,70 +3131,6 @@ SHELL FUN rk_err_t I2SDevShellCreate(HDC dev, uint8 * pstr)
     printf("\nI2S RKDev_Create success\n");
 #endif
     return RK_SUCCESS;
-}
-
-
-//#else
-_DRIVER_I2S_I2SDEVICE_SHELL_
-SHELL API rk_err_t I2SDev_Shell(HDC dev,  uint8 * pstr)
-{
-    uint32 i = 0;
-    uint8  *pItem;
-    uint16 StrCnt = 0;
-    rk_err_t   ret;
-
-    uint8 Space;
-
-    StrCnt = ShellItemExtract(pstr,&pItem, &Space);
-
-    if (StrCnt == 0)
-    {
-        return RK_ERROR;
-    }
-
-    ret = ShellCheckCmd(ShellI2SName, pItem, StrCnt);
-    if (ret < 0)
-    {
-        return RK_ERROR;
-    }
-
-    i = (uint32)ret;
-
-    pItem += StrCnt;
-    pItem++;                                                 //remove '.',the point is the useful item
-
-    switch (i)
-    {
-        case 0x00:
-            //ret = I2SDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = I2SDevShellCreate(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = I2SDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:
-            //ret = I2SDevShellTest(dev,pItem);
-            break;
-
-        case 0x04:
-            //ret = I2SDevShellHelp(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
-    }
-    return ret;
-}
-#else
-rk_err_t I2SDev_Shell(HDC dev,  uint8 * pstr)
-{
-
 }
 #endif
 

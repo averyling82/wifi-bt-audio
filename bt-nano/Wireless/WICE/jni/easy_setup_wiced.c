@@ -381,8 +381,6 @@ int easy_setup_start()
     /* LED show status, could be removed */
     wiced_gpio_output_high( WICED_LED1 );
 
-
-
     rkos_memset(&easy_join_ap, 0x00, sizeof(WIFI_AP));
     result = &ws->result;
     easy_join_ap.ap_ssid_len = result->ap_ssid.len;
@@ -391,15 +389,15 @@ int easy_setup_start()
     rkos_memcpy(easy_join_ap.security_key, result->security_key, easy_join_ap.security_key_length);
     rkos_memcpy(easy_join_ap.ap_bssid, result->ap_bssid.octet, 6);
 	/***********JJJHHH just for test*************/
-	/*AIRMUSIC-HOME test airmusic   WICED_SECURITY_WPA2_MIXED_PSK  18 8	*/
-	/*Baidu_music_0117 Good8888yeah  	WICED_SECURITY_WPA_TKIP_PSK  16 12*/
+	/*AIRMUSIC-HOME test airmusic   WICED_SECURITY_WPA2_MIXED_PSK	*/
+	/*Baidu_music_0117 Good8888yeah  	WICED_SECURITY_WPA_TKIP_PSK*/
 //	#define STA_TEST__
 #ifdef STA_TEST__
-	#define TEST_SSID "AIRMUSIC-HOME test"
-	#define TEST_SSID_LEN 18
-	#define TEST_PASSWORD "airmusic"
-	#define TEST_PASSWORD_LEN 8 
-	#define TEST_SECURITY_TYPE WICED_SECURITY_WPA2_MIXED_PSK
+	#define TEST_SSID "Baidu_music_0117"
+	#define TEST_SSID_LEN 16
+	#define TEST_PASSWORD "Good8888yeah"
+	#define TEST_PASSWORD_LEN 12 
+	#define TEST_SECURITY_TYPE WICED_SECURITY_WPA_AES_PSK
 	
 	easy_join_ap.ap_ssid_len =TEST_SSID_LEN; 
 	easy_join_ap.security_key_length=TEST_PASSWORD_LEN;

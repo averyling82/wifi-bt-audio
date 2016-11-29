@@ -1,14 +1,14 @@
+#include "bspconfig.h"
 #include "RKOS.h"
 #include "dhcpd.h"
 #include "common_subr.h"
 #include "lwip/api.h"
 #include "dhcpd_conf.h"
 #include "leases.h"
-//#include "uart_cmd.h"
 #include "lwip/dhcp.h"
 #include "lwip/sockets.h"
-
-#if 1//LWIP_DHCPD
+#include <stdint.h>
+#ifdef USE_LWIP
 
 struct dhcpOfferedAddr leases[5];
 struct dhcpd payload_out;

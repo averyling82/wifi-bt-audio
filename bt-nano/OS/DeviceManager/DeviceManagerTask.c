@@ -95,7 +95,7 @@ uint32 * DeviceList;
 rk_err_t DeviceTaskCheckIdle(HTC hTask);
 rk_err_t DeviceResume(uint32 ClassID, uint32 ObjectID);
 rk_err_t DeleteDeviceList(uint32 DeviceListID, void * arg);
-void SystemReset(void);
+void SystemReset(uint32 maskrom);
 void SystemPowerOff(void);
 rk_err_t CreateDeviceList(uint32 DeviceListID, void * arg);
 
@@ -198,6 +198,8 @@ COMMON API rk_err_t DeviceTask_DevIdleTick(void)
 
     rkos_queue_send(gpstDeviceTaskDataBlock->DeviceAskQueue, &DeviceAskQueue, 0);
 }
+
+#ifdef _FS_
 /*******************************************************************************
 ** Name: DeviceTask_LoadFs
 ** Input:uint32 DeviceListID, uint32 Mode
@@ -295,6 +297,7 @@ COMMON API rk_err_t DeviceTask_RemoveFs(uint32 DeviceListID, uint32 Mode)
     }
 
 }
+#endif
 
 /*******************************************************************************
 ** Name: DeviceTask_DeleteDeviceList
@@ -367,11 +370,12 @@ COMMON API rk_err_t DeviceTask_System_PowerOff(void)
 ** Time: 18:52:01
 *******************************************************************************/
 _OS_DEVICEMANAGER_DEVICEMANAGERTASK_COMMON_
-COMMON API rk_err_t DeviceTask_SystemReset(void)
+COMMON API rk_err_t DeviceTask_SystemReset(uint32 maskrom)
 {
     DEVICE_ASK_QUEUE DeviceAskQueue;
     DeviceAskQueue.cmd = DEVICE_CMD_SYS_RESET;
     DeviceAskQueue.Mode = ASYNC_MODE;
+    DeviceAskQueue.arg = (void *)maskrom;
 
     rkos_queue_send(gpstDeviceTaskDataBlock->DeviceAskQueue, &DeviceAskQueue, MAX_DELAY);
 }
@@ -490,6 +494,7 @@ COMMON API void DeviceTask(void)
                 break;
             }
 
+            #ifdef _FS_
             case DEVICE_CMD_REMOVE_FS:
             {
                 ret = DeviceListRemoveFs(DeviceAskQueue.DeviceListID, ((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DeviceAskQueue.DeviceListID]));
@@ -529,11 +534,10 @@ COMMON API void DeviceTask(void)
                 }
                 break;
             }
+            #endif
 
             case DEVICE_CMD_SYS_RESET:
-                //rkos_sleep(1000); //for when has sd card,need delay before system reset;
-                //DelayMs(1000);
-                SystemReset();
+                SystemReset((uint32)DeviceAskQueue.arg);
                 break;
 
             case DEVICE_CMD_SYS_POWER_OFF:
@@ -756,6 +760,7 @@ COMMON FUN rk_err_t DeleteDeviceList(uint32 DeviceListID, void * arg)
         {
             return DeleteDeviceListEmmcDataBase((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_EMMC_DATABASE]);
         }
+        #ifdef _FS_
         case DEVICE_LIST_EMMC_FS1:
         {
             return DeleteDeviceListEmmcFs1((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_EMMC_FS1]);
@@ -772,6 +777,7 @@ COMMON FUN rk_err_t DeleteDeviceList(uint32 DeviceListID, void * arg)
             return DeleteDeviceListEmmcFs3((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_EMMC_FS3]);
         }
         #endif
+        #endif
  #endif
 
  #ifdef _SPI_BOOT_
@@ -783,6 +789,7 @@ COMMON FUN rk_err_t DeleteDeviceList(uint32 DeviceListID, void * arg)
         {
             return DeleteDeviceListSpiDataBase((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_SPI_DATABASE]);
         }
+        #ifdef _FS_
         case DEVICE_LIST_SPI_FS1:
         {
             return DeleteDeviceListSpiFs1((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_SPI_FS1]);
@@ -798,6 +805,7 @@ COMMON FUN rk_err_t DeleteDeviceList(uint32 DeviceListID, void * arg)
         {
             return DeleteDeviceListSpiFs3((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_SPI_FS3]);
         }
+        #endif
         #endif
  #endif
 
@@ -837,10 +845,12 @@ COMMON FUN rk_err_t DeleteDeviceList(uint32 DeviceListID, void * arg)
         }
         #endif
 
+        #ifdef _FS_
         case DEVICE_LIST_DIR:
         {
             return DeleteDeviceListDir((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_DIR]);
         }
+        #endif
 
         case DEVICE_LIST_FIFO:
         {
@@ -870,10 +880,19 @@ err:
 ** Time: 10:50:53
 *******************************************************************************/
 _OS_DEVICEMANAGER_DEVICEMANAGERTASK_COMMON_
-COMMON FUN void SystemReset(void)
+COMMON FUN void SystemReset(uint32 maskrom)
 {
     rk_printf("power reset");
-    System_Reset(SYS_RESET_RESTART);
+    FW_LoadSegment(SEGMENT_ID_INIT, SEGMENT_OVERLAY_ALL);
+    SystemDeInit();
+    if(maskrom)
+    {
+        System_Reset(SYS_RESET_MASKROM);
+    }
+    else
+    {
+        System_Reset(SYS_RESET_RESTART);
+    }
 }
 /*******************************************************************************
 ** Name: SystemPowerOff
@@ -922,6 +941,7 @@ COMMON FUN rk_err_t CreateDeviceList(uint32 DeviceListID, void * arg)
         {
             return CreateDeviceListEmmcDataBase((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_EMMC_DATABASE]);
         }
+        #ifdef _FS_
         case DEVICE_LIST_EMMC_FS1:
         {
             return CreateDeviceListEmmcFs1((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_EMMC_FS1]);
@@ -939,6 +959,7 @@ COMMON FUN rk_err_t CreateDeviceList(uint32 DeviceListID, void * arg)
             return CreateDeviceListEmmcFs3((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_EMMC_FS3]);
         }
         #endif
+        #endif
  #endif
 
  #ifdef _SPI_BOOT_
@@ -950,6 +971,7 @@ COMMON FUN rk_err_t CreateDeviceList(uint32 DeviceListID, void * arg)
         {
             return CreateDeviceListSpiDataBase((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_SPI_DATABASE]);
         }
+        #ifdef _FS_
         case DEVICE_LIST_SPI_FS1:
         {
             return CreateDeviceListSpiFs1((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_SPI_FS1]);
@@ -965,6 +987,7 @@ COMMON FUN rk_err_t CreateDeviceList(uint32 DeviceListID, void * arg)
         {
             return CreateDeviceListSpiFs3((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_SPI_FS3]);
         }
+        #endif
         #endif
  #endif
 
@@ -1003,10 +1026,12 @@ COMMON FUN rk_err_t CreateDeviceList(uint32 DeviceListID, void * arg)
             return CreateDeviceListUsbHostMsc((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_HOST_USBMSC]);
         }
         #endif
+        #ifdef _FS_
         case DEVICE_LIST_DIR:
         {
             return CreateDeviceListDir((uint32 *)gpstDeviceTaskDataBlock->DeviceList[DEVICE_LIST_DIR]);
         }
+        #endif
 
         case DEVICE_LIST_FIFO:
         {

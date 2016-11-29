@@ -590,7 +590,7 @@ COMMON API void rkos_memory_free(void * buf)
 
     if(((size_t)buf < xHeapFirstAddr[1]) || ((size_t)buf >(xHeapFirstAddr[1] + xTotalHeapSize[1])))
     {
-        printf("\n buf error = %x", p);
+        printf("\n buf error = %x", buf);
         IntPendingSet(2);
         while(1);
     }
@@ -797,9 +797,7 @@ COMMON API void * rkos_memory_malloc(uint32 size)
     }
     else
     {
-        #ifdef _MEMORY_LEAK_CHECH_
         rk_printf("thread:%s", pcTaskGetTaskName(pxCurrentTCB));
-        #endif
 
         return NULL;
     }

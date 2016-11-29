@@ -35,46 +35,6 @@
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-typedef enum _MEDIA_MSGBOX_FILE_CMD
-{
-    MEDIA_MSGBOX_CMD_FILE_NULL = 100,
-
-    MEDIA_MSGBOX_CMD_FILE_SEEK,
-    MEDIA_MSGBOX_CMD_FILE_SEEK_CMPL,
-
-    MEDIA_MSGBOX_CMD_FILE_READ,
-    MEDIA_MSGBOX_CMD_FILE_READ_CMPL,
-
-    MEDIA_MSGBOX_CMD_FILE_WRITE,
-    MEDIA_MSGBOX_CMD_FILE_WRITE_CMPL,
-
-    MEDIA_MSGBOX_CMD_FILE_TELL,
-    MEDIA_MSGBOX_CMD_FILE_TELL_CMPL,
-
-    MEDIA_MSGBOX_CMD_FILE_GET_LENGTH,
-    MEDIA_MSGBOX_CMD_FILE_GET_LENGTH_CMPL,
-
-}MEDIA_MSGBOX_FILE_CMD;
-
-
-
-typedef enum _FILE_STREAM_CMD
-{
-    FILE_STREAM_CMD_OPEN,
-    FILE_STREAM_CMD_CLOSE,
-    FILE_STREAM_CMD_SEEK,
-    FILE_STREAM_CMD_GET,
-    FILE_STREAM_CMD_LOSE,
-
-    FILE_STREAM_CMD_SET_SEARCH_AREA,
-    FILE_STREAM_CMD_SET_SEARCH_MODE,
-    FILE_STREAM_CMD_SEARCH_NEXT,
-    FILE_STREAM_CMD_SEARCH_PREV,
-
-    FILE_STREAM_CMD_NUM
-
-}FILE_STREAM_CMD;
-
 #define _APP_FILESTREAM_FILESTREAMTASK_COMMON_  __attribute__((section("app_filestream_filestreamtask_common")))
 #define _APP_FILESTREAM_FILESTREAMTASK_INIT_  __attribute__((section("app_filestream_filestreamtask_common")))
 

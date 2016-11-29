@@ -73,11 +73,12 @@ typedef enum _CODEC_DEVICE_CONTROL_CMD
 
 typedef struct _ROCKCODEC_DEV_CONFIG_ARG
 {
-    //CodecMode_en_t Codecmode;
-    CodecMode_en_t DacOutMode;
-    CodecMode_en_t AdcinMode;
-    CodecFS_en_t SampleRate;
-    eACodecI2sDATA_WIDTH_t DataWidth;
+    CodecMode_en_t DacMode;
+    CodecMode_en_t AdcMode;
+    CodecFS_en_t AdcFs;
+    CodecFS_en_t DacFs;
+    eACodecI2sDATA_WIDTH_t DacDataWidth;
+    eACodecI2sDATA_WIDTH_t AdcDataWidth;
 
 }ROCKCODEC_DEV_CONFIG_ARG;
 
@@ -105,14 +106,14 @@ typedef struct _ROCKCODEC_DEV_ARG
 */
 extern rk_err_t RockCodecDev_ExitMode(HDC dev, uint32 Type);
 extern rk_err_t RockcodecDev_SetAdcDataWidth(HDC dev, eI2sDATA_WIDTH_t adcDatawdt);
-extern rk_err_t RockcodecDev_SetAdcInputMode(HDC dev,  CodecMode_en_t AdcinMode);
-extern rk_err_t RockcodecDev_SetDataWidth(HDC dev, eI2sDATA_WIDTH_t datawdt);
+extern rk_err_t RockcodecDev_SetAdcMode(HDC dev,  CodecMode_en_t AdcMode);
+extern rk_err_t RockcodecDev_SetDacDataWidth(HDC dev, eI2sDATA_WIDTH_t datawdt);
 extern rk_err_t RockcodecDev_SetVol(HDC dev, uint32 userEQMod, uint32 vol);
 extern rk_err_t RockcodecDev_Write(HDC dev, uint8* buffer, uint32 size,uint8 mode);
 extern rk_err_t RockcodecDev_SetVolTable(HDC dev, uint32 voltable);
-extern rk_err_t RockcodecDev_RxSetRate(HDC dev, CodecFS_en_t CodecFS);
-extern rk_err_t RockcodecDev_SetRate(HDC dev, CodecFS_en_t CodecFS);
-extern rk_err_t RockcodecDev_SetMode(HDC dev, CodecMode_en_t Codecmode);
+extern rk_err_t RockcodecDev_SetAdcRate(HDC dev, CodecFS_en_t CodecFS);
+extern rk_err_t RockcodecDev_SetDacRate(HDC dev, CodecFS_en_t CodecFS);
+extern rk_err_t RockcodecDev_SetDacMode(HDC dev, CodecMode_en_t Codecmode);
 extern HDC RockCodecDev_Create(uint32 DevID, void *arg);
 extern rk_err_t RockCodecDev_Shell(HDC dev, uint8 * pstr);
 extern rk_err_t RockCodecDev_Delete(uint32 DevID, void * arg);

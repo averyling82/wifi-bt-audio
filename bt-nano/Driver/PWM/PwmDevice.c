@@ -89,9 +89,9 @@ rk_err_t PwmDevShellBspIrqTest(HDC dev, uint8 * pstr);
 rk_err_t PwmDevShellBspHelp(HDC dev, uint8 * pstr);
 rk_err_t PwmDevShellHelp(HDC dev, uint8 * pstr);
 rk_err_t PwmDevShellBsp(HDC dev, uint8 * pstr);
-rk_err_t PwmDevShellTest(HDC dev, uint8 * pstr, uint8 ch);
+rk_err_t PwmDevShellTest(HDC dev, uint8 * pstr);
 rk_err_t PwmDevShellDel(HDC dev, uint8 * pstr);
-rk_err_t PwmDevShellCreate(HDC dev, uint8 * pstr, uint8 ch);
+rk_err_t PwmDevShellCreate(HDC dev, uint8 * pstr);
 rk_err_t PwmDevShellPcb(HDC dev, uint8 * pstr);
 void PwmDevIntIsr(void);
 rk_err_t PwmDevDeInit(PWM_DEVICE_CLASS * pstPwm);
@@ -385,24 +385,24 @@ INIT FUN rk_err_t PwmDevInit(PWM_DEVICE_CLASS * pstPwm)
 _DRIVER_PWM_PWMDEVICE_SHELL_DATA_
 static SHELL_CMD ShellPwmName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "bsp",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "pcb",PwmDevShellPcb,"NULL","NULL",
+    "create",PwmDevShellCreate,"NULL","NULL",
+    "del",PwmDevShellDel,"NULL","NULL",
+    "test",PwmDevShellTest,"NULL","NULL",
+#ifdef SHELL_BSP
+    "bsp",PwmDevShellBsp,"NULL","NULL",
+#endif
     "\b",NULL,"NULL","NULL",
 };
 
 #ifdef SHELL_BSP
 static SHELL_CMD ShellPwmBspName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "start",NULL,"NULL","NULL",
-    "stop",NULL,"NULL","NULL",
-    "setrate",NULL,"NULL","NULL",
-    "setfreq",NULL,"NULL","NULL",
-    "irqtest",NULL,"NULL","NULL",
+    "start",PwmDevShellBspStart,"NULL","NULL",
+    "stop",PwmDevShellBspStop,"NULL","NULL",
+    "setrate",PwmDevShellBspSetRate,"NULL","NULL",
+    "setfreq",PwmDevShellBspSetFreq,"NULL","NULL",
+    "irqtest",PwmDevShellBspIrqTest,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 
 };
@@ -435,13 +435,19 @@ SHELL API rk_err_t PwmDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellPwmName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -457,39 +463,10 @@ SHELL API rk_err_t PwmDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                      //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellPwmName[i].CmdDes, pItem);
+    if(ShellPwmName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //pcb
-            ret = PwmDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:  //mc pwm0
-            *pItem = 0;
-            ret = PwmDevShellCreate(dev,pItem,0);
-            break;
-
-        case 0x02:  //del
-            ret = PwmDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:  //test pwm0
-            ret = PwmDevShellTest(dev,pItem,0);
-            break;
-
-        case 0x04:  //bsp
-            #ifdef SHELL_BSP
-            ret = PwmDevShellBsp(dev,pItem);
-            #endif
-            break;
-         case 0x05: //help
-           #ifdef SHELL_HELP
-           ret = PwmDevShellHelp(dev,pItem);
-           #endif
-           break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellPwmName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 
@@ -589,20 +566,6 @@ SHELL FUN rk_err_t PwmDevShellBspHelp(HDC dev, uint8 * pstr)
 _DRIVER_PWM_PWMDEVICE_SHELL_
 SHELL FUN rk_err_t PwmDevShellBspStart(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("pwm.bsp.start ??pwm\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     // TODO:
     //add other code below:
     gPWMChannel = PWM_CHN0;
@@ -627,19 +590,6 @@ SHELL FUN rk_err_t PwmDevShellBspStart(HDC dev, uint8 * pstr)
 _DRIVER_PWM_PWMDEVICE_SHELL_
 SHELL FUN rk_err_t PwmDevShellBspStop(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("pwm.bsp.stop ??pwm\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     // TODO:
     //add other code below:
@@ -669,19 +619,6 @@ _DRIVER_PWM_PWMDEVICE_SHELL_
 SHELL FUN rk_err_t PwmDevShellBspSetRate(HDC dev, uint8 * pstr)
 {
     UINT32 rate;    //reference / capture
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("pwm.bsp.setrate  ??pwm???\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     // TODO:
     //add other code below:
@@ -723,19 +660,6 @@ _DRIVER_PWM_PWMDEVICE_SHELL_
 SHELL FUN rk_err_t PwmDevShellBspSetFreq(HDC dev, uint8 * pstr)
 {
     uint32 freq;
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("pwm.bsp.setfreq ??pwm??\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     while(pstr[0] == ' ')
         pstr++;
@@ -773,19 +697,6 @@ SHELL FUN rk_err_t PwmDevShellBspSetFreq(HDC dev, uint8 * pstr)
 _DRIVER_PWM_PWMDEVICE_SHELL_
 SHELL FUN rk_err_t PwmDevShellBspIrqTest(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("pwm.bsp.irqtest pwm????\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     gPWMChannel = PWM_CHN0;
     gPWMInt_flag = 0;
@@ -851,13 +762,19 @@ SHELL FUN rk_err_t PwmDevShellBsp(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellPwmBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -873,68 +790,14 @@ SHELL FUN rk_err_t PwmDevShellBsp(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                        //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellPwmBspName[i].CmdDes, pItem);
+    if(ShellPwmBspName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //bsp help
-            #ifdef SHELL_HELP
-            ret = PwmDevShellBspHelp(dev,pItem);
-            #endif
-
-            break;
-
-        case 0x01:  //start
-            ret = PwmDevShellBspStart(dev,pItem);
-            break;
-
-        case 0x02:  //stop
-            ret = PwmDevShellBspStop(dev,pItem);
-            break;
-
-        case 0x03:  //set rate
-            ret = PwmDevShellBspSetRate(dev,pItem);
-            break;
-
-        case 0x04:  //set freq
-            ret = PwmDevShellBspSetFreq(dev,pItem);
-            break;
-
-        case 0x05:  //irq test
-            ret = PwmDevShellBspIrqTest(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellPwmBspName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 }
 #endif
-/*******************************************************************************
-** Name: PwmDevShellHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.Ma
-** Date: 2014.11.10
-** Time: 17:54:37
-*******************************************************************************/
-_DRIVER_PWM_PWMDEVICE_SHELL_
-SHELL FUN rk_err_t PwmDevShellHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
-
-    if( StrLenA( pstr) != 0)
-        return RK_ERROR;
-
-    printf("pwm?????????????pwm????\r\n");
-    printf("????:\r\n");
-    printf("pcb       ??pcb??         \r\n");
-    printf("mc        mc??              \r\n");
-    printf("del       ??pwm device?? \r\n");
-    printf("test      ????            \r\n");
-    printf("bsp       ???????      \r\n");
-    printf("help      ??pwm??????\r\n");
-    return RK_SUCCESS;
-}
 
 /*******************************************************************************
 ** Name: PwmDevShellTest
@@ -945,27 +808,23 @@ SHELL FUN rk_err_t PwmDevShellHelp(HDC dev, uint8 * pstr)
 ** Time: 17:45:44
 *******************************************************************************/
 _DRIVER_PWM_PWMDEVICE_SHELL_
-SHELL FUN rk_err_t PwmDevShellTest(HDC dev, uint8 * pstr, uint8 ch)
+SHELL FUN rk_err_t PwmDevShellTest(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("pwm.test  : test pwm device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     // TODO:
     //add other code below:
     //...
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     rk_printf ("Enrty Pwm test\n");
-    PwmRateSet(ch,20,PWM_FREQ);
+    PwmRateSet(0,20,PWM_FREQ);
 
     return RK_SUCCESS;
 }
@@ -981,24 +840,18 @@ SHELL FUN rk_err_t PwmDevShellTest(HDC dev, uint8 * pstr, uint8 ch)
 _DRIVER_PWM_PWMDEVICE_SHELL_
 SHELL FUN rk_err_t PwmDevShellDel(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("pwm.del  : ??pwm device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     // TODO:
     //add other code below:
     //...
-
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 
@@ -1011,21 +864,8 @@ SHELL FUN rk_err_t PwmDevShellDel(HDC dev, uint8 * pstr)
 ** Time: 17:45:44
 *******************************************************************************/
 _DRIVER_PWM_PWMDEVICE_SHELL_
-SHELL FUN rk_err_t PwmDevShellCreate(HDC dev, uint8 * pstr, uint8 ch)
+SHELL FUN rk_err_t PwmDevShellCreate(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("pwm.mc  : ??pwm device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     // TODO:
     //add other code below:
@@ -1036,8 +876,18 @@ SHELL FUN rk_err_t PwmDevShellCreate(HDC dev, uint8 * pstr, uint8 ch)
     uint32 channel;
     rk_err_t ret;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     DevID = *pstr;
-    channel = ch;
+    channel = 0;
 
     PwmDev.stPwmDevice.DevID = DevID;
     PwmDev.channel = channel;
@@ -1062,24 +912,19 @@ SHELL FUN rk_err_t PwmDevShellCreate(HDC dev, uint8 * pstr, uint8 ch)
 _DRIVER_PWM_PWMDEVICE_SHELL_
 SHELL FUN rk_err_t PwmDevShellPcb(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("pwm.pcb : pwm pcb info.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     // TODO:
     //add other code below:
     //...
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 

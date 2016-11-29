@@ -127,7 +127,7 @@ extern rk_err_t DeviceTask_LoadRemoveFs(uint32 DeviceListID, uint32 Mode);
 extern rk_err_t DeviceTask_RemoveFs(uint32 DeviceListID, uint32 Mode);
 extern rk_err_t DeviceTask_DeleteDeviceList(uint32 DeviceListID, void *arg, uint32 Mode);
 extern rk_err_t DeviceTask_System_PowerOff(void);
-extern rk_err_t DeviceTask_SystemReset(void);
+extern rk_err_t DeviceTask_SystemReset(uint32 maskrom);
 extern rk_err_t DeviceTask_CreateDeviceList(uint32 DeviceListID, void *arg, uint32 Mode);
 extern void DeviceTask(void);
 extern rk_err_t DeviceTaskDeInit(void *pvParameters);

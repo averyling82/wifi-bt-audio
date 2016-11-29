@@ -29,6 +29,7 @@
     #ifdef _UART_DEBUG_                          /*-----UART Debug config------------*/
         #define _USE_SHELL_                      /* Enable shell command             */
         //#define _RKOS_DEBUG_                     /* Use COM1 Debug RKOS              */
+        //#define _IDLE_DEBUG_                     /* Not Shut off Uart                */
 
         #ifdef _RKOS_DEBUG_
         #define DEBUG_UART_PORT  UART_DEV1       /* Enable Uart0 Debug               */
@@ -121,8 +122,8 @@
  *                        External memory and boot config
  *************************************************************************************/
 //#define DISK_VOLUME                           /* Enable disk volume                */
-//#define _HIDDEN_DISK1_                          /* Enable hidden disk(A:)            */
-//#define _HIDDEN_DISK2_                          /* Enable hidden disk(B:)            */
+#define _HIDDEN_DISK1_                          /* Enable hidden disk(A:)            */
+#define _HIDDEN_DISK2_                          /* Enable hidden disk(B:)            */
 //#define ENABLE_MBR                            /* Enable MBR                        */
 
 //#define _EMMC_BOOT_                             /* Enable eMMC Flash                 */
@@ -174,6 +175,7 @@
 //#define _USE_GUI_                               /* Enable GUI                        */
 #ifndef _USE_GUI_
     #define NOSCREEN_USE_LED                    /* Enable LED in no screen mode      */
+	#define NOSCREEN_OPEN                       /* open noscreen operation           */
     #define __ENABLE_POWERMANAGER         /*Enable PowerManager*/
 #endif
 
@@ -183,6 +185,14 @@
 
 #define _WIFI_                                  /* Enable WIFI                       */
 #if defined(_WIFI_) || defined(_ENABLE_WIFI_BLUETOOTH)                                   /* -----WIFI config------------------*/
+
+#define WLAN_MODE_AP 1
+#define WLAN_MODE_STA 2
+
+#define _QPLAY_ENABLE
+
+#define _WICE_
+#ifdef _WICE_
 #define WIFI_AP_COUNT 3   //(545)
 #define _WIFI_OB                                /* Enable WIFI IO interrupt          */
 #define _WIFI_FOR_SYSTEM_                       /* Enable save WIFI information      */
@@ -190,7 +200,11 @@
 //#define _WIFI_AP6181
 #define _WIFI_AP6212
 //#define _WIFI_5G_AP6255
-#endif
+#endif//#ifdef _WICE_ end
+//#define _REALTEK_
+#endif//#if defined(_WIFI_) || defined(_ENABLE_WIFI_BLUETOOTH)  end
+
+#define USE_LWIP
 
 #if !defined(_WIFI_) || defined(_ENABLE_WIFI_BLUETOOTH)
 	#define _BLUETOOTH_                             /* Enable Bluetooth                  */
@@ -201,6 +215,7 @@
 //#define USB_HOST
 #define    USBMSC_LUN  10
 #endif
+#define _FS_
 
 #define _MUSIC_                                 /* Enable Music                      */
 #ifdef _MUSIC_                                  /* -----MUSIC config-----------------*/
@@ -353,6 +368,7 @@
 #define _BEEP_NOT_MIXED_                       /* Enable beep and no mixed           */
 #endif
 
+#define _SUPPORT_PA_EN
 #define HP_DET_CONFIG                        /* Reserved                           */
 #ifdef HP_DET_CONFIG
 	#define HP_DET GPIOPortB_Pin3

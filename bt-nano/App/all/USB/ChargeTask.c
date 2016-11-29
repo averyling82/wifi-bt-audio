@@ -89,8 +89,9 @@ static CHARGE_TASK_DATA_BLOCK * gpstChargeData;
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+#ifdef _USE_GUI_
 rk_err_t GuiCallBack(APP_RECIVE_MSG_EVENT evnet_type, uint32 event, void * arg, HGC pGc);
-
+#endif
 
 
 /*
@@ -156,11 +157,11 @@ COMMON API void ChargeTask_Enter(void * arg)
     pstChainArg.display= 1;
     hGc= GUITask_CreateWidget(GUI_CLASS_CHAIN, &pstChainArg);
 #endif
+
 #ifdef _USE_GUI_
     GuiTask_AppReciveMsg(GuiCallBack);
-#else
-    DeviceTask_SystemReset();
 #endif
+
     while (1)
     {
         rkos_queue_receive(gpstChargeData->ChargeAskQueue, &ChargeAskQueue, MAX_DELAY);
@@ -189,7 +190,7 @@ COMMON API void ChargeTask_Enter(void * arg)
                 GuiTask_DeleteWidget(hGc);
                 GuiTask_AppUnReciveMsg(GuiCallBack);
 #endif
-                DeviceTask_SystemReset();
+                DeviceTask_SystemReset(0);
                 break;
 
             default:

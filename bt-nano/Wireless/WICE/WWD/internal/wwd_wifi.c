@@ -649,6 +649,7 @@ wwd_result_t wwd_wifi_join( const wiced_ssid_t* ssid, wiced_security_t auth_type
     wwd_result_t          result;
     wlc_ssid_t*           ssid_params;
 
+    rk_printf("jjjhhh wwd_wifi_join  ssid=%s,security_key=%s\n",ssid->value,security_key);
     if ( ssid->length > (size_t) SSID_MAX_LEN )
     {
         WPRINT_WWD_DEBUG(("wiced_wifi_join: SSID too long\n"));
@@ -660,6 +661,7 @@ wwd_result_t wwd_wifi_join( const wiced_ssid_t* ssid, wiced_security_t auth_type
 
     if ( wwd_wifi_set_block_ack_window_size( WWD_STA_INTERFACE ) != WWD_SUCCESS )
     {
+        rk_printf("jjjhhh wwd_wifi_set_block_ack_window_size failed\n");
         return WWD_SET_BLOCK_ACK_WINDOW_FAIL;
     }
 
@@ -699,7 +701,7 @@ wwd_result_t wwd_wifi_join( const wiced_ssid_t* ssid, wiced_security_t auth_type
     {
         host_rtos_deinit_semaphore( &join_sema );
     }
-
+    rk_printf("jjjhhh wwd_wifi_join end\n");
     WWD_WLAN_LET_SLEEP( );
     return result;
 }

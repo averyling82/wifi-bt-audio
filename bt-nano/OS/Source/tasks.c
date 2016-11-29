@@ -102,6 +102,7 @@ task.h is included from an application file. */
  */
 #define tskIDLE_STACK_SIZE    configMINIMAL_STACK_SIZE
 
+extern void * rkos_memory_malloc(unsigned long size);
 /*
  * Task control block.  A task control block (TCB) is allocated for each task,
  * and stores task state information, including a pointer to the task's context

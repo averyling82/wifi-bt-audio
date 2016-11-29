@@ -23,7 +23,10 @@
 #ifdef SBC_DEC_INCLUDE2
 #include "sbc.h"
 #endif
+
+#ifdef _RECORD_
 #include "record_globals.h"
+#endif
 
 
 /*
@@ -127,7 +130,11 @@ uint32 FileTotalSize[8];
 _ATTR_BB_SYS_DATA_
 uint32 CurFileOffset[8];
 
+#ifdef _RECORD_
 WAV_WRITE_BUFFER_STRUCT  WriteBuffer;
+#endif
+
+extern MediaBlock gMediaBlockInfo;
 
 /*
 --------------------------------------------------------------------------------
@@ -309,6 +316,7 @@ void RKFileFuncInit2(void)
     RKFIO_FEof    = HifiFileEof;
 }
 
+#ifdef _RECORD_
 void RecordCopyEncData2Buf2(UINT8 *DataBuf, uint32 encodeDataLen)
 {
     UINT16  uTail, i;
@@ -447,7 +455,7 @@ void RecordBufferInit2()
 
     RKFIO_BWrite = RecordCopyEncData2Buf2;
 }
-
+#endif
 
 /*
 --------------------------------------------------------------------------------
@@ -536,7 +544,7 @@ void AudioFileBufferSwitch2(FILE * Handle)
     while(AudioFileBufBusy2 == 1)
     {
         __WFI2();
-        rk_printf2("wait file stream...2");
+        bb_printf1("wait file stream...2");
     }
 
     AudioFileBufPos2 = 0;
@@ -548,14 +556,14 @@ void AudioFileBufferSwitch2(FILE * Handle)
     {
         gBufByPass = 1;
 
-        rk_printf2("wait file stream...");
+        bb_printf1("wait file stream...");
 
         AudioFileBufSize2[AudioFileRdBufID2]
         = HifiFileRead((uint8*)(&AudioFileBuf2[AudioFileRdBufID2 * AudioFilePIPOBufSize2]),
                        AudioFilePIPOBufSize2, Handle);
     }
 
-    #if 0
+    #if 1
     ClearMsg(MSG_AUDIO_DECODE_FILL_BUFFER);
     AudioFileInput2(pRawFileCache);
     #else
@@ -1014,20 +1022,27 @@ void AudioFileChangeBuf2(FILE * Handle, uint32 CodecBufSize)
 
     AudioFilePIPOBufSize2 = ((HIFI_AUDIO_BUF_SIZE - CodecBufSize) / 1024) * 1024;
     AudioFilePIPOBufSize2 = AudioFilePIPOBufSize2 >> 1;
-    HifiFileSeek((fileoffset - AudioFileBufSize2[0] - AudioFileBufSize2[1]), SEEK_SET, Handle);
+
+    if(gMediaBlockInfo.directplay == 0)
+    {
+        HifiFileSeek((fileoffset - AudioFileBufSize2[0] - AudioFileBufSize2[1]), SEEK_SET, Handle);
 
 
-    gBufByPass = 1;
-    AudioFileBufSize2[AudioFileRdBufID2]
-    = HifiFileRead((uint8*)(&AudioFileBuf2[AudioFileRdBufID2 * AudioFilePIPOBufSize2]),
-                   AudioFilePIPOBufSize2, Handle);
+        gBufByPass = 1;
+        AudioFileBufSize2[AudioFileRdBufID2]
+        = HifiFileRead((uint8*)(&AudioFileBuf2[AudioFileRdBufID2 * AudioFilePIPOBufSize2]),
+                       AudioFilePIPOBufSize2, Handle);
 
-    AudioFileBufSize2[AudioFileWrBufID2]  = 0;
+        AudioFileBufSize2[AudioFileWrBufID2]  = 0;
 
-    rk_printf2("AudioFilePIPOBufSize2 = %d, AudioFileBufSize2[0] = %d, AudioFileBufSize2[1] = %d", AudioFilePIPOBufSize2, AudioFileBufSize2[0], AudioFileBufSize2[1]);
+        rk_printf2("AudioFilePIPOBufSize2 = %d, AudioFileBufSize2[0] = %d, AudioFileBufSize2[1] = %d", AudioFilePIPOBufSize2, AudioFileBufSize2[0], AudioFileBufSize2[1]);
 
-    SendMsg(MSG_AUDIO_DECODE_FILL_BUFFER);
-
+        SendMsg(MSG_AUDIO_DECODE_FILL_BUFFER);
+    }
+    else
+    {
+        memcpy(&AudioFileBuf2[AudioFilePIPOBufSize2],&AudioFileBuf2[512], 512);
+    }
 }
 
 uint32 AudioCodecGetBufferSize2(int codec, int samplerate)
@@ -1106,7 +1121,7 @@ uint32 AudioCodecGetBufferSize2(int codec, int samplerate)
 #endif //DC_FILTER
     {
 #ifdef MP3_DEC_INCLUDE2
-        CodecBufSize2 = 1152 * 8;                    // 1152*4*2 = 9216
+        CodecBufSize2 = 1152 * 16;                    // 1152*4*2 = 9216
 #endif
 
 #ifdef XXX_ENC_INCLUDE2
@@ -1123,13 +1138,13 @@ uint32 AudioCodecGetBufferSize2(int codec, int samplerate)
 
 #ifdef WAV_DEC_INCLUDE2
         #ifdef CODEC_24BIT
-        CodecBufSize2 = 2730 * 8;                    // 2730*4*2 = 21840 / 2
+        CodecBufSize2 = 1024*32;                    // 2730*4*2 = 21840 / 2
         #else
         CodecBufSize2 = 2730 * 4;                    // 2730*4*2 = 21840 / 2
         #endif
 #endif
 #ifdef AMR_DEC_INCLUDE2
-        CodecBufSize2 = 1024;
+        CodecBufSize2 = 2048;
 #endif
 
 #ifdef WAV_ENC_INCLUDE2
@@ -1348,6 +1363,7 @@ uint32 AudioCodecGetBufferSize2(int codec, int samplerate)
 
 #ifdef WAV_DEC_INCLUDE2
         WavoutBuf[0] = (short*)AudioCodecBuf2;
+        WavoutBuf[1] = (short*)(&AudioCodecBuf2[CodecBufSize2>>1]);
 #endif
 
 #ifdef WAV_ENC_INCLUDE2
@@ -1478,6 +1494,7 @@ void AudioHWDeInit2(void)
 #endif
 }
 
+#ifdef FLAC_DEC_INCLUDE2
 _ATTR_FLACDEC_TEXT_
 int FLAC_FileSeekFast(int offset, int clus, FILE * in)
 {
@@ -1524,7 +1541,7 @@ int FLAC_FileGetSeekInfo(int *pOffset, int *pClus, FILE * in)
     //*pClus   = FileInfo[(int)in].Clus;
     return 0;
 }
-
+#endif
 /*
 ********************************************************************************
 *

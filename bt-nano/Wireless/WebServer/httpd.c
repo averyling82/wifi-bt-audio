@@ -77,7 +77,7 @@
  * - split too long functions into multiple smaller functions?
  * - support more file types?
  */
-
+#include "bspconfig.h"
 #include "ap6181wifi.h"
 #include <string.h>
 #include <stdlib.h>

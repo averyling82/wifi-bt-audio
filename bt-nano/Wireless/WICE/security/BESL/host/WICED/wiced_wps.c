@@ -1008,6 +1008,7 @@ void wps_host_scan( wps_agent_t* workspace, wps_scan_handler_t result_handler, w
     do
     {
         ++attempts;
+		rk_printf("jjjhhh 3333 wwd_wifi_scan\n");
         ret = wwd_wifi_scan( WICED_SCAN_TYPE_ACTIVE, WICED_BSS_TYPE_INFRASTRUCTURE, 0, 0, chlist, &extparam, wps_wwd_scan_result_handler, 0, workspace, interface );
     } while ( ret != BESL_SUCCESS && attempts < 5 );
 

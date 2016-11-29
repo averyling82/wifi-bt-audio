@@ -1283,7 +1283,7 @@ SHELL API rk_err_t DirDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
 
     if(ShellHelpSampleDesDisplay(dev, ShellDirName, pstr) == RK_SUCCESS)
@@ -1293,7 +1293,7 @@ SHELL API rk_err_t DirDev_Shell(HDC dev, uint8 * pstr)
 
 
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }

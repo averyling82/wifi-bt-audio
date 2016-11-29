@@ -56,6 +56,7 @@ rk_err_t ShellDeviceList(HDC dev, uint8 * pstr);
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+_SYSTEM_SHELL_SHELLDEVCMD_COMMON_
 static SHELL_CMD ShellDeviceName[] =
 {
     "list",ShellDeviceList,"list all aready create ok device","NULL",
@@ -110,14 +111,20 @@ COMMON API rk_err_t ShellDeviceParsing(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellDeviceName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -175,7 +182,10 @@ COMMON FUN rk_err_t ShellDeviceList(HDC dev, uint8 * pstr)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     TempDevHandler = RKDev_GetFirstHandler(0xffffffff);
 
     rk_print_string("\n this cmd will list all device info!!\r\n\r\n");

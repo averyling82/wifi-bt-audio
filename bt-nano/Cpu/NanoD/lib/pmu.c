@@ -114,11 +114,11 @@ COMMON API void PmuSoftReset(uint32 module, uint32 reset)
 {
     if(reset)
     {
-        Pmu_Reg->PMU_SOFTRST_CON |= module;
+        Pmu_Reg->PMU_SOFTRST_CON  = ((module << 16) | module);
     }
     else
     {
-        Pmu_Reg->PMU_SOFTRST_CON &= ~module;
+        Pmu_Reg->PMU_SOFTRST_CON =  (module << 16) | ~module;
     }
 }
 

@@ -26,7 +26,7 @@
 #define _ATTR_LWBT_CODE_         __attribute__((section("LwbtCode")))
 #define _ATTR_LWBT_DATA_         __attribute__((section("LwbtData")))
 #define _ATTR_LWBT_BSS_          __attribute__((section("LwbtBss"),zero_init))
-
+#ifdef _BLUETOOTH_
 #if (BT_CHIP_CONFIG == BT_CHIP_RTL8761AT)
 
 
@@ -9417,3 +9417,4 @@ unsigned char rtk_config_data[] =
 };
 
 _ATTR_BLUETOOTHCONTROL_DATA_ int rtl_config_data = sizeof(rtk_config_data);
+#endif

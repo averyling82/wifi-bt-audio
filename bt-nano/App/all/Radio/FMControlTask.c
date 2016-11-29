@@ -1346,11 +1346,11 @@ COMMON FUN void FM_Start(void)
 
 /*
     #ifdef CODEC_24BIT //24bit
-    RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
+    RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
     #else
-    RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
+    RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
     #endif
-    RockcodecDev_SetMode(gpstAudioDevInf->hCodec, Codec_DACoutHP);
+    RockcodecDev_SetDacMode(gpstAudioDevInf->hCodec, Codec_DACoutHP);
 */
 
     stAudioArg.Bit = gpstFMControlData->Bit;
@@ -1366,18 +1366,18 @@ COMMON FUN void FM_Start(void)
     }
 /*
     #ifdef CODEC_24BIT //24bit
-    RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
+    RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH24);
     #else
-    RockcodecDev_SetDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
+    RockcodecDev_SetDacDataWidth(gpstAudioDevInf->hCodec,ACodec_I2S_DATA_WIDTH16);
     #endif
-    RockcodecDev_SetMode(gpstAudioDevInf->hCodec, Codec_DACoutHP);
+    RockcodecDev_SetDacMode(gpstAudioDevInf->hCodec, Codec_DACoutHP);
 */
     AudioDev_SetBit(gpstFMControlData->hAudio, 0, gpstFMControlData->Bit);
     AudioDev_SetChannel(gpstFMControlData->hAudio, 0, gpstFMControlData->LRChannel);
     AudioDev_GetMainTrack(gpstFMControlData->hAudio);
     AudioDev_SetVol(gpstFMControlData->hAudio, gpstFMControlData->playVolume);
     AudioDev_SetTrackLen(gpstFMControlData->hAudio, gpstFMControlData->OutPcmLen);
-    AudioDev_SetSampleRate(gpstFMControlData->hAudio, 0, gpstFMControlData->SampleRate);
+    AudioDev_SetTxSampleRate(gpstFMControlData->hAudio, 0, gpstFMControlData->SampleRate);
 
     gpstFMControlData->POutPcmBuf[0] = rkos_memory_malloc(bufLen);
     if(gpstFMControlData->POutPcmBuf[0] == NULL)
@@ -1563,9 +1563,12 @@ INIT API rk_err_t FMControlTask_Init(void *pvParameters, void *arg)
     {
         pFMControlTaskData->playVolume = 25;
     }
+    #ifdef _RK_EQ_
     pFMControlTaskData->EqMode = gSysConfig.MusicConfig.Eq.Mode;
+    #endif
     gpstFMControlData = pFMControlTaskData;
 
+    #ifdef _RECORD_
     if (RECORD_QUALITY_HIGH == gSysConfig.RecordConfig.RecordQuality)  //quality record.
     {
         DEBUG("FM_FS = FS_192KHz;");
@@ -1578,6 +1581,7 @@ INIT API rk_err_t FMControlTask_Init(void *pvParameters, void *arg)
         gpstFMControlData->SampleRate = I2S_FS_44100Hz;
         gpstFMControlData->Bit = 16;
     }
+    #endif
     gpstFMControlData->FMRecordState = 0;
     rk_printf("FMControlTask_Init over\n");
     return RK_SUCCESS;

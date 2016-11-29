@@ -107,6 +107,12 @@ typedef struct _AUDIO_DEV_ARG
     P_PCM_CALLBACK pfPcmCallBack;
 }AUDIO_DEV_ARG;
 
+#ifndef _FADE_PROCESS_
+#define FADE_IN     0
+#define FADE_OUT    1
+#define FADE_NULL   -1
+#endif
+
 
 /*
 *---------------------------------------------------------------------------------------------------------------------
@@ -123,12 +129,12 @@ typedef struct _AUDIO_DEV_ARG
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
+extern void AudioDev_SetByPass(HDC dev, uint32 bypass);
 extern rk_err_t AudioDev_ReadEnable(HDC dev, uint32 Flag);
 extern rk_err_t AudioDev_FadeOk(HDC dev);
 extern rk_err_t AudioDev_FadeInit(HDC dev,  uint32 samples, uint32 type);
 extern void Bit_Convertor_shift(short *ppsBuffer, uint32 Length, int16 bitpersample);
 extern void Bit_Convertor_DEC(short *ppsBuffer, uint32 Length, int16 bitpersample);
-extern void AudioDev_SetVolume(void);
 extern void AudioDev_SetEQ(HDC dev, uint32 userEQMod);
 extern rk_err_t AudioDev_SetVol(HDC dev, uint32 vol);
 extern rk_err_t AudioDev_SetTrackProcess(HDC dev, uint32 TrackNo, uint8 subTrackProcess);
@@ -141,7 +147,7 @@ extern rk_err_t AudioDev_SetMixScale(HDC dev ,uint32 TrackNo, uint32 MixMain, ui
 extern rk_err_t AudioDev_SetBit(HDC dev, uint32 TrackNo, uint32 Bit);
 extern rk_err_t AudioDev_SetChannel(HDC dev, uint32 TrackNo, uint32 Channel);
 extern rk_err_t AudioDev_SetRxSampleRate(HDC dev, uint32 TrackNo, uint32 SamleRate);
-extern rk_err_t AudioDev_SetSampleRate(HDC dev, uint32 TrackNo, uint32 SamleRate);
+extern rk_err_t AudioDev_SetTxSampleRate(HDC dev, uint32 TrackNo, uint32 SamleRate);
 extern rk_err_t AudioDev_SetModel(HDC dev,  uint32 TrackNo, uint32 ProcessNo, uint32 ProcessPos);
 extern rk_err_t AudioDev_Shell(HDC dev, uint8 * pstr);
 extern HDC AudioDev_Create(uint32 DevID, void *arg);

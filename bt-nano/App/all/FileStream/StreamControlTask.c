@@ -176,8 +176,10 @@ COMMON API void StreamControlTask_Enter(void)
 
                     if(gpstStreamControlData->hFifo == NULL)
                     {
+                        #ifdef _FS_
                         ret = FileDev_FileSeek(gpstStreamControlData->hFile[gpFileSeekParm->handle], gpFileSeekParm->whence, gpFileSeekParm->offset);
                         FileDev_GetFileOffset(gpstStreamControlData->hFile[gpFileSeekParm->handle], &gpFileSeekParm->offset);
+                        #endif
                     }
                     else
                     {
@@ -205,7 +207,7 @@ COMMON API void StreamControlTask_Enter(void)
 
                     if(gpstStreamControlData->hFifo == NULL)
                     {
-
+                        #ifdef _FS_
                         ret = FileDev_ReadFile(gpstStreamControlData->hFile[handle], dataptr, num);
 
                         #if 0
@@ -227,6 +229,7 @@ COMMON API void StreamControlTask_Enter(void)
 
                         MailBoxWriteA2BCmd(MEDIA_MSGBOX_CMD_FILE_READ_CMPL,MAILBOX_ID_0, MAILBOX_CHANNEL_2);
                         MailBoxWriteA2BData(ret, MAILBOX_ID_0, MAILBOX_CHANNEL_2);
+                        #endif
 
                     }
                     else
@@ -251,8 +254,10 @@ COMMON API void StreamControlTask_Enter(void)
 
                     if(gpstStreamControlData->hFifo == NULL)
                     {
+                        #ifdef _FS_
                         ret = FileDev_WriteFile(gpstStreamControlData->hFile[gpFileWriteParm->handle],gpFileWriteParm->buf,
                                         gpFileWriteParm->size);
+                        #endif
                     }
 
                     if(ret == -1)
@@ -268,7 +273,9 @@ COMMON API void StreamControlTask_Enter(void)
                     uint32 offset;
                     if(gpstStreamControlData->hFifo == NULL)
                     {
+                        #ifdef _FS_
                         FileDev_GetFileOffset(gpstStreamControlData->hFile[gpFileSeekParm->handle], &offset);
+                        #endif
                     }
                     else
                     {
@@ -285,7 +292,9 @@ COMMON API void StreamControlTask_Enter(void)
                     uint32 filesize;
                     if(gpstStreamControlData->hFifo == NULL)
                     {
+                        #ifdef _FS_
                         FileDev_GetFileSize(gpstStreamControlData->hFile[gpFileSeekParm->handle], &filesize);
+                        #endif
                     }
                     else
                     {

@@ -41,18 +41,15 @@ typedef volatile struct {
     UINT32 PMU_WAKEUP_CFG1;
     UINT32 PMU_WAKEUP_CFG2;
     UINT32 PMU_PWRDN_CN;
-
     UINT32 PMU_PWRDN_ST;
     UINT32 PMU_POWER_MODE_CON;
     UINT32 PAD;
     UINT32 PMU_OSC_CNT;
     UINT32 PMU_CORE_PWRDW_CNT;
-
     UINT32 PMU_CORE_PWRUP_CNT;
     UINT32 PMU_SOFT_CON;
     UINT32 PMU_PLLLOCK_CNT;
     UINT32 PMU_INT_CON;
-
     UINT32 PMU_INT_ST;
     UINT32 PMU_GPIO_POS_INT_ST;
     UINT32 PMU_GPIO_NEG_INT_ST;
@@ -60,8 +57,10 @@ typedef volatile struct {
     UINT32 PMU_SYS_REG1;
     UINT32 PMU_SYS_REG2;
     UINT32 PMU_SYS_REG3;
+    UINT32 PAD1[4];
     UINT32 PMU_GPIO_POS_INT_CON;
     UINT32 PMU_GPIO_NEG_INT_CON;
+    UINT32 PAD2[6];
     UINT32 PMU_SOFTRST_CON;
 
 } PMU_REG, *gPMU_REG;
@@ -153,8 +152,6 @@ typedef volatile struct {
 #define PMU_GPIO2_RST_SEL      ((UINT32)1<<1)
 #define PMU_GRF_RST_SEL        ((UINT32)1<<2)
 #define PMU_PVTM_RST_SEL       ((UINT32)1<<3)
-
-
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *

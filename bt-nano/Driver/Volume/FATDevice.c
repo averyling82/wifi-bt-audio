@@ -5988,7 +5988,7 @@ COMMON FUN rk_err_t GetFreeMemory(FAT_DEVICE_CLASS * pstFatDev)
 
     gbFatMemCache = rkos_memory_malloc(BUF_SECTOR * 512);
 
-    FREQ_EnterModule(FREQ_MAX);
+    //FREQ_EnterModule(FREQ_MAX);
 
     if(pstFatDev->FATType == VOLUME_TYPE_FAT12)
     {
@@ -6199,7 +6199,7 @@ out:
     #undef BUF_SECTOR
     #undef DMA_MAX_SEC
 
-    FREQ_ExitModule(FREQ_MAX);
+    //FREQ_ExitModule(FREQ_MAX);
 
     rkos_memory_free(gbFatMemCache);
 
@@ -6755,13 +6755,19 @@ SHELL API rk_err_t FatDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellFatName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -6777,33 +6783,13 @@ SHELL API rk_err_t FatDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                                            //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellFatName[i].CmdDes, pItem);
+    if(ShellFatName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = FatShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = FatShellCreate(dev,pItem);
-            break;
-
-        case 0x02:  //help
-            ret = FatShellHelp(dev,pItem);;
-            break;
-
-        //ohter sub cmd...
-        case 0x03:
-            //ret = ;
-            break;
-
-        case 0x04:
-            //ret = ;
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellFatName[i].ShellCmdParaseFun(dev, pItem);
     }
+
+
     return ret;
 }
 
@@ -6850,19 +6836,6 @@ rk_err_t FatShellPcb(HDC dev,  uint8 * pstr)
     FAT_DEVICE_CLASS * pstFatDev;
     uint32 i;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        if(StrCmpA((uint8*)pstr, "help", 4) == 0)
-        {
-            rk_print_string("fat.pcb :fat pcb info.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-    pstr++;
-#endif
     // TODO:
     //add other code below:
     //...
@@ -6958,19 +6931,10 @@ rk_err_t FatShellCreate(HDC dev,  uint8 * pstr)
     uint8 Buf[128];
     uint32 len;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA((uint8*)pstr, "help", 4) == 0)
-        {
-            rk_print_string("fat.open : open fat.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
 
     hPar = RKDev_Open(DEV_CLASS_PAR, 0, NOT_CARE);
     if ((hPar == NULL) || (hPar == (HDC)RK_ERROR) || (hPar == (HDC)RK_PARA_ERR))

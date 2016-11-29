@@ -43,6 +43,7 @@
 #include "RKOS.h"
 #include "BSP.h"
 #include "DeviceInclude.h"
+#include "hw_pmu.h"
 
 /*
 *********************************************************************************************************
@@ -81,8 +82,6 @@
 int Main(void)
 {
     UART_DEV_ARG stUartArg;
-
-    FREQ_EnterModule(FREQ_INIT);
 
     bsp_init();
 

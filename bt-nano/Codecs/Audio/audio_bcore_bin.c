@@ -16,6 +16,7 @@ uint8 bbdata[] =
 };
 #else
 
+#ifdef __DRIVER_BCORE_BCOREDEVICE_C__
 _ATTR_BB_SYS_CODE_
 const uint8 bbcore[] =
 {
@@ -258,7 +259,7 @@ uint8 hifi_alac_data_bin[] =
 {
     #include "hifi_alac_data.bin"
 };
-
+#endif
 #endif
 #endif
 #endif

@@ -70,7 +70,7 @@
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-rk_err_t GpioShellSpeedTest(void);
+rk_err_t GpioShellSpeedTest(HDC dev, uint8 * pstr);
 void GpioInt2(void);
 void GpioInt1(void);
 void GpioInt0(void);
@@ -160,8 +160,7 @@ rk_err_t GPIOBspShell(uint8 * pstr);
 _CPU_NANOD_LIB_GPIO_SHELL_
 static SHELL_CMD ShellGPIOName[] =
 {
-    "speed",GpioShellSpeedTest,"test gpio seep","gpio.speed\n",
-    "bsp",NULL,"NULL","NULL",
+    "speed",GpioShellSpeedTest,"test gpio seep","gpio.speed",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -169,15 +168,7 @@ static SHELL_CMD ShellGPIOName[] =
 _CPU_NANOD_LIB_GPIO_SHELL_
 static SHELL_CMD ShellGPIOBspName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "pullup",NULL,"NULL","NULL",
-    "pulldown",NULL,"NULL","NULL",
-    "in",NULL,"NULL","NULL",
-    "out",NULL,"NULL","NULL",
-    "riseint",NULL,"NULL","NULL",
-    "fallint",NULL,"NULL","NULL",
-    "lowint",NULL,"NULL","NULL",
-    "highint",NULL,"NULL","NULL",
+    "pintest",GPIOBspShell_PinINTTest,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -264,20 +255,6 @@ SHELL FUN void GPIO_ISR(void)
 _CPU_NANOD_LIB_GPIO_SHELL_
 SHELL FUN rk_err_t GPIOBspShell_PinINTTest(uint8 * pstr)
 {
-#ifdef SHELL_HELP
-	pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("gpio int test : 该命令用来测试gpio某一管脚的四种中断形式.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     pstr++; //omit the '.' to next char
     gGPIOChannel = GPIO_CH0;
     gGPIOPinNum  = GPIOPortB_Pin2;
@@ -424,19 +401,6 @@ _CPU_NANOD_LIB_GPIO_SHELL_
 SHELL FUN rk_err_t GPIOBspShell_PinLevelTest(uint8 * pstr)
 {
     int level;
-#ifdef SHELL_HELP
-	pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("gpio pin level : 设置gpio某一管脚的电平高低.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     pstr++; //omit the '.' to next char
     gGPIOChannel = GPIO_CH0;
@@ -475,19 +439,6 @@ _CPU_NANOD_LIB_GPIO_SHELL_
 SHELL FUN rk_err_t GPIOBspShell_PinDirTest(uint8 * pstr)
 {
     int direction;
-#ifdef SHELL_HELP
-	pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("gpio pin direction : 设置gpio某一管脚的输入或输出方向.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     pstr++; //omit the '.' to next char
     gGPIOChannel = GPIO_CH0;
@@ -522,17 +473,23 @@ SHELL FUN rk_err_t GPIOBspShell_PinDirTest(uint8 * pstr)
 ** Time: 15:52:45
 *******************************************************************************/
 _CPU_NANOD_LIB_GPIO_SHELL_
-SHELL FUN rk_err_t GPIOBspShell(uint8 * pstr)
+SHELL FUN rk_err_t GPIOBspShell(HDC dev, uint8 * pstr)
 {
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellGPIOBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -548,62 +505,12 @@ SHELL FUN rk_err_t GPIOBspShell(uint8 * pstr)
     pItem += StrCnt;
     pItem++;                          //remove '.',the point is the useful item
 
-    uint8 ptemp[10];
-
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellGPIOBspName[i].CmdDes, pItem);
+    if(ShellGPIOBspName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //bsp help
-            #ifdef SHELL_HELP
-            ret = GPIOBspShellHelp(pItem);
-            #endif
-
-            break;
-
-        case 0x01:  //pull up
-            MemCpy(ptemp, "up", 2);
-            ret = GPIOBspShell_PinLevelTest(ptemp);
-            break;
-
-        case 0x02:  //pull down
-            MemCpy(ptemp, "down", 4);
-            ret = GPIOBspShell_PinLevelTest(ptemp);
-
-            break;
-
-        case 0x03:  //gpio as in
-            MemCpy(ptemp, "in", 2);
-            ret = GPIOBspShell_PinDirTest(ptemp);
-            break;
-
-        case 0x04:  //gpio as out
-            MemCpy(ptemp, "out", 3);
-            ret = GPIOBspShell_PinDirTest(ptemp);
-            break;
-
-        case 0x05:  //gpio int test
-            MemCpy(ptemp, "rise", 4);
-            ret = GPIOBspShell_PinINTTest(ptemp);
-            break;
-
-        case 0x06:  //gpio int test
-            MemCpy(ptemp, "fall", 4);
-            ret = GPIOBspShell_PinINTTest(ptemp);
-            break;
-
-        case 0x07:  //gpio int test
-            MemCpy(ptemp, "low", 3);
-            ret = GPIOBspShell_PinINTTest(ptemp);
-            break;
-
-        case 0x08:  //gpio int test
-            MemCpy(ptemp, "high", 4);
-            ret = GPIOBspShell_PinINTTest(ptemp);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellGPIOBspName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 
@@ -618,9 +525,19 @@ SHELL FUN rk_err_t GPIOBspShell(uint8 * pstr)
 ** Time: 16:26:16
 *******************************************************************************/
 _CPU_NANOD_LIB_GPIO_SHELL_
-SHELL FUN rk_err_t GpioShellSpeedTest(void)
+SHELL FUN rk_err_t GpioShellSpeedTest(HDC dev, uint8 * pstr)
 {
     uint32 flag;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     Grf_GpioMuxSet(GPIO_CH1,GPIOPortB_Pin1,IOMUX_GPIO1B1_IO);
     Gpio_SetPinDirection(GPIO_CH1,GPIOPortB_Pin1, GPIO_OUT);
@@ -675,12 +592,18 @@ SHELL FUN rk_err_t GPIOShell(void* dev,uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellGPIOName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }

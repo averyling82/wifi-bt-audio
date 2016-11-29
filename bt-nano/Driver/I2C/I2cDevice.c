@@ -669,13 +669,12 @@ INIT FUN rk_err_t I2CDevInit(HDC dev)
 
 
 #ifdef _I2C_DEV_SHELL_
-_DRIVER_I2C_I2CDEVICE_DATA_
+_DRIVER_I2C_I2CDEVICE_SHELL_
 static SHELL_CMD ShellI2CName[] =
 {
-    "pcb",I2CDevShellPcb,"I2c.pcb show I2c pcb info","NULL",
-    "create",I2CDevShellCreate,"create I2c device","NULL",
-    "delete",I2CDevShellDelete,"delete I2c device","NULL",
-    "help",I2CDevShellHelp,"list for I2c shell cmd","NULL",
+    "pcb",I2CDevShellPcb,"I2c.pcb show I2c pcb info","i2c.pcb [i2c device object id]",
+    "create",I2CDevShellCreate,"create I2c device","i2c.create [i2c device object id]",
+    "delete",I2CDevShellDelete,"delete I2c device","i2c.delete [i2c device object id]",
     //"suspend",NULL,"NULL","NULL",
     //"resume",NULL,"NULL","NULL",
     //"read",NULL,"NULL","NULL",
@@ -685,18 +684,17 @@ static SHELL_CMD ShellI2CName[] =
     "\b",NULL,"NULL","NULL",                        // the end
 };
 
-_DRIVER_I2C_I2CDEVICE_DATA_ UINT8     gI2C_flag;
-_DRIVER_I2C_I2CDEVICE_DATA_ UINT8     gI2C_slaveaddr;
+_DRIVER_I2C_I2CDEVICE_SHELL_ UINT8     gI2C_flag;
+_DRIVER_I2C_I2CDEVICE_SHELL_ UINT8     gI2C_slaveaddr;
 
 #ifdef SHELL_BSP
 static SHELL_CMD ShellI2CBspName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "setspeed",NULL,"NULL","NULL",
-    "send",NULL,"NULL","NULL",
-    "recive",NULL,"NULL","NULL",
-    "testspeed",NULL,"NULL","NULL",
-    "testsr",NULL,"NULL","NULL",
+    "setspeed",I2CDevShellBspSetSpeed,"NULL","NULL",
+    "send",I2CDevShellBspSendData,"NULL","NULL",
+    "recive",I2CDevShellBspReceiveData,"NULL","NULL",
+    "testspeed",I2CDevShellBspTestSpeed,"NULL","NULL",
+    "testsr",I2CDevShellBspTestSR,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -811,16 +809,23 @@ SHELL API rk_err_t I2CDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    uint   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellI2CName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
-    rk_print_string("I2C shell cmd \r\n");
-    if (StrCnt == 0)
+
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
+
     ret = ShellCheckCmd(ShellI2CName, pItem, StrCnt);
     if(ret < 0)
     {
@@ -832,59 +837,12 @@ SHELL API rk_err_t I2CDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                                            //remove '.',the point is the useful item
 
-   ShellI2CName[i].ShellCmdParaseFun(dev, pItem);
-
-/*
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellI2CName[i].CmdDes, pItem);
+    if(ShellI2CName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //pcb
-            ret = I2CDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:  //open
-            ret = I2CDevShellCreate(dev,pItem);
-            break;
-
-        case 0x02:  //close
-            ret = I2CDevShellDelete(dev,pItem);
-            break;
-
-        case 0x03:  //suspend
-            ret = I2CDevShellSuspend(dev,pItem);
-            break;
-
-        case 0x04:  //resume
-            ret = I2CDevShellResume(dev,pItem);
-            break;
-
-        case 0x05:  //read
-            ret = I2CDevShellRead(dev,pItem);
-            break;
-
-        case 0x06:  //write
-            ret = I2CDevShellWrite(dev,pItem);
-            break;
-
-        case 0x07:  //control
-            ret = I2CDevShellControl(dev,pItem);
-            break;
-
-        case 0x08:  //help
-#ifdef SHELL_HELP
-            ret = I2CDevShellHelp(dev,pItem);
-#endif
-            break;
-
-        case 0x09:  //bsp
-#ifdef SHELL_BSP
-            ret = I2CDevShellBsp(dev,pItem);
-#endif
-            break;
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellI2CName[i].ShellCmdParaseFun(dev, pItem);
     }
-*/
+
     return ret;
 
 }
@@ -914,22 +872,6 @@ SHELL FUN rk_err_t I2CDevShellBspTestSR(HDC dev, uint8 * pstr)
     uint16 times = 0;
     uint8 datatoSend[2];
     UINT8 dataRcv[2];
-
-
-
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.bsp.sr : ??i2c??????????????.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     if (*pstr == NULL)
     {
@@ -1158,19 +1100,6 @@ SHELL FUN rk_err_t I2CDevShellBspTestSR(HDC dev, uint8 * pstr)
 _DRIVER_I2C_I2CDEVICE_SHELL_
 SHELL FUN rk_err_t I2CDevShellBspTestSpeed(HDC dev,  uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.bsp.testspeed : ??i2c?????????????,????????.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     rk_print_string("ShellBspTestSpeed\r\n");
     // TODO:
     //add other code below:
@@ -1244,19 +1173,6 @@ SHELL FUN rk_err_t I2CDevShellBspSendData(HDC dev,  uint8 * pstr)
     uint8 datatoSend[2];
     uint32 sendedLen;
     uint8 i;
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.bsp.send : ????5A,????????????.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     if (*pstr == NULL)
     {
@@ -1381,19 +1297,6 @@ SHELL FUN rk_err_t I2CDevShellBspReceiveData(HDC dev,  uint8 * pstr)
     UINT8 _data[2];
     uint16 regData;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.bsp.recive : ????.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     if (*pstr == NULL)
     {
@@ -1542,20 +1445,6 @@ SHELL FUN rk_err_t I2CDevShellBspSetSpeed(HDC dev, uint8 * pstr)
     uint32 devID;
     uint32 speed;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.bsp.setspeed : ??I2C?????.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-
     if ( *pstr == NULL)
     {
         rk_print_string("Warning!  miss  parameter,default speed 100Khz.\r\n");
@@ -1590,37 +1479,6 @@ SHELL FUN rk_err_t I2CDevShellBspSetSpeed(HDC dev, uint8 * pstr)
     return RK_SUCCESS;
 
 }
-
-#ifdef SHELL_HELP
-/*******************************************************************************
-** Name: I2CDevShellBspHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.Ma
-** Date: 2014.11.10
-** Time: 11:41:05
-*******************************************************************************/
-_DRIVER_I2C_I2CDEVICE_SHELL_
-SHELL FUN rk_err_t I2CDevShellBspHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
-
-    if (StrLenA(pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("i2c.bsp?????????????i2c??????????\r\n");
-    rk_print_string("??????:\r\n");
-    rk_print_string("setspeed s       ??I2C?????\r\n");
-    rk_print_string("send m           ????????????\r\n");
-    rk_print_string("recive m         ????????????\r\n");
-    rk_print_string("testspeed        ??I2C?????,??????????,???????\r\n");
-    rk_print_string("testsr            i2c bsp??????????????\r\n");
-
-
-    return RK_SUCCESS;
-}
-#endif
-
 /*******************************************************************************
 ** Name: I2CDevShellBsp
 ** Input:HDC dev, uint8 * pstr
@@ -1635,21 +1493,25 @@ SHELL FUN rk_err_t I2CDevShellBsp(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
-    rk_print_string("I2CDevShellBsp\r\n");
+
+    if(ShellHelpSampleDesDisplay(dev, ShellBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
-        rk_print_string("I2CDevShellBsp StrCnt RK_ERROR\r\n");
         return RK_ERROR;
     }
 
     ret = ShellCheckCmd(ShellI2CBspName, pItem, StrCnt);
     if (ret < 0)
     {
-        rk_print_string("I2CDevShellBsp ShellCheckCmd RK_ERROR\r\n");
         return RK_ERROR;
     }
 
@@ -1658,40 +1520,12 @@ SHELL FUN rk_err_t I2CDevShellBsp(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                          //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellI2CBspName[i].CmdDes, pItem);
+    if(ShellI2CBspName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //bsp help
-#ifdef SHELL_HELP
-            ret = I2CDevShellBspHelp(dev,pItem);
-#endif
-
-            break;
-
-        case 0x01:  //setspeed
-            ret = I2CDevShellBspSetSpeed(dev,pItem);
-            break;
-
-        case 0x02:  //send data
-            ret = I2CDevShellBspSendData(dev,pItem);
-
-            break;
-
-        case 0x03:  //recive data
-            ret = I2CDevShellBspReceiveData(dev,pItem);
-            break;
-
-        case 0x04:  //test speed
-            ret = I2CDevShellBspTestSpeed(dev,pItem);
-            break;
-
-        case 0x05:  //test I2C Device
-            ret = I2CDevShellBspTestSR(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellI2CBspName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 #endif
@@ -1708,21 +1542,17 @@ SHELL FUN rk_err_t I2CDevShellBsp(HDC dev, uint8 * pstr)
 _DRIVER_I2C_I2CDEVICE_SHELL_
 SHELL FUN rk_err_t I2CDevShellPcb(HDC dev, uint8 * pstr)
 {
- uint32 DevID;
+    uint32 DevID;
     I2C_DEVICE_CLASS * pstI2cDev;
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.pcb : pcb info\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     DevID = String2Num(pstr);
 
@@ -1799,6 +1629,15 @@ SHELL FUN rk_err_t I2CDevShellCreate(HDC dev, uint8 * pstr)
     uint32 DevID;
     HDC hExDev;
     I2C_DEVICE_ARG stArg;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     if (StrCmpA(pstr, "0", 1) == 0)
     {
         DevID = 0;
@@ -1813,21 +1652,8 @@ SHELL FUN rk_err_t I2CDevShellCreate(HDC dev, uint8 * pstr)
     }
 
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.open : open i2c cmd.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     rk_print_string("Will RKDev_Create\r\n");
-    ret = RKDev_Create(DEV_CLASS_I2C, I2C_DEV0,I2C_DEV0_PA);
+    ret = RKDev_Create(DEV_CLASS_I2C, DevID,I2C_DEV0_PA);
     rk_print_string("RKDev_Create ok\r\n");
     if (ret != RK_SUCCESS)
     {
@@ -1847,24 +1673,18 @@ SHELL FUN rk_err_t I2CDevShellCreate(HDC dev, uint8 * pstr)
 _DRIVER_I2C_I2CDEVICE_SHELL_
 SHELL FUN rk_err_t I2CDevShellDelete(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.close : close i2c device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
-    rk_print_string(" I2CDevShellDelete\r\n");
     // TODO:
     //add other code below:
     //...
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 
@@ -1879,19 +1699,6 @@ SHELL FUN rk_err_t I2CDevShellDelete(HDC dev, uint8 * pstr)
 _DRIVER_I2C_I2CDEVICE_SHELL_
 SHELL FUN rk_err_t I2CDevShellSuspend(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.suspend : suspend i2c device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -1910,19 +1717,6 @@ SHELL FUN rk_err_t I2CDevShellSuspend(HDC dev, uint8 * pstr)
 _DRIVER_I2C_I2CDEVICE_SHELL_
 SHELL FUN rk_err_t I2CDevShellResume(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.resume : resume i2c device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -1950,19 +1744,6 @@ SHELL FUN rk_err_t I2CDevShellRead(HDC dev, uint8 * pstr)
     minute = 59;
     hour   = 23;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.read : read data from i2c device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     rk_print_string(" I2CDevShellRead\r\n");
     // TODO:
     //add other code below:
@@ -2007,19 +1788,6 @@ SHELL FUN rk_err_t I2CDevShellRead(HDC dev, uint8 * pstr)
 _DRIVER_I2C_I2CDEVICE_SHELL_
 SHELL FUN rk_err_t I2CDevShellWrite(HDC dev,  uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.write : write data to i2c device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     rk_print_string(" I2CDevShellWrite\r\n");
 
     // TODO:
@@ -2040,19 +1808,6 @@ SHELL FUN rk_err_t I2CDevShellWrite(HDC dev,  uint8 * pstr)
 _DRIVER_I2C_I2CDEVICE_SHELL_
 SHELL FUN rk_err_t I2CDevShellControl(HDC dev,  uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("i2c.control : control i2c device.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     rk_print_string(" I2CDevShellControl\r\n");
     // TODO:
     //add other code below:
@@ -2060,41 +1815,5 @@ SHELL FUN rk_err_t I2CDevShellControl(HDC dev,  uint8 * pstr)
 
     return RK_SUCCESS;
 }
-/*******************************************************************************
-** Name: I2CDevShellHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.Ma
-** Date: 2014.11.10
-** Time: 10:21:35
-*******************************************************************************/
-_DRIVER_I2C_I2CDEVICE_SHELL_
-SHELL FUN rk_err_t I2CDevShellHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
-
-    if ( StrLenA( pstr) != 0)
-        return RK_ERROR;
-    rk_print_string("usage: I2c [.pcb] [.create] [.delete] [.help]   \r\n\n");
-
-    rk_print_string("The most commonly used I2c commands are:\r\n");
-
-    rk_print_string("pcb        I2c pcb info\r\n");
-    rk_print_string("create     create I2c device\r\n");
-    rk_print_string("delete     delete I2c device\r\n");
-    rk_print_string("help       I2c the most commonly used I2c commands list\r\n");
-
-    //rk_print_string("open      ??i2c             \r\n");
-    //rk_print_string("close     ??i2c             \r\n");
-    //rk_print_string("suspend   suspend i2c         \r\n");
-    //rk_print_string("resume    resume i2c          \r\n");
-    //rk_print_string("read      read from i2c       \r\n");
-    //rk_print_string("write     write to i2c        \r\n");
-    //rk_print_string("control   control i2c         \r\n");
-    //rk_print_string("bsp    ??I2C?????\r\n");
-
-    return RK_SUCCESS;
-}
-
 #endif
 #endif

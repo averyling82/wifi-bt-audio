@@ -18,6 +18,11 @@
 #include "FreeRTOS.h"
 #include "timers.h"
 
+#ifdef _QPLAY_ENABLE
+#include "qplay_list.h"
+#endif
+
+
 #define DLNA_AYNC 1
 
 typedef  struct _MPLAYER_RESP_QUEUE
@@ -159,6 +164,16 @@ void Player_Sate(unsigned int audio_state)
 #else
         rk_printf("audio controlstop  ****************************************");
         MplayerCtrl_Set_stating(PLAYER_STOPPED);
+#ifdef _QPLAY_ENABLE
+			if(QPLAY_TRANSPORT_STATE_NOTSEEKING == get_qplay_seek_state())
+				player_seek_next_qplay_index();/**/
+			else if(get_qplay_seek_state())
+			{
+				rk_printf("It is SEEKING\n");
+				set_qplay_seek_state(QPLAY_TRANSPORT_STATE_NOTSEEKING);
+			}
+#endif
+
 #endif
     }
     else if(audio_state == AUDIO_STATE_PLAY)
@@ -168,6 +183,10 @@ void Player_Sate(unsigned int audio_state)
 #else
         rk_printf("audio controlplay  ****************************************");
         MplayerCtrl_Set_stating(PLAYER_PLAYING);
+	#ifdef _QPLAY_ENABLE
+		if(get_qplay_seek_state())
+			set_qplay_seek_state(QPLAY_TRANSPORT_STATE_NOTSEEKING);
+	#endif
 #endif
     }
     else if(audio_state == AUDIO_STATE_PAUSE)
@@ -187,12 +206,14 @@ int MplayerCtrl_Init(void)
 
     rk_printf("MplayerCtrl_Init");
     play_state = PLAYER_STOPPED;
-    pArg.ucSelPlayType = SOURCE_FROM_DLNA;
+    pArg.ucSelPlayType = SOURCE_FROM_HTTP;
     pArg.FileNum = 1;
 
     pArg.pfAudioState = Player_Sate;
 
     //memcpy(pArg.filepath, "http://192.168.1.100/%E6%89%93%E8%80%81%E8%99%8E.MP3", 200);
+	pArg.SaveMemory = 0;
+	pArg.DirectPlay = 0;
 
     RKTaskCreate(TASK_ID_AUDIOCONTROL, 0, &pArg, SYNC_MODE);
     RKTaskCreate(TASK_ID_DLNA_PLAYER, 0, NULL, SYNC_MODE);
@@ -356,11 +377,15 @@ int MplayerCtrl_Playing(char *url)
     }
 
 #if DLNA_AYNC
-
-    if(MplayerCtrl_Get_state() == PLAYER_TRANSITIONING)
+  #ifdef _QPLAY_ENABLE
+    if(get_qplay_seek_state() || (MplayerCtrl_Get_state() == PLAYER_TRANSITIONING))//(MplayerCtrl_Get_state() == PLAYER_TRANSITIONING)//jjjhhh 20161126
+  #else
+	if(MplayerCtrl_Get_state() == PLAYER_TRANSITIONING)
+  #endif
     {
         AudioControlTask_SendCmd(AUDIO_CMD_DECSTART, NULL, SYNC_MODE);
     }
+
     return 0;
 #else
 
@@ -382,7 +407,8 @@ int MplayerCtrl_Playing(char *url)
             return 0;
         }
         else
-        {
+        {	
+        	rk_printf("AudioControlTask_SendCmd failed\n");
             MplayerCtrl_Set_stating(PLAYER_STOPPED);
             return -1;
         }
@@ -897,7 +923,6 @@ int MplayerCtrl_Set_stating(int state)
     play_state = state;
     if (play_state_changed)
         play_state_changed(play_state);
-
     return 0;
 }
 
@@ -1025,13 +1050,13 @@ void MPLAYERTask_Enter(void)
                 //Play_Resp.cmd = MPLAYER_STATE_SEEK;
                 break;
             case MPLAYER_STATE_PAUSE:
-               // printf(" ***MplayerCtrl_Pausing start remain = %d  \n", rkos_GetFreeHeapSize());
+                //printf(" ***MplayerCtrl_Pausing start remain = %d  \n", rkos_GetFreeHeapSize());
                 ret = MplayerCtrl_Pausing();
                 //printf(" ***MplayerCtrl_Pausing end  remain = %d  \n", rkos_GetFreeHeapSize());
                 //Play_Resp.cmd = MPLAYER_STATE_PAUSE;
                 break;
             case MPLAYER_STATE_RESUME:
-               // printf(" ***MplayerCtrl_Resuming start remain = %d  \n", rkos_GetFreeHeapSize());
+                //printf(" ***MplayerCtrl_Resuming start remain = %d  \n", rkos_GetFreeHeapSize());
                 ret = MplayerCtrl_Resuming();
                 //printf(" ***MplayerCtrl_Resuming end remain = %d  \n", rkos_GetFreeHeapSize());
                 //Play_Resp.cmd = MPLAYER_STATE_RESUME;
@@ -1044,6 +1069,7 @@ void MPLAYERTask_Enter(void)
                 //rkos_queue_send(gpstMPLAYERData->MPLAYERRespQueue, &Play_Resp, MAX_DELAY);
                 break;
             case DLNA_STOP:
+				printf(" ***DLNA_STOP remain = %d  \n", rkos_GetFreeHeapSize());
                 dlna_stop();
                 break;
             default:

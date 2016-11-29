@@ -680,9 +680,10 @@ _DRIVER_DMA_DMADEVICE_DATA_
 static SHELL_CMD ShellDmaName[] =
 {
     "pcb",DmaShellPcb,"list dma device info","dma.pcb [objectid]\n",
-    "create",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
-    "bsp",NULL,"NULL","NULL",
+    "create",DmaShellCreate,"create a dma device ","dma.create",
+#ifdef SHELL_BSP
+    "bsp",ShellDmaBsp,"NULL","NULL",
+#endif
     "\b",NULL,"NULL","NULL",
 };
 
@@ -690,22 +691,21 @@ static SHELL_CMD ShellDmaName[] =
 _DRIVER_DMA_DMADEVICE_SHELL_
 static SHELL_CMD ShellDmaBspName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "setsrc",NULL,"NULL","NULL",
-    "settarget",NULL,"NULL","NULL",
-    "setblock",NULL,"NULL","NULL",
-    "setsrcinc",NULL,"NULL","NULL",
-    "settargetinc",NULL,"NULL","NULL",
-    "setchp",NULL,"NULL","NULL",
-    "start",NULL,"NULL","NULL",
-    "stop",NULL,"NULL","NULL",
-    "testdma",NULL,"NULL","NULL",
-    "testblock",NULL,"NULL","NULL",,
-    "teststartstop",NULL,"NULL","NULL",
-    "testint",NULL,"NULL","NULL",
-    "testllp",NULL,"NULL","NULL",
-    "testmuldma",NULL,"NULL","NULL",
-    "testchp",NULL,"NULL","NULL",
+    "setsrc",ShellDmaBspSetSrc,"NULL","NULL",
+    "settarget",ShellDmaBspSetTarget,"NULL","NULL",
+    "setblock",ShellDmaBspSetBlock,"NULL","NULL",
+    "setsrcinc",ShellDmaBspSetSrcInc,"NULL","NULL",
+    "settargetinc",ShellDmaBspSetTargetInc,"NULL","NULL",
+    "setchp",ShellDmaBspSetChP,"NULL","NULL",
+    "start",ShellDmaBspStart,"NULL","NULL",
+    "stop",ShellDmaBspStop,"NULL","NULL",
+    "testdma",ShellDmaBspTestDma,"NULL","NULL",
+    "testblock",ShellDmaBspTestBlock,"NULL","NULL",,
+    "teststartstop",ShellDmaBspTestStartStop,"NULL","NULL",
+    "testint",ShellDmaBspTestInt,"NULL","NULL",
+    "testllp",ShellDmaBspTestLlp,"NULL","NULL",
+    "testmuldma",ShellDmaBspTestMulDma,"NULL","NULL",
+    "testchp",ShellDmaBspTestChp,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 #endif
@@ -732,12 +732,18 @@ SHELL API rk_err_t DmaDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t  ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellDmaName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -753,29 +759,12 @@ SHELL API rk_err_t DmaDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                 //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellDmaName[i].CmdDes, pItem);
+    if(ShellDmaName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //pcb
-            ret = DmaShellPcb(dev,pItem);
-            break;
-
-        case 0x01:  //Create
-            ret = DmaShellCreate(dev,pItem);
-            break;
-
-        case 0x02:  //help
-            break;
-
-        case 0x03:
-#ifdef SHELL_BSP
-            ret = ShellDmaBsp(dev, pItem);
-#endif
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellDmaName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 
@@ -803,12 +792,18 @@ SHELL FUN rk_err_t ShellDmaBsp(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t  ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellDmaBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -824,78 +819,12 @@ SHELL FUN rk_err_t ShellDmaBsp(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                 //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellDmaBspName[i].CmdDes, pItem);
+    if(ShellDmaBspName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //help
-#ifdef SHELL_HELP
-            ret = ShellDmaBspHelp(dev,pItem);
-#endif
-            break;
-
-        case 0x01:  //setsrc
-            ret = ShellDmaBspSetSrc(dev,pItem);
-            break;
-
-        case 0x02:  //settarget
-            ret = ShellDmaBspSetTarget(dev,pItem);
-            break;
-
-        case 0x03: //setblock
-            ret = ShellDmaBspSetBlock(dev, pItem);
-            break;
-
-        case 0x04: //setsrcinc
-            ret = ShellDmaBspSetSrcInc(dev, pItem);
-            break;
-
-        case 0x05: //settargetinc
-            ret = ShellDmaBspSetTargetInc(dev, pItem);
-            break;
-
-        case 0x06: //setchp
-            ret = ShellDmaBspSetChP(dev, pItem);
-            break;
-
-        case 0x07:  //start
-            ret = ShellDmaBspStart(dev,pItem);
-            break;
-
-        case 0x08:  //stop
-            ret = ShellDmaBspStop(dev,pItem);
-            break;
-
-        case 0x09:  //testdma
-            ret = ShellDmaBspTestDma(dev,pItem);
-            break;
-
-        case 0x0a: //testblock
-            ret = ShellDmaBspTestBlock(dev, pItem);
-            break;
-
-        case 0x0b: //teststartstop
-            ret = ShellDmaBspTestStartStop(dev, pItem);
-            break;
-
-        case 0x0c: //testint
-            ret = ShellDmaBspTestInt(dev, pItem);
-            break;
-
-        case 0x0d: //testllp
-            ret = ShellDmaBspTestLlp(dev, pItem);
-            break;
-
-        case 0x0e: //testmuldma
-            ret = ShellDmaBspTestMulDma(dev, pItem);
-            break;
-
-        case 0x0f: //testchp
-            ret = ShellDmaBspTestChp(dev, pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellDmaBspName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 
@@ -1269,19 +1198,15 @@ SHELL FUN rk_err_t DmaShellCreate(HDC dev,  uint8 * pstr)
 {
     rk_err_t ret;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA((uint8 *)pstr, "help", 4) == 0)
-        {
-            rk_print_string("dma.open : open dma. \r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     ret = RKDev_Create(DEV_CLASS_DMA, 0, NULL);
 
@@ -1314,12 +1239,12 @@ SHELL FUN rk_err_t DmaShellPcb(HDC dev,  uint8 * pstr)
         return RK_SUCCESS;
     }
 
-    DevID = String2Num(pstr);
-
-    if(DevID >= FILE_DEV_NUM_MAX)
+    if(*(pstr - 1) == '.')
     {
         return RK_ERROR;
     }
+
+    DevID = String2Num(pstr);
 
     pstDmaDev = gpstDmaDevInf;
 

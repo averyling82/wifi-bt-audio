@@ -271,7 +271,7 @@ rk_err_t rk_wifi_relink_sysinfo(int flag)
         if(mwifi_buf->wifiinfo[i].Connect_flag == 1)
         {
             rkos_memcpy(connect_ssid, mwifi_buf->wifiinfo[i].wifi_ap.ap_ssid_value, 32);
-            mwifi_buf->wifiinfo[i].Connect_flag = 0;
+            mwifi_buf->wifiinfo[i].Connect_flag = 0;rk_printf("connect_ssid=%s\n",connect_ssid);
         }
 
         if(easy_setup_flag == WICED_BUSY)
@@ -772,6 +772,8 @@ int rkwifi_get_strength(char *mssid_value, int mssid_len, uint8* bssid_value, in
     do {
 
        // wwd_wifi_scan( WICED_SCAN_TYPE_PASSIVE, WICED_BSS_TYPE_INFRASTRUCTURE, &ssid, &bogus_scan_mac, NULL, &extparam, easy_scan_result_callback, (wiced_scan_result_t **) &result_ptr, ws, WWD_STA_INTERFACE  );
+       
+	    rk_printf("jjjhhh 1111 wwd_wifi_scan ssid=%s\n",ssid.value);
         wwd_wifi_scan(WICED_SCAN_TYPE_ACTIVE, WICED_BSS_TYPE_ANY, &ssid, &bogus_scan_mac, NULL, &extparam, get_strength_easy_scan_result_callback, (wiced_scan_result_t **) &rk_result_ptr, ws, WWD_STA_INTERFACE  );
         rkos_semaphore_take( ws->scan_complete_sem, 2000);
         retry_times--;
@@ -915,7 +917,7 @@ rk_err_t rk_wifi_smartconfig(void)
 
     if(easy_setup_flag == WICED_BUSY)
     {
-        //rk_printf("smatconfig busy");
+        rk_printf("smatconfig busy");
         return RK_ERROR;
     }
 
@@ -925,7 +927,7 @@ rk_err_t rk_wifi_smartconfig(void)
 
     do
     {
-        //rk_printf("smartconfig = %d", wifi_network_up_flag);
+        rk_printf("smartconfig = %d", wifi_network_up_flag);//jjjhhh 20161110
         if(easy_setup_stop_flag == 1)
         {
              easy_setup_flag = WICED_FALSE;
@@ -1163,7 +1165,7 @@ void wifi_connectTask_Enter(void)
                 wiced_network_down(WICED_STA_INTERFACE);
                 flag = 0;
             }
-            if(wifi_ask.cmd == LINK_SMARTCONFIG)
+            if(wifi_ask.cmd == LINK_SMARTCONFIG)//update wifi info
             {
                 //rk_printf("aa");
                 rkos_memcpy(&JoinAp, &easy_join_ap, sizeof(WIFI_AP));
@@ -1450,9 +1452,10 @@ COMMON API void wifi_applicationTask_Enter(void)
                 }
                 else
                 #endif
-                {
+                {//rk_printf("WIFI_DEINIT 11111111\n");
                     if(WIFI_CONNECTTASK_HANDLE != NULL)
-                    {
+                    {	
+                    	//rk_printf("WIFI_DEINIT 22222222\n");
                         RKTaskDelete2(WIFI_CONNECTTASK_HANDLE);
                     }
                     #if 0
@@ -1463,10 +1466,10 @@ COMMON API void wifi_applicationTask_Enter(void)
                     }
                     #endif
                 }
-
-                ret = wiced_deinit();
+				//rk_printf("WIFI_DEINIT 333333\n");
+                ret = wiced_deinit();//rk_printf("WIFI_DEINIT 444444\n");
                 DeviceTask_DeleteDeviceList(DEVICE_LIST_SDIO, NULL, SYNC_MODE);
-
+				//rk_printf("WIFI_DEINIT 5555555\n");
                 if(ret == WICED_SUCCESS)
                 {
                     wifi_resp.cmd = RK_SUCCESS;
@@ -1474,8 +1477,8 @@ COMMON API void wifi_applicationTask_Enter(void)
                 else
                 {
                     wifi_resp.cmd = RK_ERROR;
-                }
-                rkos_queue_send(gWifiAppData->WIFIAPPRespQueue, &wifi_resp, MAX_DELAY);
+                }//rk_printf("WIFI_DEINIT 66666\n");
+                rkos_queue_send(gWifiAppData->WIFIAPPRespQueue, &wifi_resp, MAX_DELAY);//rk_printf("WIFI_DEINIT 7777\n");
                 break;
 
             case WIFI_SCAN:

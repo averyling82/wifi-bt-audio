@@ -113,8 +113,6 @@ static const ACodecPLL_APP ACodecpllTable_40960[8]=
 */
 ACodecI2S_mode_t Acodec_I2S_MODE;
 eACodecPll_Target_Freq pll_old_target;
-CodecMode_en_t Codecmode_Bak;
-CodecFS_en_t CodecFS_Bak;
 CodecPower_Status_t Codec_Power_Status;
 uint32 Acodec_suspend_En;
 
@@ -177,12 +175,12 @@ void ACodec_Set_ADC_NoiseGate();
 void ACodec_Set_ADC_ALC();
 void ACodec_Exit_ADC_Mode();
 void ACodec_Set_MICLI_Mode(CodecIn_sel_t In_Mode,CodecMicBias_sel_t Mic_Bias,CodecMic_Mode_t MIC_Mode);
-void ACodec_Set_ADC_Mode(CodecIn_sel_t In_Mode, CodecFS_en_t CodecFS);
+void ACodec_Set_ADC_Mode(CodecIn_sel_t In_Mode);
 void ACodec_WriteReg(uint32 regaddr,uint32 data);
 void ACodec_Exit_DAC_Mode();
-void ACodec_Set_DAC_Mode(CodecOut_sel_t OUT_Mode,CodecFS_en_t CodecFS);
+void ACodec_Set_DAC_Mode(CodecOut_sel_t OUT_Mode);
 void ACodec_Set_HPLO_Mode(CodecOut_sel_t OUT_Mode);
-void ACodec_Set_I2S_Mode(eACodecI2sFormat_t BUS_FORMAT,
+void ACodec_Set_I2S_TX_Mode(eACodecI2sFormat_t BUS_FORMAT,
               eACodecI2sDATA_WIDTH_t I2S_Data_width,
               ACodecI2S_BUS_MODE_t I2S_Bus_mode,
               ACodecI2S_mode_t I2S_mode);
@@ -193,7 +191,7 @@ void ACodec_Set_I2S_RX_Mode(eACodecI2sFormat_t BUS_FORMAT,
               ACodecI2S_mode_t I2S_mode);
 
 void Codec_PowerOnInitial(void);
-void Codec_SetMode(CodecMode_en_t Codecmode, CodecFS_en_t CodecFS);
+void Codec_SetMode(CodecMode_en_t Codecmode);
 void Codec_ExitMode(CodecMode_en_t Codecmode);
 void Codec_SetSampleRate(CodecFS_en_t CodecFS);
 //void Codec_SetVolumet(unsigned int Volume);
@@ -406,23 +404,19 @@ uint32 ACodec_Get_SRT_TIME(CodecFS_en_t CodecFS)
   Note:      if exit from application, like FM or MIC , please set codec to standby mode
 --------------------------------------------------------------------------------
 */
-void Codec_SetMode(CodecMode_en_t Codecmode, CodecFS_en_t CodecFS)
+void Codec_SetMode(CodecMode_en_t Codecmode)
 {
-
-    Codecmode_Bak = Codecmode;
-    CodecFS_Bak = CodecFS;
-
     switch (Codecmode)
     {
         case Codec_DACoutHP:
-            ACodec_Set_DAC_Mode(CodecOut_Sel_HP,CodecFS);
+            ACodec_Set_DAC_Mode(CodecOut_Sel_HP);
             break;
         case Codec_DACoutLINE:
-            ACodec_Set_DAC_Mode(CodecOut_Sel_LINE,CodecFS);
+            ACodec_Set_DAC_Mode(CodecOut_Sel_LINE);
             break;
 
         case Codec_Line1ADC:
-            ACodec_Set_ADC_Mode(Codecin_Sel_LINE1,CodecFS);
+            ACodec_Set_ADC_Mode(Codecin_Sel_LINE1);
             ACodec_ADC2DAC_MIX(CodecMIX_DISABLE);
             ACodec_Set_ADCMUX_Vol(5);
             ACodec_Set_ADC_DigVol(0);
@@ -430,13 +424,13 @@ void Codec_SetMode(CodecMode_en_t Codecmode, CodecFS_en_t CodecFS)
             break;
 
         case Codec_Line1in:
-            ACodec_Set_ADC_Mode(Codecin_Sel_LINE1,CodecFS);
+            ACodec_Set_ADC_Mode(Codecin_Sel_LINE1);
             ACodec_ADC2DAC_MIX(CodecMIX_ENABLE);
             ACodec_Set_ADC_HighPassFilter();
             break;
 
         case Codec_Line2ADC:
-            ACodec_Set_ADC_Mode(Codecin_Sel_LINE2,CodecFS);
+            ACodec_Set_ADC_Mode(Codecin_Sel_LINE2);
             ACodec_ADC2DAC_MIX(CodecMIX_DISABLE);
             ACodec_Set_ADCMUX_Vol(5);
             ACodec_Set_ADC_DigVol(0);
@@ -444,13 +438,13 @@ void Codec_SetMode(CodecMode_en_t Codecmode, CodecFS_en_t CodecFS)
             break;
 
         case Codec_Line2in:
-            ACodec_Set_ADC_Mode(Codecin_Sel_LINE2,CodecFS);
+            ACodec_Set_ADC_Mode(Codecin_Sel_LINE2);
             ACodec_ADC2DAC_MIX(CodecMIX_ENABLE);
             ACodec_Set_ADC_HighPassFilter();
             break;
 
         case Codec_MicStero:
-            ACodec_Set_ADC_Mode(Codecin_Sel_MIC_STERO,CodecFS);
+            ACodec_Set_ADC_Mode(Codecin_Sel_MIC_STERO);
             ACodec_ADC2DAC_MIX(CodecMIX_DISABLE);
             ACodec_Set_MIC_AnaVol(2);
             ACodec_Set_ADCMUX_Vol(5);
@@ -459,7 +453,7 @@ void Codec_SetMode(CodecMode_en_t Codecmode, CodecFS_en_t CodecFS)
             break;
 
         case Codec_Mic1Mono:
-            ACodec_Set_ADC_Mode(Codecin_Sel_MIC1_MONO,CodecFS);
+            ACodec_Set_ADC_Mode(Codecin_Sel_MIC1_MONO);
             ACodec_ADC2DAC_MIX(CodecMIX_DISABLE);
             ACodec_Set_MIC_AnaVol(2);
             ACodec_Set_ADCMUX_Vol(5);
@@ -468,7 +462,7 @@ void Codec_SetMode(CodecMode_en_t Codecmode, CodecFS_en_t CodecFS)
             break;
 
          case Codec_Mic2Mono:
-            ACodec_Set_ADC_Mode(Codecin_Sel_MIC2_MONO,CodecFS);
+            ACodec_Set_ADC_Mode(Codecin_Sel_MIC2_MONO);
             ACodec_ADC2DAC_MIX(CodecMIX_DISABLE);
             ACodec_Set_MIC_AnaVol(2);
             ACodec_Set_ADCMUX_Vol(5);
@@ -598,120 +592,6 @@ void Codec_SetSampleRate(CodecFS_en_t CodecFS)
     }
 }
 
-/*
---------------------------------------------------------------------------------
-  Function name : void Codec_SetVolumet(unsigned int Volume)
-  Author        : yangwenjie
-  Description   : codec control volume
-
-  Input         : Volume
-
-  Return        : null
-
-  History:     <author>         <time>         <version>
-             yangwenjie     2008-11-20         Ver1.0
-  desc:         ORG
-  Note:      volume = 0 mean mute,
---------------------------------------------------------------------------------
-*/
-/*
-_LIB_ROCKCODEC_COMMON_
-void Codec_SetVolumet(unsigned int Volume)
-{
-   uint32 VolumeMode = EQ_NOR;
-
-    rk_printf("Volume = %d",Volume);
-
-    if (Volume == 0)
-    {
-        Codec_DACMute();
-    }
-    else
-    {
-        if(ACodec_Get_DAC_MTST())
-        {
-            Codec_DACUnMute();
-        }
-        #if 0
-        if (TRUE == ThreadCheck(pMainThread, &MusicThread))
-        {
-            RKEffect          *pEffect = &pAudio->EffectCtl;
-            VolumeMode = pEffect->Mode;
-        }
-        #endif
-        switch (VolumeMode)
-        {
-            case EQ_NOR:
-                if(ACODEC_OUT_CONFIG == ACODEC_OUT_LINE)
-                {
-                    rk_printf("HPAMPVol = %d",ACodec_LineOutVol[Volume].HP_AMPVol);
-                    ACodec_Set_HP_AMP(ACodec_LineOutVol[Volume].HP_AMPVol);
-                    rk_printf("DacDigVol = %d",ACodec_LineOutVol[Volume].Dac_DigVol);
-                    ACodec_Set_DAC_DigVol(ACodec_LineOutVol[Volume].Dac_DigVol);
-                }
-                else
-                {
-                    rk_printf("HPAMPVol = %d",ACodec_HPoutVol[Volume].HP_AMPVol);
-                    ACodec_Set_HP_AMP(ACodec_HPoutVol[Volume].HP_AMPVol);
-
-                    rk_printf("DacDigVol = %d",ACodec_HPoutVol[Volume].Dac_DigVol);
-                    ACodec_Set_DAC_DigVol(ACodec_HPoutVol[Volume].Dac_DigVol);
-                }
-                break;
-            case EQ_POP:
-            case EQ_HEAVY:
-                if(VOLTAB_CONFIG == VOL_Europe)
-                {
-                    ACodec_Set_DAC_DigVol(CodecConfig_Europe[Volume].DacDigVol);
-                }
-                else
-                {
-                    ACodec_Set_DAC_DigVol(CodecConfig_General[Volume].DacDigVol);
-                }
-                break;
-            case EQ_JAZZ:
-            case EQ_UNIQUE:
-                if(VOLTAB_CONFIG == VOL_Europe)
-                {
-                   ACodec_Set_DAC_DigVol(CodecConfig_Europe[Volume].DacDigVol);
-                }
-                else
-                {
-                    ACodec_Set_DAC_DigVol(CodecConfig_General[Volume].DacDigVol);
-                }
-                break;
-
-            case EQ_USER:
-                if(VOLTAB_CONFIG == VOL_Europe)
-                {
-                    ACodec_Set_DAC_DigVol(CodecConfig_Europe[Volume].DacDigVol);
-                }
-                else
-                {
-                    ACodec_Set_DAC_DigVol(CodecConfig_General[Volume].DacDigVol);
-                }
-                break;
-
-            case EQ_BASS:
-                if(VOLTAB_CONFIG == VOL_Europe)
-                {
-                    ACodec_Set_DAC_DigVol(CodecConfig_Europe[Volume].DacDigVol);
-                }
-                else
-                {
-                    ACodec_Set_DAC_DigVol(CodecConfig_General[Volume].DacDigVol);
-                }
-
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    DelayUs(10);
-}
-*/
 /*
 --------------------------------------------------------------------------------
   Function name : void Codec_DACMute(void)
@@ -936,7 +816,7 @@ void ACodec_Set_I2S_RX_Mode(eACodecI2sFormat_t BUS_FORMAT,
 ** Return: void
 *******************************************************************************/
 //_ATTR_SYS_INIT_CODE_
-void ACodec_Set_I2S_Mode(eACodecI2sFormat_t BUS_FORMAT,
+void ACodec_Set_I2S_TX_Mode(eACodecI2sFormat_t BUS_FORMAT,
                          eACodecI2sDATA_WIDTH_t I2S_Data_width,
                          ACodecI2S_BUS_MODE_t I2S_Bus_mode,
                          ACodecI2S_mode_t I2S_mode)
@@ -956,7 +836,7 @@ void ACodec_Set_I2S_Mode(eACodecI2sFormat_t BUS_FORMAT,
 ** Input:pll_target
 ** Return: void
 *******************************************************************************/
-void ACodec_Set_DAC_Mode(CodecOut_sel_t OUT_Mode,CodecFS_en_t CodecFS)
+void ACodec_Set_DAC_Mode(CodecOut_sel_t OUT_Mode)
 {
     uint32 config = 0;
     //uint32 DACSRT_NUM;
@@ -1021,7 +901,7 @@ void ACodec_Set_DAC_Mode(CodecOut_sel_t OUT_Mode,CodecFS_en_t CodecFS)
 ** Input:pll_target
 ** Return: void
 *******************************************************************************/
-void ACodec_Set_ADC_Mode(CodecIn_sel_t In_Mode, CodecFS_en_t CodecFS)
+void ACodec_Set_ADC_Mode(CodecIn_sel_t In_Mode)
 {
     uint32 config = 0;
     //uint32 ADCSRT_NUM;

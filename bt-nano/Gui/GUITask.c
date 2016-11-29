@@ -158,11 +158,7 @@ rk_err_t GUITaskResume(HTC hTask);
 rk_err_t GUITaskSuspend(HTC hTask, uint32 Level);
 rk_err_t GUITaskCheckIdle(HTC hTask);
 rk_err_t GuiShellPcb(HDC dev, uint8 * pstr);
-rk_err_t GUITaskShellTest(HDC dev, uint8 * pstr);
-rk_err_t GUITaskShellHelp(HDC dev, uint8 * pstr);
-rk_err_t GUITaskShellDel(HDC dev, uint8 * pstr);
-rk_err_t GUITaskShellMc(HDC dev, uint8 * pstr);
-rk_err_t GUITaskShellPcb(HDC dev, uint8 * pstr);
+rk_err_t GuiShellTest(HDC dev,  uint8 * pstr);
 
 
 /*
@@ -2019,11 +2015,11 @@ INIT API rk_err_t GUITask_Init(void *pvParameters, void *arg)
 *---------------------------------------------------------------------------------------------------------------------
 */
 #ifdef _GUI_SHELL_
+_GUI_GUITASK_SHELL_
 static SHELL_CMD ShellGuiName[] =
 {
-    "test",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
-    "pcb",NULL,"NULL","NULL",
+    "test",GuiShellTest,"test gui control widget","gui.test",
+    "pcb",GuiShellPcb,"list gui thread pcb inf","gui.pcb [gui thread object id]",
     "\b",NULL,"NULL","NULL",                         // the end
 };
 
@@ -2049,13 +2045,19 @@ rk_err_t GuiShell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellGuiName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -2071,24 +2073,12 @@ rk_err_t GuiShell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellGuiName[i].CmdDes, pItem);
+    if(ShellGuiName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //test
-            ret = GuiShellTest(dev,pItem);
-            break;
-
-        case 0x01:  //help
-            ret = GuiShellHelp(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = GuiShellPcb(dev, pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellGuiName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 
@@ -2115,24 +2105,14 @@ SHELL FUN rk_err_t GuiShellPcb(HDC dev, uint8 * pstr)
     GUI_TASK_CTRL_BLOCK * pstGuiTask;
     uint32 i;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA((uint8 *)pstr, "help", 4) == 0)
-        {
-            rk_print_string("gui.pcb : gui pcb info cmd.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-    pstr++;
-#endif
     // TODO:
     //add other code below:
     //...
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
     TaskID = String2Num(pstr);
 
@@ -2269,28 +2249,6 @@ COMMON API rk_err_t GuiTask_SelectCallBack(HGC pGc, eSELECT_EVENT_TYPE EVENT_typ
 }
 
 /*******************************************************************************
-** Name: GuiShellHelp
-** Input:HDC dev
-** Return: rk_err_t
-** Owner:Benjo.lei
-** Date: 2015.10.29
-** Time: 10:43:17
-*******************************************************************************/
-_GUI_GUITASK_SHELL_
-rk_err_t GuiShellHelp(HDC dev,  uint8 * pstr)
-{
-    pstr--;
-
-    if ( StrLenA( pstr) != 0)
-        return RK_ERROR;
-
-    printf("test      ≤‚ ‘gui√¸¡Ó    \r\n");
-    printf("help      œ‘ ægui√¸¡Ó∞Ô÷˙–≈œ¢  \r\n");
-
-    return RK_SUCCESS;
-}
-
-/*******************************************************************************
 ** Name: GuiShellTest
 ** Input:HDC dev,  uint8 * pstr
 ** Return: rk_err_t
@@ -2314,6 +2272,11 @@ rk_err_t GuiShellTest(HDC dev,  uint8 * pstr)
     RKGUI_PROGRESSBAR_ARG pstProgressBarContent;
     RKGUI_TEXT_ARG pstTextContent;
     RKGUI_SPECTRUM_ARG pstSpectrumContent;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
 //    pstIconArg.x= 0;
 //    pstIconArg.y= 0;

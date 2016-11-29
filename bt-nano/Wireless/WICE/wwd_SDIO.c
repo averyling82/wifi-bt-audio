@@ -71,57 +71,7 @@ static void sdio_irq_handler_f2( void* arg )
      //printf("sdio_irq_handler_f2\n");
 #endif
 }
-int sdio_device_create(void)
-{
-    SDC_DEV_ARG stSdcArg;
-    SDIO_DEV_ARG stSdioArg;
-    HDC hSdc;
-    rk_err_t ret;
 
-
-    /*   ret = RKDev_Create(DEV_CLASS_DMA, 0, NULL);
-
-       if (ret != RK_SUCCESS)
-       {
-         printf("dma device create failure");
-       }
-    */
-
-    stSdcArg.hDma = RKDev_Open(DEV_CLASS_DMA, 0, NOT_CARE);
-    stSdcArg.Channel = 0;
-    if (stSdcArg.hDma <= 0)
-    {
-        return WWD_TIMEOUT;
-    }
-
-    ret = RKDev_Create(DEV_CLASS_SDC, 1, &stSdcArg);
-
-    if (ret != RK_SUCCESS)
-    {
-        printf("sdc1 open failure");
-        return WWD_TIMEOUT;
-    }
-
-
-    hSdc = RKDev_Open(DEV_CLASS_SDC, 1, NOT_CARE);
-
-    if ((hSdc == NULL) || (hSdc == (HDC)RK_ERROR) || (hSdc == (HDC)RK_PARA_ERR))
-    {
-        printf("Sdc Device Open Failure");
-        return WWD_TIMEOUT;
-    }
-
-    stSdioArg.hSdc = hSdc;
-
-    ret = RKDev_Create(DEV_CLASS_SDIO, 0, &stSdioArg);
-
-    if (ret != RK_SUCCESS)
-    {
-        printf("sdio Device Create Failure");
-        return WWD_TIMEOUT;
-    }
-    return ret;
-}
 _ap6181WICE_WIFI_INIT_
 wwd_result_t host_platform_bus_init( void )
 {

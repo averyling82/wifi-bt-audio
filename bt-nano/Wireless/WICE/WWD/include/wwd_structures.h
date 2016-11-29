@@ -170,11 +170,11 @@ typedef struct wiced_scan_result
     wiced_ssid_t              SSID;             /**< Service Set Identification (i.e. Name of Access Point)                    */
     wiced_mac_t               BSSID;            /**< Basic Service Set Identification (i.e. MAC address of Access Point)       */
     int16_t                   signal_strength;  /**< Receive Signal Strength Indication in dBm. <-90=Very poor, >-30=Excellent */
-    uint32_t                  max_data_rate;    /**< Maximum data rate in kilobits/s                                           */
     wiced_bss_type_t          bss_type;         /**< Network type                                                              */
     wiced_security_t          security;         /**< Security type                                                             */
     uint8_t                   channel;          /**< Radio channel that the AP beacon was received on                          */
     wiced_802_11_band_t       band;             /**< Radio band                                                                */
+    uint32_t                  max_data_rate;    /**< Maximum data rate in kilobits/s                                           */
     wiced_bool_t              on_channel;       /**< True if scan result was recorded on the channel advertised in the packet  */
     struct wiced_scan_result* next;             /**< Pointer to the next scan result                                           */
 } wiced_scan_result_t;

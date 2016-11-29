@@ -64,8 +64,4 @@ extern rk_err_t rkos_get_bt_status(void);
 extern rk_err_t rkos_get_sys_volume(void);
 extern rk_err_t rkos_get_battery_level(void);
 extern rk_err_t rkos_get_battery_status(void);
-extern rk_err_t rkos_get_wifi_status(void);
-
-
-
 #endif

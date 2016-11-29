@@ -328,7 +328,6 @@ PCMEncFunction(unsigned long ulIoctl, unsigned long ulParam1,
     {
         case SUBFN_CODEC_OPEN_ENC:
         {
-            rk_printf("open encode");
             MailBoxWriteA2BCmd(MEDIA_MSGBOX_CMD_ENCODE_OPEN, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
             MailBoxWriteA2BData(ulParam1, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
             rkos_semaphore_take(osRecordEncodeOk, MAX_DELAY);

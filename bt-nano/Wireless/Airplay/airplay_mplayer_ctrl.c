@@ -79,6 +79,8 @@ int Airplay_MplayerCtrl_Init(void)
     }
 
     pArg.ucSelPlayType = SOURCE_FROM_XXX;
+    pArg.SaveMemory = 0;
+    pArg.DirectPlay = 0;
     pArg.FileNum = 1;
 
     pArg.pfAudioState = NULL;

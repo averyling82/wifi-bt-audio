@@ -91,7 +91,7 @@ RKNanoD  Wireless Audio SDK V1.3更新如下：
 23, 解决无屏关机死机问题
 
 
-RKNanoD  Wireless Audio SDK V1.4更新如下：
+RKNanoD  Wireless Audio SDK V1.5更新如下：
 
 1,解决V1.3版本中存在并已经发现的BUG, BUG来自客户，自测，内测等。
 
@@ -137,6 +137,26 @@ RKNanoD  Wireless Audio SDK V1.4更新如下：
    PC无法更改，通过修改源码可更改，如果C盘存在钥匙 RKOSA.KEY, RKOSB.KEY可打开对应的盘，钥匙可通过修改源码更改。
    SPI BOOT的资源存放顺序分别是A, B, C三个盘，即如果有A盘，存A盘，如果没有A盘，有B盘，存B盘，否则存C盘。
 
+
+RKNanoD  Wireless Audio SDK V1.6更新如下：
+ 
+ 1,支持SOFT AP，WLAN->WIFI POWER里面有2个启动选项，一个是ON STA, 另一个ON AP, 从AP启动后，SSID为rkos-iot, 	password:123123123。
+
+ 2, DLNA支持全格式和SEEK功能。
+
+ 3，修改无屏操作逻辑，使其更加完善。
+
+ 4，增加看门口。
+
+ 5，增加大量宏控制，方便代码分割。
+
+ 6，解决系统无法从待机模式2.8进入待机模式2.9。
+
+ 7，优化WLAN启动，连接速度。
+
+ 8，解决V1.5版本中存在并已经发现的BUG, BUG来自客户，自测，内测等。
+
+ 
    
 
   

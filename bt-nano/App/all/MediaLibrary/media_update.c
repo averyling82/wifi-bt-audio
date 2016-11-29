@@ -100,6 +100,8 @@
 _APP_MEDIA_UPDATE_COMMON_
 COMMON FUN void UpdateMediaLibray(void)
 {
+    FREQ_EnterModule(FREQ_MEDIAUPDATA);
+
     MainTask_SetTopIcon(MAINTASK_SYS_MEDIA_UPDATE);
 
     FW_LoadSegment(SEGMENT_ID_FILEINFO_SAVE, SEGMENT_OVERLAY_ALL);
@@ -114,7 +116,11 @@ COMMON FUN void UpdateMediaLibray(void)
 
     MainTask_DeleteTopIcon(MAINTASK_SYS_MEDIA_UPDATE);
 
+    FREQ_ExitModule(FREQ_MEDIAUPDATA);
+
     RKTaskDelete(TASK_ID_MEDIA_UPDATE, 0, ASYNC_MODE);
+
+
 
 
 }

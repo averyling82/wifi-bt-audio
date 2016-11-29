@@ -646,10 +646,10 @@ INIT FUN rk_err_t BcoreDevInit(BCORE_DEVICE_CLASS * pstBcoreDev)
 _DRIVER_BCORE_BCOREDEVICE_DATA_
 static SHELL_CMD ShellBcoreName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "delete",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
+    "pcb",BcoreDevShellPcb,"list bcored device pcb information","bcore.pcb [bcore device object id]",
+    "create",BcoreDevShellCreate,"create a bcore device","bcore.create [bcore device object id]",
+    "delete",BcoreDevShellDel,"delete a bcore device","bcore.delete [bcore device object id]",
+    "test",BcoreDevShellTest,"test bcore device","bcore.test [bcore device object id]",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -674,10 +674,18 @@ SHELL API rk_err_t BcoreDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellBcoreName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -692,28 +700,14 @@ SHELL API rk_err_t BcoreDev_Shell(HDC dev, uint8 * pstr)
 
     pItem += StrCnt;
     pItem++;
-    switch (i)
+
+    ShellHelpDesDisplay(dev, ShellBcoreName[i].CmdDes, pItem);
+
+    if(ShellBcoreName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = BcoreDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = BcoreDevShellCreate(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = BcoreDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:
-            ret = BcoreDevShellTest(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ShellBcoreName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 
 }
@@ -741,6 +735,16 @@ SHELL FUN rk_err_t BcoreDevShellTest(HDC dev, uint8 * pstr)
     HDC hBcoreDev;
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     //Get BcoreDev ID...
     if(StrCmpA(pstr, "0", 1) == 0)
     {
@@ -756,7 +760,7 @@ SHELL FUN rk_err_t BcoreDevShellTest(HDC dev, uint8 * pstr)
     }
 
     //Open BcoreDev...
-    hBcoreDev = RKDev_Open(DEV_CLASS_BCORE, 0, NOT_CARE);
+    hBcoreDev = RKDev_Open(DEV_CLASS_BCORE, DevID, NOT_CARE);
     if((hBcoreDev == NULL) || (hBcoreDev == (HDC)RK_ERROR) || (hBcoreDev == (HDC)RK_PARA_ERR))
     {
         rk_print_string("BcoreDev open failure");
@@ -784,6 +788,15 @@ SHELL FUN rk_err_t BcoreDevShellDel(HDC dev, uint8 * pstr)
 {
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     //Get BcoreDev ID...
     if(StrCmpA(pstr, "0", 1) == 0)
     {
@@ -800,7 +813,7 @@ SHELL FUN rk_err_t BcoreDevShellDel(HDC dev, uint8 * pstr)
 
     rk_print_string("TASK_ID_BCORE success\n");
 
-    if(RKDev_Delete(DEV_CLASS_BCORE, 0, NULL) != RK_SUCCESS)
+    if(RKDev_Delete(DEV_CLASS_BCORE, DevID, NULL) != RK_SUCCESS)
     {
         rk_print_string("BCOREDev delete failure");
     }
@@ -821,6 +834,16 @@ SHELL FUN rk_err_t BcoreDevShellCreate(HDC dev, uint8 * pstr)
     BCORE_DEV_ARG stBcoreDevArg;
     rk_err_t ret;
     uint32 DevID;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     if(StrCmpA(pstr, "0", 1) == 0)
     {
@@ -845,8 +868,6 @@ SHELL FUN rk_err_t BcoreDevShellCreate(HDC dev, uint8 * pstr)
         rk_print_string("BcoreDev create failure");
     }
 
-    RKTaskCreate(TASK_ID_BCORE, 0, NULL, SYNC_MODE);
-
     return RK_SUCCESS;
 
 }
@@ -863,6 +884,16 @@ SHELL FUN rk_err_t BcoreDevShellPcb(HDC dev, uint8 * pstr)
 {
     HDC hBcoreDev;
     uint32 DevID;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
 
     //Get BcoreDev ID...
     if(StrCmpA(pstr, "0", 1) == 0)

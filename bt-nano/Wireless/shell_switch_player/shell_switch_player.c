@@ -98,7 +98,7 @@ rk_err_t SwitchPlayer_shell(HDC dev, uint8 * pstr)
             break;
 
         case 0x01:
-			SwitchToPlayer(SOURCE_FROM_DLNA);
+			SwitchToPlayer(SOURCE_FROM_HTTP);
             break;
 
 		case 0x02:

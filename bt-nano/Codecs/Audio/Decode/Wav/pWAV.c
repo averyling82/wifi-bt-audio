@@ -686,74 +686,69 @@ PCMFunction(unsigned long ulIoctl, unsigned long ulParam1,
     switch (ulIoctl)
     {
         case SUBFN_CODEC_OPEN_DEC:
-            {
-                MailBoxWriteA2BCmd(MEDIA_MSGBOX_CMD_DEC_OPEN, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
-                MailBoxWriteA2BData(0, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
-                gpMediaBlock.needDecode = 0;
-                rkos_semaphore_take(osAudioDecodeOk, MAX_DELAY);
-                if (gpMediaBlock.DecodeErr)   //codec decode open error
-                    return 0;
-                else
-                {
-                    return(1);
-                }
-            }
-            /*
-                    case SUBFN_CODEC_GETARTIST:
-                        {
-                            char **ppcName;
-                            ppcName = (char **)ulParam2;
-                            *ppcName = 0;
-                            return(1);
-                        }
+        {
+            gpMediaBlock.directplay = ulParam1;
+            gpMediaBlock.savememory = ulParam2;
 
-                    case SUBFN_CODEC_GETTITLE:
-                        {
-                            char **ppcName;
-                            ppcName = (char **)ulParam2;
-                            *ppcName = 0;
+            #ifdef CODEC_24BIT
+            gpMediaBlock.CodecDataWidth = 24;
+            #endif
 
-                            return(1);
-                        }
-            */
+            MailBoxWriteA2BCmd(MEDIA_MSGBOX_CMD_DEC_OPEN, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
+            MailBoxWriteA2BData((uint32)&gpMediaBlock, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
+            gpMediaBlock.needDecode = 0;
+            rkos_semaphore_take(osAudioDecodeOk, MAX_DELAY);
+            if (gpMediaBlock.DecodeErr)   //codec decode open error
+                return 0;
+            else
+                return(1);
+        }
 
         case SUBFN_CODEC_GETBITRATE:
-            {
-                *(int *)ulParam1 = gpMediaBlock.BitRate;
-                return(1);
-            }
+        {
+            *(int *)ulParam1 = gpMediaBlock.BitRate;
+            return(1);
+        }
 
         case SUBFN_CODEC_GETSAMPLERATE:
-            {
-                *(int *)ulParam1 = gpMediaBlock.SampleRate;
-                return(1);
-            }
+        {
+            *(int *)ulParam1 = gpMediaBlock.SampleRate;
+            return(1);
+        }
 
         case SUBFN_CODEC_GETCHANNELS:
-            {
-                *(int *)ulParam1 = gpMediaBlock.Channel;
-                return(1);
-            }
+        {
+            *(int *)ulParam1 = gpMediaBlock.Channel;
+            return(1);
+        }
 
         case SUBFN_CODEC_GETLENGTH:
-            {
-                *(unsigned long *)ulParam1 = gpMediaBlock.TotalPlayTime;
-                return(1);
-            }
+        {
+            *(unsigned long *)ulParam1 = gpMediaBlock.TotalPlayTime;
+            return(1);
+        }
 
         case SUBFN_CODEC_GET_BIT_PER_SAMPLE:
-            {
-                *(int *)ulParam1 = gpMediaBlock.BitPerSample;
-                return(1);
-            }
+        {
+            *(int *)ulParam1 = gpMediaBlock.BitPerSample;
+            return(1);
+        }
 
         case SUBFN_CODEC_GETTIME:
-            {
-                *(unsigned long *)ulParam1 = gpMediaBlock.CurrentPlayTime;
-                return(1);
-            }
+        {
+            *(unsigned long *)ulParam1 = gpMediaBlock.CurrentPlayTime;
+            return(1);
+        }
 
         case SUBFN_CODEC_DEC_GETBUFFER:
+        {
+            if(gpMediaBlock.savememory)
+            {
+                *(int *)ulParam1 = gpMediaBlock.Outptr;
+                *(int *)ulParam2 = gpMediaBlock.OutLength;
+                return 1;
+            }
+            else
             {
                 //DEBUG("wav get buffer...DecodeOver = %d",gpMediaBlock.DecodeOver);
 retry:
@@ -854,39 +849,46 @@ retry:
 
                 return(0);
             }
+        }
 
         case SUBFN_CODEC_DECODE:
-            {
-                MailBoxWriteA2BCmd(MEDIA_MSGBOX_CMD_DECODE, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
-                MailBoxWriteA2BData(0, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
-                return 1; //error.
-            }
-
-        case SUBFN_CODEC_SEEK:
-            {
-                //DEBUG("codec seek times = %d",ulParam1);
-                MailBoxWriteA2BCmd(MEDIA_MSGBOX_CMD_DECODE_SEEK, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
-                MailBoxWriteA2BData(ulParam1, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
-                rkos_semaphore_take(osAudioDecodeOk, MAX_DELAY);
-                return(1);
-            }
-
-        case SUBFN_CODEC_CLOSE:
-            {
-                MailBoxWriteA2BCmd(MEDIA_MSGBOX_CMD_DECODE_CLOSE, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
-                MailBoxWriteA2BData(0, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
-                rkos_semaphore_take(osAudioDecodeOk, MAX_DELAY);
-                return 1;
-            }
-        case SUBFN_CODEC_GET_FRAME_LEN:
-            {
-                *(int *)ulParam1 = gpMediaBlock.OutLength;
-            }
-
-        default:
+        {
+            MailBoxWriteA2BCmd(MEDIA_MSGBOX_CMD_DECODE, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
+            MailBoxWriteA2BData(0, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
+            gpMediaBlock.needDecode = 1;
+            rkos_semaphore_take(osAudioDecodeOk, MAX_DELAY);
+            if (gpMediaBlock.DecodeErr == 1)
             {
                 return 0;
             }
+            return 1;
+        }
+
+        case SUBFN_CODEC_SEEK:
+        {
+            //DEBUG("codec seek times = %d",ulParam1);
+            MailBoxWriteA2BCmd(MEDIA_MSGBOX_CMD_DECODE_SEEK, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
+            MailBoxWriteA2BData(ulParam1, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
+            rkos_semaphore_take(osAudioDecodeOk, MAX_DELAY);
+            return(1);
+        }
+
+        case SUBFN_CODEC_CLOSE:
+        {
+            MailBoxWriteA2BCmd(MEDIA_MSGBOX_CMD_DECODE_CLOSE, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
+            MailBoxWriteA2BData(0, MAILBOX_ID_0, MAILBOX_CHANNEL_1);
+            rkos_semaphore_take(osAudioDecodeOk, MAX_DELAY);
+            return 1;
+        }
+        case SUBFN_CODEC_GET_FRAME_LEN:
+        {
+            *(int *)ulParam1 = gpMediaBlock.OutLength;
+        }
+
+        default:
+        {
+            return 0;
+        }
     }
 #endif
 }

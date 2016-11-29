@@ -17,6 +17,7 @@
 #include <typedef.h>
 #include <DriverInclude.h>
 #include "rkos.h"
+#include "Bsp.h"
 
 
 typedef UINT32       (*p__MRS_MSP)(void);
@@ -28,7 +29,7 @@ extern UINT32 Image$$AP_MAIN_STACK$$ZI$$Limit;
 
 #if defined(__arm__) && defined(__ARMCC_VERSION)
 __attribute__((used,section("APMainStack"))) __align(4) uint32 MainStack[512];
-#ifdef _ENABLE_WIFI_BLUETOOTH
+#if 0//def _ENABLE_WIFI_BLUETOOTH
 __attribute__((used,section("IdleStack"))) __align(4) uint32 IdleStack[230];//JJJHHH 20161019 //IdleStack[250];
 #else
 __attribute__((used,section("IdleStack"))) __align(4) uint32 IdleStack[250];
@@ -165,7 +166,7 @@ void IntDefaultHandler_displaytasklist (void)
 {
     RK_TASK_CLASS * TempTaskHandler;
 
-    printf("\nMspSave =  0x%08x", MspSave);
+    //printf("\nMspSave =  0x%08x", MspSave);
 
     {
         uint32 i;
@@ -242,6 +243,7 @@ void IntDefaultHandler_displaytasklist (void)
     }
     #endif
 
+    Grf_NOC_Remap_Sel(NOC_REMAP_BOOT_ROM);
     while(1);
 }
 

@@ -29,7 +29,7 @@
 #include "RKOS.h"
 #include "BSP.h"
 #include "DeviceInclude.h"
-#include "GUITask.h"
+
 
 
 rk_err_t TimerShellTest (HDC dev, uint8* pstr, uint32 usTick);
@@ -626,9 +626,9 @@ static SHELL_CMD ShellTimeName[] =
 #ifdef SHELL_BSP
     "bsp",TimeDevShellBsp,"NULL","NULL",
 #endif
-    "create",TimerShellCreate,"NULL","NULL",
-    "test",TimerShellTest,"NULL","NULL",
-    "delete",TimerShellDel,"NULL","NULL",
+    "create",TimerShellCreate,"create timer device","timer.create",
+    "test",TimerShellTest,"test timer device","timer.test",
+    "delete",TimerShellDel,"delete timer device","timer.delete",
     "\b",NULL,"NULL","NULL",                       // the end
 };
 
@@ -661,13 +661,19 @@ SHELL API rk_err_t TimerDev_Shell(HDC dev,  uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t  ret;
+    rk_err_t  ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellTimeName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -740,14 +746,17 @@ SHELL FUN rk_err_t TimerShellCreate(HDC dev, uint8 * pstr)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     {
         //audio test
         #ifdef __DRIVER_AUDIO_AUDIODEVICE_C__
         hAudio = RKDev_Open(DEV_CLASS_AUDIO, 0, NOT_CARE);
         AudioDev_GetMainTrack(hAudio);
         AudioDev_SetChannel(hAudio, 0, 2);
-        AudioDev_SetSampleRate(hAudio, 0, CodecFS_192KHz);
+        AudioDev_SetTxSampleRate(hAudio, 0, CodecFS_192KHz);
         AudioDev_SetTrackLen(hAudio, 768);
         AudioDev_SetBit(hAudio, 0, 24);
         AudioDev_SetVol(hAudio, 25);
@@ -819,7 +828,10 @@ SHELL FUN rk_err_t TimerShellDel(HDC dev, uint8 * pstr)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     {
         rk_printf("timer pstr = %s\n",pstr);
         if (StrCmpA((uint8 *) pstr, "/0", 2) == 0)
@@ -861,7 +873,10 @@ SHELL FUN rk_err_t TimerShellTest (HDC dev, uint8* pstr, uint32 usTick)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 
@@ -881,13 +896,19 @@ SHELL FUN rk_err_t TimeDevShellBsp(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellTimeBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }

@@ -146,7 +146,9 @@ COMMON API rk_err_t fifoDev_FlushBuf(HDC dev)
         pstFIFODev->front = pstFIFODev->back;
         if(pstFIFODev->UseFile)
         {
+            #ifdef _FS_
             FileDev_FileSeek(pstFIFODev->hReadFile, SEEK_CUR, pstFIFODev->CurSize);
+            #endif
         }
         pstFIFODev->CurSize = 0;
 
@@ -353,6 +355,7 @@ COMMON API rk_err_t fifoDev_GetOffset(HDC dev, uint32 * offset, uint32 fn)
     {
         *offset = pstFIFODev->back;
     }
+    #ifdef _FS_
     else if(fn == 1)
     {
         FileDev_GetFileOffset(pstFIFODev->hReadFile1, offset);
@@ -361,6 +364,7 @@ COMMON API rk_err_t fifoDev_GetOffset(HDC dev, uint32 * offset, uint32 fn)
     {
         FileDev_GetFileOffset(pstFIFODev->hReadFile2, offset);
     }
+    #endif
 
     return RK_SUCCESS;
 }
@@ -390,8 +394,9 @@ COMMON API rk_err_t fifoDev_ReadSeek(HDC dev,  uint32 pos, int32 offset, uint32 
         return RK_ERROR;
     }
 
-    rk_printf("file seek1");
+    rk_printf("file seek1 offset = %d, pos = %d, fn = %d", offset, pos, fn);
 
+    #ifdef _FS_
     if(fn == 1)
     {
         return FileDev_FileSeek(pstFIFODev->hReadFile1, pos, offset);
@@ -400,6 +405,7 @@ COMMON API rk_err_t fifoDev_ReadSeek(HDC dev,  uint32 pos, int32 offset, uint32 
     {
         return FileDev_FileSeek(pstFIFODev->hReadFile2, pos, offset);
     }
+    #endif
 
     rkos_semaphore_take(pstFIFODev->osfifoReadReqSem, MAX_DELAY);
 
@@ -471,7 +477,9 @@ COMMON API rk_err_t fifoDev_ReadSeek(HDC dev,  uint32 pos, int32 offset, uint32 
         else
         {
             pstFIFODev->back += offset;
+            #ifdef _FS_
             FileDev_FileSeek(pstFIFODev->hReadFile, SEEK_SET, pstFIFODev->back % fifolen);
+            #endif
         }
 
         rkos_semaphore_give(pstFIFODev->osfifoReadReqSem);
@@ -535,7 +543,9 @@ COMMON API rk_err_t fifoDev_ReadSeek(HDC dev,  uint32 pos, int32 offset, uint32 
         else
         {
             pstFIFODev->back = offset;
+            #ifdef _FS_
             FileDev_FileSeek(pstFIFODev->hReadFile, SEEK_SET, pstFIFODev->back % fifolen);
+            #endif
         }
 
         rk_printf("fifo seek ok, back = %d", pstFIFODev->back);
@@ -560,8 +570,9 @@ _DRIVER_FIFO_FIFODEVICE_COMMON_
 COMMON API rk_err_t fifoDev_SetTotalSize(HDC dev, uint32 TotalSize)
 {
     FIFO_DEVICE_CLASS * pstFIFODev = (FIFO_DEVICE_CLASS *)dev;
+    #ifdef _FS_
     FILE_ATTR stFileAttr;
-
+    #endif
     pstFIFODev->front = 0;
     pstFIFODev->back = 0;
     pstFIFODev->ReadReqSize = 0;
@@ -599,6 +610,7 @@ COMMON API rk_err_t fifoDev_SetTotalSize(HDC dev, uint32 TotalSize)
     {
         if(pstFIFODev->UseFile)
         {
+            #ifdef _FS_
             FileDev_FileSeek(pstFIFODev->hReadFile, SEEK_SET, 0);
             FileDev_FileSeek(pstFIFODev->hReadFile1, SEEK_SET, 0);
             FileDev_FileSeek(pstFIFODev->hReadFile2, SEEK_SET, 0);
@@ -614,6 +626,7 @@ COMMON API rk_err_t fifoDev_SetTotalSize(HDC dev, uint32 TotalSize)
                 rk_print_string("file cache buffer write handle open fail");
                 return RK_ERROR;
             }
+            #endif
         }
 
         pstFIFODev->TotalSize = TotalSize;
@@ -648,6 +661,7 @@ COMMON API rk_err_t fifoDev_Read(HDC dev, uint8 * pbuf, uint32 size, uint32 fn, 
         return RK_ERROR;
     }
 
+    #ifdef _FS_
     if(fn == 1)
     {
         return FileDev_ReadFile(pstFIFODev->hReadFile1, pbuf, size);
@@ -656,6 +670,7 @@ COMMON API rk_err_t fifoDev_Read(HDC dev, uint8 * pbuf, uint32 size, uint32 fn, 
     {
         return FileDev_ReadFile(pstFIFODev->hReadFile2, pbuf, size);
     }
+    #endif
 
 
     rkos_semaphore_take(pstFIFODev->osfifoReadReqSem, MAX_DELAY);
@@ -814,8 +829,10 @@ COMMON API rk_err_t fifoDev_Read(HDC dev, uint8 * pbuf, uint32 size, uint32 fn, 
     {
         if(pstFIFODev->UseFile)
         {
+            #ifdef _FS_
             //rk_printf("fifo read front1 = %d, back1 = %d", front1, back1);
             FileDev_ReadFile(pstFIFODev->hReadFile, pbuf, size);
+            #endif
         }
         else
         {
@@ -829,7 +846,9 @@ COMMON API rk_err_t fifoDev_Read(HDC dev, uint8 * pbuf, uint32 size, uint32 fn, 
         {
             if(pstFIFODev->UseFile)
             {
+                #ifdef _FS_
                 FileDev_ReadFile(pstFIFODev->hReadFile, pbuf, size);
+                #endif
             }
             else
             {
@@ -840,7 +859,9 @@ COMMON API rk_err_t fifoDev_Read(HDC dev, uint8 * pbuf, uint32 size, uint32 fn, 
         {
             if(pstFIFODev->UseFile)
             {
+                #ifdef _FS_
                 FileDev_ReadFile(pstFIFODev->hReadFile, pbuf, fifolen - back);
+                #endif
             }
             else
             {
@@ -851,8 +872,10 @@ COMMON API rk_err_t fifoDev_Read(HDC dev, uint8 * pbuf, uint32 size, uint32 fn, 
             {
                 if(pstFIFODev->UseFile)
                 {
+                    #ifdef _FS_
                     FileDev_FileSeek(pstFIFODev->hReadFile, SEEK_SET, 0);
                     FileDev_ReadFile(pstFIFODev->hReadFile, pbuf + fifolen - back, size - fifolen + back);
+                    #endif
                 }
                 else
                 {
@@ -988,11 +1011,10 @@ COMMON API rk_err_t fifoDev_Write(HDC dev, uint8 * pbuf, uint32 size, uint32 Mod
                 return RK_ERROR;
             }
 
-            rk_printf("fifo write suspend front1 = %d, back1 = %d, size = %d", front1, back1, size);
-
             pstFIFODev->WriteReqSize = size;
+            rk_printf("fifo write suspend front1 = %d, back1 = %d, size = %d", front1, back1, size);
             rkos_semaphore_take(pstFIFODev->osfifoWriteSem, MAX_DELAY);
-            rk_printf("write resume");
+            rk_printf("write resume = %d", RKTaskHeapFree());
 
             if(pstFIFODev->ForceStop)
             {
@@ -1029,6 +1051,7 @@ COMMON API rk_err_t fifoDev_Write(HDC dev, uint8 * pbuf, uint32 size, uint32 Mod
         {
             if(pstFIFODev->UseFile)
             {
+                #ifdef _FS_
                 if(pbuf != NULL)
                 {
                     FileDev_WriteFile(pstFIFODev->hWriteFile, pbuf, size);
@@ -1041,6 +1064,7 @@ COMMON API rk_err_t fifoDev_Write(HDC dev, uint8 * pbuf, uint32 size, uint32 Mod
                 FileDev_SynchFileHandler(pstFIFODev->hReadFile, pstFIFODev->hWriteFile,SYNCH_TOTAL_SIZE);
                 FileDev_SynchFileHandler(pstFIFODev->hReadFile1, pstFIFODev->hWriteFile,SYNCH_TOTAL_SIZE);
                 FileDev_SynchFileHandler(pstFIFODev->hReadFile2, pstFIFODev->hWriteFile,SYNCH_TOTAL_SIZE);
+                #endif
             }
             else
             {
@@ -1053,6 +1077,7 @@ COMMON API rk_err_t fifoDev_Write(HDC dev, uint8 * pbuf, uint32 size, uint32 Mod
             {
                 rk_printf("fifo reback");
 
+                #ifdef _FS_
                 if(pbuf != NULL)
                 {
                     FileDev_WriteFile(pstFIFODev->hWriteFile, pbuf, fifolen - front);
@@ -1065,7 +1090,7 @@ COMMON API rk_err_t fifoDev_Write(HDC dev, uint8 * pbuf, uint32 size, uint32 Mod
                 FileDev_SynchFileHandler(pstFIFODev->hReadFile, pstFIFODev->hWriteFile,SYNCH_TOTAL_SIZE);
                 FileDev_SynchFileHandler(pstFIFODev->hReadFile1, pstFIFODev->hWriteFile,SYNCH_TOTAL_SIZE);
                 FileDev_SynchFileHandler(pstFIFODev->hReadFile2, pstFIFODev->hWriteFile,SYNCH_TOTAL_SIZE);
-
+                #endif
             }
             else
             {
@@ -1081,6 +1106,7 @@ COMMON API rk_err_t fifoDev_Write(HDC dev, uint8 * pbuf, uint32 size, uint32 Mod
             {
                 if(pstFIFODev->UseFile)
                 {
+                    #ifdef _FS_
                     FileDev_FileSeek(pstFIFODev->hWriteFile, SEEK_SET, 0);
 
                     if(pbuf != NULL)
@@ -1091,6 +1117,7 @@ COMMON API rk_err_t fifoDev_Write(HDC dev, uint8 * pbuf, uint32 size, uint32 Mod
                     {
                         FileDev_FileSeek(pstFIFODev->hWriteFile, SEEK_CUR, size - fifolen + front);
                     }
+                    #endif
                 }
                 else
                 {
@@ -1103,6 +1130,7 @@ COMMON API rk_err_t fifoDev_Write(HDC dev, uint8 * pbuf, uint32 size, uint32 Mod
     {
         if(pstFIFODev->UseFile)
         {
+            #ifdef _FS_
             if(pbuf != NULL)
             {
                 FileDev_WriteFile(pstFIFODev->hWriteFile, pbuf, size);
@@ -1111,6 +1139,7 @@ COMMON API rk_err_t fifoDev_Write(HDC dev, uint8 * pbuf, uint32 size, uint32 Mod
             {
                 FileDev_FileSeek(pstFIFODev->hWriteFile, SEEK_CUR, size);
             }
+            #endif
         }
         else
         {
@@ -1133,8 +1162,10 @@ COMMON API rk_err_t fifoDev_Write(HDC dev, uint8 * pbuf, uint32 size, uint32 Mod
             if(pstFIFODev->TotalWriteSize >= pstFIFODev->TotalSize)
             {
                 rk_printf("offb");
+                #ifdef _FS_
                 FileDev_CloseFile(pstFIFODev->hWriteFile);
                 pstFIFODev->hWriteFile = NULL;
+                #endif
             }
         }
     }
@@ -1328,6 +1359,7 @@ INIT API rk_err_t fifoDev_Delete(uint32 DevID, void * arg)
         return RK_ERROR;
     }
 
+    #ifdef _FS_
     if(pstFIFOArg != NULL)
     {
         if(gpstfifoDevISR[DevID]->hReadFile != NULL)
@@ -1354,6 +1386,7 @@ INIT API rk_err_t fifoDev_Delete(uint32 DevID, void * arg)
     {
         FileDev_CloseFile(gpstfifoDevISR[DevID]->hReadFile2);
     }
+    #endif
 
     rkos_semaphore_delete(gpstfifoDevISR[DevID]->osfifoReadReqSem);
     rkos_semaphore_delete(gpstfifoDevISR[DevID]->osfifoWriteReqSem);
@@ -1411,6 +1444,7 @@ INIT FUN rk_err_t fifoDev_Init(FIFO_DEVICE_CLASS * pstFIFODev)
 
     if(pstFIFODev->UseFile == 1)
     {
+        #ifdef _FS_
         pstFIFODev->hWriteFile = FileDev_CloneFileHandler(pstFIFODev->hReadFile);
         if((rk_err_t)pstFIFODev->hWriteFile <= 0)
         {
@@ -1435,6 +1469,7 @@ INIT FUN rk_err_t fifoDev_Init(FIFO_DEVICE_CLASS * pstFIFODev)
             rk_print_string("file cache buffer read2 handle open fail");
             return RK_ERROR;
         }
+        #endif
     }
 
     return RK_SUCCESS;
@@ -1474,11 +1509,17 @@ SHELL API rk_err_t fifoDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellfifoName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1513,7 +1554,7 @@ SHELL API rk_err_t fifoDev_Shell(HDC dev, uint8 * pstr)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-_DRIVER_FIFO_FIFODEVICE_SHELL_ HDC hFifoTest;
+_DRIVER_FIFO_FIFODEVICE_COMMON_ HDC hFifoTest;
 
 /*******************************************************************************
 ** Name: HttpStatus
@@ -1523,7 +1564,7 @@ _DRIVER_FIFO_FIFODEVICE_SHELL_ HDC hFifoTest;
 ** Date: 2016.6.16
 ** Time: 16:23:54
 *******************************************************************************/
-_DRIVER_FIFO_FIFODEVICE_SHELL_
+_DRIVER_FIFO_FIFODEVICE_COMMON_
 SHELL FUN void HttpStatus(int status, void *httppcb)
 {
     if((status == TCP_RECIVER_ERR) || (status == READ_DATA_ERR))
@@ -1540,10 +1581,11 @@ SHELL FUN void HttpStatus(int status, void *httppcb)
 ** Date: 2016.6.2
 ** Time: 10:31:55
 *******************************************************************************/
-static _DRIVER_FIFO_FIFODEVICE_SHELL_ uint8 packet[512];
-_DRIVER_FIFO_FIFODEVICE_SHELL_ uint8 *http_packet = NULL;
-_DRIVER_FIFO_FIFODEVICE_SHELL_ uint16 http_left_len = 0;
-_DRIVER_FIFO_FIFODEVICE_SHELL_
+static _DRIVER_FIFO_FIFODEVICE_COMMON_ uint8 packet[512];
+_DRIVER_FIFO_FIFODEVICE_COMMON_ uint8 *http_packet = NULL;
+_DRIVER_FIFO_FIFODEVICE_COMMON_ uint16 http_left_len = 0;
+static _DRIVER_FIFO_FIFODEVICE_SHELL_ uint16 directplay = 0;
+_DRIVER_FIFO_FIFODEVICE_COMMON_
 SHELL FUN rk_err_t http_write_fifo(uint8 *buf, uint16 write_len, uint32 mlen)
 {
     uint16 i,j;
@@ -1612,6 +1654,8 @@ SHELL FUN rk_err_t http_write_fifo(uint8 *buf, uint16 write_len, uint32 mlen)
     return RK_SUCCESS;
 }
 
+#include "audio_globals.h"
+
 /*******************************************************************************
 ** Name: fifoDevShellTest
 ** Input:HDC dev, uint8 * pstr
@@ -1634,6 +1678,11 @@ SHELL FUN rk_err_t fifoDevShellTest(HDC dev, uint8 * pstr)
         return RK_SUCCESS;
     }
 
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
     hFifoTest = RKDev_Open(DEV_CLASS_FIFO, 0, NOT_CARE);
     if(hFifoTest == NULL)
     {
@@ -1641,13 +1690,27 @@ SHELL FUN rk_err_t fifoDevShellTest(HDC dev, uint8 * pstr)
         return RK_SUCCESS;
     }
 
-
     //wifi play
     #ifdef __APP_AUDIO_AUDIOCONTROLTASK_C__
 
-    pArg.ucSelPlayType = SOURCE_FROM_DLNA;
+    pArg.ucSelPlayType = SOURCE_FROM_HTTP;
     pArg.FileNum = 1;
-    pArg.pfAudioState = NULL;
+
+    rk_printf("directplay = %d", directplay);
+
+    if(directplay == 1)
+    {
+        pArg.DirectPlay = 1;
+        pArg.SaveMemory = 1;
+        pArg.CodecType = CODEC_AMR_DEC;
+        pArg.pfAudioState = NULL;
+    }
+    else
+    {
+        pArg.DirectPlay = 0;
+        pArg.SaveMemory = 0;
+        pArg.pfAudioState = NULL;
+    }
 
     if(RKTaskFind(TASK_ID_AUDIOCONTROL, 0) != NULL)
     {
@@ -1658,7 +1721,6 @@ SHELL FUN rk_err_t fifoDevShellTest(HDC dev, uint8 * pstr)
         RKTaskCreate(TASK_ID_AUDIOCONTROL, 0, &pArg, SYNC_MODE);
     }
 
-    #ifdef __WIFI_DLNA_C__
 
     FW_LoadSegment(SEGMENT_ID_HTTP, SEGMENT_OVERLAY_ALL);
     DlnaHttp_Pcb1 = HttpPcb_New(HttpStatus, http_write_fifo, FIFOWRITE);
@@ -1668,7 +1730,7 @@ SHELL FUN rk_err_t fifoDevShellTest(HDC dev, uint8 * pstr)
         return -1;
     }
 
-    //ret = HttpGet_Url("http://192.168.1.100//xueyubaizhen.mp3", NULL, 0);
+    //ret = HttpGet_Url("http://192.168.1.100//a.mp3", NULL, 0);
     //ret = HttpGet_Url(DlnaHttp_Pcb1,"http://192.168.1.100//linyuyizhizou.mp3", 0);
     //ret = HttpGet_Url(DlnaHttp_Pcb1,"http://www.zsctc-api.com:8001/box/1/01.mp3", 0);
     ret = HttpGet_Url(DlnaHttp_Pcb1, pstr, 0);
@@ -1683,7 +1745,6 @@ SHELL FUN rk_err_t fifoDevShellTest(HDC dev, uint8 * pstr)
         printf("\nlocal http error\n");
         return RK_SUCCESS;
     }
-    #endif
 
     #endif
 
@@ -1709,6 +1770,11 @@ SHELL FUN rk_err_t fifoDevShellDel(HDC dev, uint8 * pstr)
         return RK_SUCCESS;
     }
 
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
+
 
     if (RKDev_Delete(DEV_CLASS_FIFO, 0, &pstFIFOArg) != RK_SUCCESS)
     {
@@ -1718,6 +1784,7 @@ SHELL FUN rk_err_t fifoDevShellDel(HDC dev, uint8 * pstr)
 
     rk_printf("fifo delete ok");
 
+    #ifdef _FS_
     if(pstFIFOArg.hReadFile != NULL)
     {
         if (FileDev_CloseFile(pstFIFOArg.hReadFile) != RK_SUCCESS)
@@ -1726,6 +1793,8 @@ SHELL FUN rk_err_t fifoDevShellDel(HDC dev, uint8 * pstr)
             return RK_ERROR;
         }
     }
+    #endif
+
     return RK_SUCCESS;
 }
 /*******************************************************************************
@@ -1740,8 +1809,10 @@ _DRIVER_FIFO_FIFODEVICE_SHELL_
 SHELL FUN rk_err_t fifoDevShellCreate(HDC dev, uint8 * pstr)
 {
     FIFO_DEV_ARG stFifoArg;
-    rk_err_t ret;
+    rk_err_t   ret = RK_SUCCESS;
+    #ifdef _FS_
     FILE_ATTR stFileAttr;
+    #endif
     uint32 DevID;
     uint8  *pItem;
     uint16 StrCnt = 0;
@@ -1752,7 +1823,10 @@ SHELL FUN rk_err_t fifoDevShellCreate(HDC dev, uint8 * pstr)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     if(StrCmpA(pstr, "/", 1) == 0)
     {
         pstr++;
@@ -1765,7 +1839,7 @@ SHELL FUN rk_err_t fifoDevShellCreate(HDC dev, uint8 * pstr)
         }
 
         StrCnt = ShellItemExtract(pstr,&pItem, &Space);
-        if (StrCnt == 0)
+        if ((StrCnt == 0) || (Space == '.'))
         {
             return RK_ERROR;
         }
@@ -1784,7 +1858,7 @@ SHELL FUN rk_err_t fifoDevShellCreate(HDC dev, uint8 * pstr)
         pstr++;
 
         Path[Ascii2Unicode(pstr, Path, strlen(pstr)) / 2 ] = 0;
-
+        #ifdef _FS_
         stFileAttr.Path = Path;
         stFileAttr.FileName = NULL;
 
@@ -1810,12 +1884,18 @@ SHELL FUN rk_err_t fifoDevShellCreate(HDC dev, uint8 * pstr)
         stFifoArg.BlockCnt = 200000;
         stFifoArg.BlockSize = 1024;
         stFifoArg.UseFile = 1;
+        #else
+        rk_print_string("not support file system");
+        return RK_SUCCESS;
+        #endif
+
+        directplay = 0;
 
     }
     else
     {
-
-        stFifoArg.BlockCnt = 20;
+        directplay = 1;
+        stFifoArg.BlockCnt = 64;
         stFifoArg.BlockSize = 1024;
         stFifoArg.UseFile = 0;
     }
@@ -1849,7 +1929,10 @@ SHELL FUN rk_err_t fifoDevShellPcb(HDC dev, uint8 * pstr)
     {
         return RK_SUCCESS;
     }
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     //...
      DevID = String2Num(pstr);
      if(DevID > FIFO_DEV_NUM)

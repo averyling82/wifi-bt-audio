@@ -31,6 +31,7 @@
 #include "BSP.h"
 #include <stdarg.h>
 #include "FwUpdate.h"
+#include "wdt.h"
 
 
 /*
@@ -76,7 +77,7 @@ int8   greenled_state = 0;
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-volatile uint32 SysTickCounter;                            //ÔÚSYSTICKÖÐ½øÐÐÔö¼Ó
+volatile uint32 SysTickCounter;                            //åœ¨SYSTICKä¸­è¿›è¡Œå¢žåŠ 
 uint32 SysTickCounterSave;
 uint32 SysTickCheck;
 uint32 MspSave;
@@ -84,11 +85,14 @@ void * UartHDC;
 void * FileSysHDC;
 void * hLcd;
 void * hKey;
+void * hWdt;
 void (*pIdleFun)(void);
 void (*pIdleFunSave)(void);
 
 //USB LUN
-uint8 gLun[USBMSC_LUN] = {2,0,0,0,0,0,0,0,0,0}; //gLun[0] Ä¬ÈÏµÈÓÚ2£¬ÈôÒªÒþ²ØÐèÒª¸ÄµôÄ¬ÈÏ
+#ifdef _USB_
+uint8 gLun[USBMSC_LUN] = {2,0,0,0,0,0,0,0,0,0}; //gLun[0] é»˜è®¤ç­‰äºŽ2ï¼Œè‹¥è¦éšè—éœ€è¦æ”¹æŽ‰é»˜è®¤
+#endif
 
 
 /*
@@ -322,14 +326,18 @@ COMMON API void PnPSever(void)
                         }
                     }
                 }
-                else if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER) == 1 ||
-					(MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) == 1))//DLNA/AIRPLAY MODE----LED1:ON; LED2:ON
+                else if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER) == 1/* ||
+					(MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) == 1)*/)//DLNA/AIRPLAY MODE----LED1:ON; LED2:ON
                 {	//rk_printf(">>>>>>>5555555555\n");
                     MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
                     MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
                 }
-
-				else if (MainTask_GetStatus(MAINTASK_APP_LOCAL_PLAYER) == 1)//MP3/±¾µØ²¥·Å MODE----LED1:ON; LED2:OFF
+                else if (MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) == 1)//AIRPLAY MODE----LED1:OFF; LED2:OFF
+                {	//rk_printf(">>>>>>>5555555555\n");
+                    MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
+                    MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
+                }
+				else if (MainTask_GetStatus(MAINTASK_APP_LOCAL_PLAYER) == 1)//MP3/æœ¬åœ°æ’­æ”¾ MODE----LED1:ON; LED2:OFF
                 {	//rk_printf(">>>>>>>6666666666\n");
                     MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
                     MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
@@ -345,7 +353,7 @@ COMMON API void PnPSever(void)
 
     if(VbusStatus == 0)
     {
-        if (Grf_CheckVbus()) //USB VBUS²å°Î»º³å1s
+        if (Grf_CheckVbus()) //USB VBUSæ’æ‹”ç¼“å†²1s
         {
             VbusTimeCount++;
             if (VbusTimeCount>2)
@@ -366,12 +374,15 @@ COMMON API void PnPSever(void)
             }
             VbusStatus = 1;
             ClearSytemIdle();
+            #ifndef _USB_
+            ChargeEnable();
+            #endif
         }
     }
     else if(VbusStatus == 1)
     {
 
-        if(Grf_CheckVbus() == 0) //USB VBUS²å°Î»º³å2s
+        if(Grf_CheckVbus() == 0) //USB VBUSæ’æ‹”ç¼“å†²2s
         {
             VbusTimeCount++;
             if (VbusTimeCount>2)
@@ -385,17 +396,22 @@ COMMON API void PnPSever(void)
         if((Grf_CheckVbus() == 0)&&(VbusTimeCount>=2))
         {
             printf ("\n-----PnPSever connect duankai-------\n");
-            if(RKTaskFind(TASK_ID_MAIN, 0))
+            if(MainTask_GetStatus(MAINTASK_APP_USB_OK) == 1)
             {
                 MainTask_SysEventCallBack(MAINTASK_USBDELETE,NULL);
             }
+            else
+            {
+                ChargeDisable();
+            }
+
             VbusStatus = 0;
             ClearSytemIdle();
         }
     }
 }
 
-
+#ifdef _RADIO_
 /*******************************************************************************
 ** Name: DeleteDeviceListFm
 ** Input:uint32 * list, void *arg
@@ -494,6 +510,7 @@ COMMON API rk_err_t CreateDeviceListFm(uint32 * list, void *arg)
     return RK_ERROR;
 
 }
+#endif
 
 #ifdef _USB_
 /*******************************************************************************
@@ -556,7 +573,7 @@ COMMON API rk_err_t CreateDeviceListUsbHostMsc(uint32 * list)
             break;
         }
     }
-    //ÓÐÐ§Lun¸öÊý
+    //æœ‰æ•ˆLunä¸ªæ•°
     valid_lun = i;
 
     //Init USBMSCDev arg...
@@ -626,6 +643,8 @@ COMMON API void GetDlnaDeviceName(uint8 * name)
     strcpy(name, "RK-DLNA");
 }
 
+#ifdef _USB_
+#ifdef _FS_
 /*******************************************************************************
 ** Name: DeviceListLoadFs
 ** Input:uint32 devicelist,uint32 * list
@@ -1234,6 +1253,8 @@ COMMON API rk_err_t DeviceListRemoveFs(uint32 devicelist, uint32 * list)
     return RK_SUCCESS;
 #endif
 }
+#endif
+#endif
 
 /*******************************************************************************
 ** Name: DeleteDeviceListSdio
@@ -1345,7 +1366,7 @@ COMMON API rk_err_t CreateDeviceListFIFO(uint32 * list, void *arg)
 _ATTR_SYS_CODE_
 COMMON API rk_err_t CreateDeviceListSdio(uint32 * list)
 {
-#ifdef _DRIVER_WIFI__
+#ifdef _WIFI_
     SDC_DEV_ARG stSdcArg;
     HDC hSdc;
     SDIO_DEV_ARG stSdioArg;
@@ -1522,7 +1543,7 @@ COMMON API rk_err_t CreateDeviceListUsbDeviceMsc(uint32 * list)
             break;
         }
     }
-    //ÓÐÐ§Lun¸öÊý
+    //æœ‰æ•ˆLunä¸ªæ•°
     valid_lun = i;
 
     //Init USBMSCDev arg...
@@ -1655,6 +1676,7 @@ COMMON API uint32 Num2String(uint8 * pstr, uint32 num)
 }
 
 #ifdef _LOG_DEBUG_
+#ifdef __DRIVER_BCORE_BCOREDEVICE_C__
 /*******************************************************************************
 ** Name: BBReqDebug
 ** Input:uint8 * buf
@@ -1728,6 +1750,7 @@ COMMON API void BBDebug(void)
 
 }
 #endif
+#endif
 
 /*******************************************************************************
 ** Name: vApplicationIdleHook
@@ -1750,6 +1773,11 @@ COMMON API void vApplicationIdleHook(void)
     if(pIdleFun != NULL)
     {
         pIdleFun();
+    }
+
+    if(hWdt != NULL)
+    {
+        WDTDev_Feed(hWdt);
     }
 }
 
@@ -2148,6 +2176,7 @@ _BSP_EVK_V20_BSP_COMMON_
 COMMON API void rk_printf(const char * fmt,...)
 {
 
+#if (DEBUG_UART_ADDR == 0x400a0000)//uart0 //jjjhhh 20161115
     uint8 * buf;
     uint8 size;
     uint32 tmpcnt,i,j;
@@ -2194,7 +2223,7 @@ COMMON API void rk_printf(const char * fmt,...)
     size =  vsnprintf((char*)(buf + j + 7), 900, (const char *)fmt, arg_ptr);
     UartDev_Write(UartHDC, buf, size + 16,  SYNC_MODE, NULL);
     rkos_memory_free(buf);
-
+#endif
 
 }
 #endif
@@ -2390,6 +2419,8 @@ _BSP_EVK_V20_BSP_INIT_
 INIT API void SystemDeInit(void)
 {
 
+    FREQ_EnterModule(FREQ_INIT);
+
     PowerManagerEnd();
 
     if(RKTaskDelete(TASK_ID_SHELL,0,SYNC_MODE) != RK_SUCCESS)
@@ -2402,24 +2433,25 @@ INIT API void SystemDeInit(void)
         rk_printf("task manager delete fail");
     }
 
+    #ifdef _FS_
     if(DeleteDeviceList(DEVICE_LIST_DIR, NULL) != RK_SUCCESS)
     {
         rk_printf("dir device list delete fail");
     }
+    #endif
 
     if(DeleteDeviceList(DEVICE_LIST_ADUIO_PLAY, NULL) != RK_SUCCESS)
     {
         rk_printf("audio play device list delete fail");
     }
 
+    #ifdef __DRIVER_BCORE_BCOREDEVICE_C__
     if(RKDev_Delete(DEV_CLASS_BCORE, 0, NULL) != RK_SUCCESS)
     {
         rk_print_string("\nbcore delete fail");
     }
-
-    #ifndef _USE_GUI_
-    FREQ_EnterModule(FREQ_BLON);
     #endif
+
     SaveSysInformation(1);
 
     #ifdef _USE_GUI_
@@ -2442,6 +2474,7 @@ INIT API void SystemDeInit(void)
         rk_printf("adc key device list delete fail");
     }
 
+    #ifdef _FS_
     #ifdef _EMMC_BOOT_
     if(DeleteDeviceList(DEVICE_LIST_EMMC_FS1, NULL) != RK_SUCCESS)
     {
@@ -2493,7 +2526,15 @@ INIT API void SystemDeInit(void)
 
     if(RKDev_Delete(DEV_CLASS_FILE, 0, NULL) != RK_SUCCESS)
     {
-        rk_printf("file device list delete fail");
+        rk_printf("file device delete fail");
+    }
+    #endif
+
+    RKDev_Close(hWdt);
+
+    if(RKDev_Delete(DEV_CLASS_WDT, 0, NULL) != RK_SUCCESS)
+    {
+        rk_printf("watchdog device delete fail");
     }
 
     //RKDev_Close(UartHDC);
@@ -2547,6 +2588,8 @@ INIT API void SystemInit(void)
     rk_err_t ret;
 
     PowerManagerInit();
+
+    FREQ_EnterModule(FREQ_INIT);
 
 #ifdef _EMMC_BOOT_
     if (CreateDeviceList(DEVICE_LIST_EMMC_BOOT, NULL) != RK_SUCCESS)
@@ -2609,6 +2652,7 @@ INIT API void SystemInit(void)
          UartHDC = NULL;
     }
 
+    #ifdef _FS_
     if(RKDev_Create(DEV_CLASS_FILE, 0, NULL) != RK_SUCCESS)
     {
         rk_print_string("\nfile device create failure");
@@ -2617,11 +2661,6 @@ INIT API void SystemInit(void)
     else
     {
         FileSysHDC = RKDev_Open(DEV_CLASS_FILE, 0, NOT_CARE);
-    }
-
-    if(RKDev_Create(DEV_CLASS_MSG, 0, NULL) != RK_SUCCESS)
-    {
-        rk_print_string("\nmsg device create failure");
     }
 
     #ifdef _EMMC_BOOT_
@@ -2687,6 +2726,33 @@ INIT API void SystemInit(void)
         gLun[i] = 0;
 
     }
+    #endif
+
+
+    if(RKDev_Create(DEV_CLASS_MSG, 0, NULL) != RK_SUCCESS)
+    {
+        rk_print_string("\nmsg device create failure");
+    }
+
+    #if 1
+    {
+        WDT_DEV_ARG stWDTDevArg;
+
+        stWDTDevArg.timeout = PERIOD_RANGE_0X7FFFFFFF;
+
+        ret = RKDev_Create(DEV_CLASS_WDT, 0, &stWDTDevArg);
+        if(ret != RK_SUCCESS)
+        {
+            rk_print_string("WDTDev create failure");
+            hWdt = NULL;
+        }
+        else
+        {
+            hWdt = RKDev_Open(DEV_CLASS_WDT, 0, NOT_CARE);
+        }
+    }
+    #endif
+
 
     CreateDeviceList(DEVICE_LIST_ADC_KEY, NULL);
 
@@ -2697,6 +2763,8 @@ INIT API void SystemInit(void)
 #ifdef _USE_GUI_
     CreateDeviceList(DEVICE_LIST_DISPLAY, NULL);
     RKTaskCreate(TASK_ID_GUI,0, NULL, SYNC_MODE);
+#else
+    PmuSetSysRegister(0, 0x55aa55aa);
 #endif
 
     if(Grf_CheckVbus())
@@ -2716,20 +2784,23 @@ INIT API void SystemInit(void)
                 GuiTask_DeleteWidget(pGc);
             }
             #endif
-			
+
             LoadSysInformation();
-			
 
             CreateDeviceList(DEVICE_LIST_ADUIO_PLAY, NULL);
-			
+
+            #ifdef __DRIVER_BCORE_BCOREDEVICE_C__
             //Create BcoreDev...
             ret = RKDev_Create(DEV_CLASS_BCORE, 0, NULL);
             if (ret != RK_SUCCESS)
             {
                 rk_print_string("\nBcoreDev create failure");
             }
-			
+            #endif
+
+            #ifdef _FS_
             CreateDeviceList(DEVICE_LIST_DIR, NULL);
+            #endif
 
             RKTaskCreate(TASK_ID_MAIN,0, NULL, SYNC_MODE);
 
@@ -2767,22 +2838,27 @@ INIT API void SystemInit(void)
 
         CreateDeviceList(DEVICE_LIST_ADUIO_PLAY, NULL);
 
+        #ifdef __DRIVER_BCORE_BCOREDEVICE_C__
         //Create BcoreDev...
         ret = RKDev_Create(DEV_CLASS_BCORE, 0, NULL);
         if (ret != RK_SUCCESS)
         {
             rk_print_string("\nBcoreDev create failure");
         }
+        #endif
 
+        #ifdef _FS_
         CreateDeviceList(DEVICE_LIST_DIR, NULL);
+        #endif
 
         RKTaskCreate(TASK_ID_MAIN,0, NULL, SYNC_MODE);
 
         #ifdef _USE_SHELL_
         RKTaskCreate(TASK_ID_SHELL,0, NULL, SYNC_MODE);
         #endif
-
+#ifdef __ENABLE_POWERMANAGER
         PowerManagerStart();
+#endif
     }
 }
 
@@ -2949,17 +3025,17 @@ INIT API rk_err_t CreateDeviceListAudioPlay(uint32 * list)
 
 
     stRockCodecDevArg.hI2s = RKDev_Open(DEV_CLASS_I2S, I2S_DEV0, NOT_CARE);
-    stRockCodecDevArg.arg.SampleRate = I2S_FS_44100Hz;
+    stRockCodecDevArg.arg.DacFs = I2S_FS_44100Hz;
 #ifndef _BROAD_LINE_OUT_
-    stRockCodecDevArg.arg.DacOutMode  = Codec_DACoutHP;
+    stRockCodecDevArg.arg.DacMode  = Codec_DACoutHP;
 #else
-    stRockCodecDevArg.arg.DacOutMode  = Codec_DACoutLINE;
+    stRockCodecDevArg.arg.DacMode  = Codec_DACoutLINE;
 #endif
-    stRockCodecDevArg.arg.AdcinMode = Codec_Standby;
+    stRockCodecDevArg.arg.AdcMode = Codec_Standby;
 #ifdef CODEC_24BIT
-    stRockCodecDevArg.arg.DataWidth = VDW_RX_WIDTH_24BIT;
+    stRockCodecDevArg.arg.DacDataWidth = VDW_RX_WIDTH_24BIT;
 #else
-    stRockCodecDevArg.arg.DataWidth = VDW_RX_WIDTH_16BIT;
+    stRockCodecDevArg.arg.DacDataWidth = VDW_RX_WIDTH_16BIT;
 #endif
     ret = RKDev_Create(DEV_CLASS_ROCKCODEC, 0,&stRockCodecDevArg);
 
@@ -3012,6 +3088,7 @@ INIT API rk_err_t CreateDeviceListAudioPlay(uint32 * list)
 
 }
 
+#ifdef _FS_
 /*******************************************************************************
 ** Name: DeleteDeviceListDir
 ** Input:uint32 * list
@@ -3063,6 +3140,7 @@ INIT API rk_err_t CreateDeviceListDir(uint32 * list)
     return RK_SUCCESS;
 
 }
+#endif
 
 /*******************************************************************************
 ** Name: CreateDeviceListKey
@@ -3338,7 +3416,6 @@ INIT API rk_err_t CreateDeviceListDisplay(uint32 * list)
 _BSP_EVK_V20_BSP_INIT_
 INIT API rk_err_t DeleteDeviceListSpiBoot(uint32 * list)
 {
-    SDC_DEV_ARG stSdcArg;
     HDC hSdc,hStorage;
     SPIFLASH_DEV_ARG stSpiArg;
     LUN_DEV_ARG stLunArg;
@@ -3365,12 +3442,16 @@ INIT API rk_err_t DeleteDeviceListSpiBoot(uint32 * list)
     i--;
     list[i] = 0;
 
-    ret = RKDev_Delete(DEV_CLASS_SPIFLASH, 0, NULL);
+    ret = RKDev_Delete(DEV_CLASS_SPIFLASH, 0, &stSpiArg);
 
     if (ret != RK_SUCCESS)
     {
         rk_print_string("\nspi device delete failure");
     }
+
+    RKDev_Close(stSpiArg.hDma);
+    i--;
+    list[i] = 0;
 
     ret = RKDev_Delete(DEV_CLASS_DMA, 0, NULL);
 
@@ -3427,6 +3508,7 @@ INIT API rk_err_t DeleteDeviceListSpiDataBase(uint32 * list)
 
 }
 
+#ifdef _FS_
 /*******************************************************************************
 ** Name: DeleteDeviceListSpiFs3
 ** Input:uint32 * list
@@ -3640,7 +3722,6 @@ INIT API rk_err_t DeleteDeviceListSpiFs1(uint32 * list)
     if(ret != RK_SUCCESS)
     {
         rk_print_string("remove C volume failure");
-        return RK_ERROR;
     }
     else
     {
@@ -3667,47 +3748,48 @@ INIT API rk_err_t DeleteDeviceListSpiFs1(uint32 * list)
     if(ret != RK_SUCCESS)
     {
         rk_print_string("par0 delete failure");
-        return RK_ERROR;
     }
-    RKDev_Close(stCreateParArg.hLun);
-    i--;
-    list[i] = 0;
+    else
+    {
+        RKDev_Close(stCreateParArg.hLun);
+        i--;
+        list[i] = 0;
+    }
 
     ret = RKDev_Delete(DEV_CLASS_LUN, 2, &stLunArg);
     if(ret != RK_SUCCESS)
     {
         rk_print_string("lun2 delete failure");
-        return RK_ERROR;
+    }
+    else
+    {
+        RKDev_Close(stLunArg.hStorage);
+        i--;
+        list[i] = 0;
     }
 
-    RKDev_Close(stLunArg.hStorage);
-    i--;
-    list[i] = 0;
-
     ret = RKDev_Delete(DEV_CLASS_SD, 0, &stSdDevArg);
-
     if (ret != RK_SUCCESS)
     {
         rk_print_string("\nSD device delete failure");
-        return RK_ERROR;
     }
-
-    RKDev_Close(stSdDevArg.hSdc);
-    i--;
-    list[i] = 0;
-
+    else
+    {
+        RKDev_Close(stSdDevArg.hSdc);
+        i--;
+        list[i] = 0;
+    }
     ret = RKDev_Delete(DEV_CLASS_SDC, 0, &stSdcArg);
-
     if (ret != RK_SUCCESS)
     {
         rk_print_string("\nsdc device delete failure");
-        return RK_ERROR;
     }
-
-    RKDev_Close(stSdcArg.hDma);
-    i--;
-    list[i] = 0;
-
+    else
+    {
+        RKDev_Close(stSdcArg.hDma);
+        i--;
+        list[i] = 0;
+    }
     rk_printf("delete spi fs1 device list");
     return RK_SUCCESS;
 }
@@ -4384,6 +4466,10 @@ err:
     return RK_ERROR;
 
 }
+
+#endif
+
+
 /*******************************************************************************
 ** Name: CreateDeviceListSpiDataBase
 ** Input:uint32 * list
@@ -4551,8 +4637,13 @@ INIT API rk_err_t CreateDeviceListSpiBoot(uint32 * list)
         goto err;
     }
 
+    stSpiArg.hDma = RKDev_Open(DEV_CLASS_DMA, 0, NOT_CARE);
     stSpiArg.spirate = SPI_BUS_CLK;
-
+    if (stSpiArg.hDma <= 0)
+    {
+        rk_print_string("\ndma device open failure");
+        goto err;
+    }
 
     ret = RKDev_Create(DEV_CLASS_SPIFLASH, 0, &stSpiArg);
     if (ret != RK_SUCCESS)
@@ -4560,6 +4651,12 @@ INIT API rk_err_t CreateDeviceListSpiBoot(uint32 * list)
         goto err;
     }
 
+
+    list[i] = ((i + 1) << 24) | (DEV_CLASS_DMA << 8) | 0;
+    i++;
+
+    list[i] = ((i + 1) << 24) | (DEV_CLASS_SPIFLASH << 8) | 0;
+    i++;
 
     hSpiFlash = RKDev_Open(DEV_CLASS_SPIFLASH, 0, NOT_CARE);
 
@@ -4583,8 +4680,6 @@ INIT API rk_err_t CreateDeviceListSpiBoot(uint32 * list)
         goto err;
     }
 
-    list[i] = ((i + 1) << 24) | (DEV_CLASS_SPIFLASH << 8) | 0;
-    i++;
     list[i] = ((i + 1) << 24) | (DEV_CLASS_LUN << 8) | 0;
     i++;
 
@@ -4716,6 +4811,7 @@ INIT API rk_err_t DeleteDeviceListEmmcDataBase(uint32 * list)
 
 }
 
+#ifdef _FS_
 /*******************************************************************************
 ** Name: DeleteDeviceListEmmcFs3
 ** Input:uint32 * list
@@ -4915,7 +5011,6 @@ INIT API rk_err_t DeleteDeviceListEmmcFs1(uint32 * list)
     if(ret != RK_SUCCESS)
     {
         rk_print_string("remove C volume failure");
-        return RK_ERROR;
     }
     else
     {
@@ -4943,23 +5038,24 @@ INIT API rk_err_t DeleteDeviceListEmmcFs1(uint32 * list)
     if(ret != RK_SUCCESS)
     {
         rk_print_string("par0 delete failure");
-        return RK_ERROR;
     }
-    RKDev_Close(stCreateParArg.hLun);
-    i--;
-    list[i] = 0;
-
+    else
+    {
+        RKDev_Close(stCreateParArg.hLun);
+        i--;
+        list[i] = 0;
+    }
     ret = RKDev_Delete(DEV_CLASS_LUN, 2, &stLunArg);
     if(ret != RK_SUCCESS)
     {
         rk_print_string("lun2 delete failure");
-        return RK_ERROR;
     }
-
-    RKDev_Close(stLunArg.hStorage);
-    i--;
-    list[i] = 0;
-
+    else
+    {
+        RKDev_Close(stLunArg.hStorage);
+        i--;
+        list[i] = 0;
+    }
     rk_printf("delete emmc fs1 device list");
     return RK_SUCCESS;
 }
@@ -5438,6 +5534,7 @@ INIT API rk_err_t CreateDeviceListEmmcFs1(uint32 * list)
     return RK_ERROR;
 
 }
+#endif
 
 /*******************************************************************************
 ** Name: CreateDeviceListEmmcDataBase
@@ -5677,7 +5774,6 @@ INIT API void RockCodecDevHwDeInit(uint32 DevID, uint32 Channel)
     ScuClockGateCtr(PCLK_ACODEC_GATE, 0);     //PCLK ACODEC gating open
 
     #ifdef HP_DET_CONFIG
-	
     Grf_GpioMuxSet(GPIO_CH2,HP_DET,IOMUX_GPIO2B3_IO);
     Gpio_SetPinDirection(GPIO_CH2,HP_DET,GPIO_IN);
     Grf_GPIO_SetPinPull(GPIO_CH2,HP_DET,DISABLE);
@@ -6266,6 +6362,30 @@ INIT API void UsbOtgDevHwInit(uint32 DevID, uint32 Channel)
 
     //interrupt init
     IntRegister(INT_ID_USBC, (void*)UsbOtgDevIntIsr0);
+
+}
+
+
+/*******************************************************************************
+** Name: UsbOtgDevHwInit
+** Input:uitn32 DevID, uint32 Channel
+** Return: void
+** Owner:aaron.sun
+** Date: 2015.5.18
+** Time: 11:29:13
+*******************************************************************************/
+_DRIVER_USB_USBOTGDEV_INIT_
+INIT API void UsbOtgDevHwDeInit(uint32 DevID, uint32 Channel)
+{
+    //CPU init
+    ScuSoftResetCtr(USBPHY_SRST, 1);
+    ScuSoftResetCtr(USBGLB_SRST, 1);
+    ScuSoftResetCtr(USBOTG_SRST, 1);
+    ScuClockGateCtr(CLK_USBPHY_GATE, 0);
+    ScuClockGateCtr(HCLK_USBC_GATE, 0);
+    Grf_otgphy_suspend(1);
+    //interrupt init
+    IntUnregister(INT_ID_USBC);
 
 }
 #endif
@@ -6963,10 +7083,12 @@ INIT API void SdioDevHwInit(uint32 DevID, uint32 Channel)
 {
     if (DevID == 0)
     {
+        #ifdef _WICE_
         Grf_GpioMuxSet(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, Type_Gpio);
         Gpio_SetPinDirection(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_OUT);
         Gpio_SetPinLevel(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_HIGH);
         rkos_sleep(100);
+        #endif
     }
 }
 #endif
@@ -6985,10 +7107,12 @@ INIT API void SdioDevHwDeInit(uint32 DevID, uint32 Channel)
 {
     if (DevID == 0)
     {
+        #ifdef _WICE_
         printf("sdio de init");
         Grf_GpioMuxSet(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, Type_Gpio);
         Gpio_SetPinDirection(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_OUT);
         Gpio_SetPinLevel(AP6181_POWER_ON_GPIO_CH, AP6181_POWER_ON_GPIO_PIN, GPIO_LOW);
+        #endif
     }
 }
 
@@ -7446,7 +7570,7 @@ void PwmDevHwInit (uint32 DevID, uint32 channel)
 void WdtDevHwInit (uint32 DevID, uint32 channel)
 {
 
-    rk_printf ("Init WDT Hardware\n");
+    rk_printf ("Init WDT Hardware");
 
     ScuClockGateCtr(PCLK_WDT_GATE, 1);
 
@@ -7472,7 +7596,7 @@ void WdtDevHwInit (uint32 DevID, uint32 channel)
 void WdtDevHwDeInit (uint32 DevID, uint32 channel)
 {
 
-    rk_printf ("Init WDT Hardware\n");
+    rk_printf ("DeInit WDT Hardware");
 
     ScuSoftResetCtr(WDT_SRST, 1);
 
@@ -8043,7 +8167,12 @@ INIT FUN void GpioInit(void)
     Gpio_SetPinDirection(GPIO_CH0,GPIOPortD_Pin0,GPIO_IN);
     Gpio_SetPinDirection(GPIO_CH0,GPIOPortD_Pin1,GPIO_IN);
 
+#ifdef _SUPPORT_PA_EN
+    Gpio_SetPinDirection(GPIO_CH1,GPIOPortA_Pin0,GPIO_OUT);//jjjhhh---PA_EN
+	Gpio_SetPinLevel(GPIO_CH1, GPIOPortA_Pin0, GPIO_LOW);
+#else
     Gpio_SetPinDirection(GPIO_CH1,GPIOPortA_Pin0,GPIO_IN);
+#endif
     Gpio_SetPinDirection(GPIO_CH1,GPIOPortA_Pin1,GPIO_IN);
     Gpio_SetPinDirection(GPIO_CH1,GPIOPortA_Pin2,GPIO_IN);
     Gpio_SetPinDirection(GPIO_CH1,GPIOPortA_Pin3,GPIO_IN);
@@ -8108,6 +8237,7 @@ INIT FUN void CPUInit(void)
     //ScuClockGateInit();
     CpuSoftResetInit();
     CpuClockGateInit();
+
 
     //Scu_Memory_Set_High_Speed(LDRAM_RESP_CYCLE);
 

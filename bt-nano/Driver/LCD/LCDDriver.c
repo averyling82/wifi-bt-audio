@@ -60,6 +60,7 @@ rk_err_t LcdIdleCheck(HDC dev);
 rk_err_t LcdCheckHandler(HDC dev);
 rk_err_t LcdResume(HDC dev);
 rk_err_t LcdSuspend(HDC dev, uint32 Level);
+rk_err_t LcdShellMc(HDC dev,  uint8 * pstr);
 rk_err_t LcdShellBspReadSize(HDC dev, uint8 * pstr);
 rk_err_t LcdShellBspSetSize(HDC dev, uint8 * pstr);
 rk_err_t LcdShellBspReadTiming(HDC dev, uint8 * pstr);
@@ -73,8 +74,8 @@ rk_err_t LcdShellBspTestSpeed(HDC dev,  uint8 * pstr);
 rk_err_t LcdShellBspSendData(HDC dev,  uint8 * pstr);
 rk_err_t LcdShellBspSendCmd(HDC dev,  uint8 * pstr);
 rk_err_t LcdShellBspSetSpeed(HDC dev,  uint8 * pstr);
-rk_err_t LcdShellBspHelp(HDC dev,  uint8 * pstr);
 rk_err_t LcdShellBsp(HDC dev,  uint8 * pstr);
+rk_err_t LcdShellDel(HDC dev, uint8 * pstr);
 
 
 /*
@@ -494,33 +495,35 @@ INIT FUN rk_err_t LcdResume(HDC dev)
 *---------------------------------------------------------------------------------------------------------------------
 */
 #ifdef _LCD_SHELL_
+_DRIVER_LCD_LCDDEVICE_SHELL_
 static SHELL_CMD ShellLcdName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "mc",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
-    "bsp",NULL,"NULL","NULL",
+    "pcb",LcdShellPcb,"list lcd device pcb inf","lcd.pcb [device id]",
+    "create",LcdShellMc,"create a lcd device","lcd.create",
+    "delete",LcdShellDel,"delete a lcd device","lcd.delete",
+    "test",LcdShellTest,"test lcd device","lcd.test",
+#ifdef SHELL_BSP
+    "bsp",LcdShellBsp,"NULL","NULL",
+#endif
     "\b",NULL,"NULL","NULL",                         // the end
 };
 
 #ifdef SHELL_BSP
+_DRIVER_LCD_LCDDEVICE_SHELL_
 static SHELL_CMD ShellLcdBspName[] =
 {
-    "help",NULL,"NULL","NULL",
-    "setspeed",NULL,"NULL","NULL",
-    "sendcmd",NULL,"NULL","NULL",
-    "senddata",NULL,"NULL","NULL",
-    "readdata"NULL,"NULL","NULL",
-    "setmode",NULL,"NULL","NULL",
-    "readmode",NULL,"NULL","NULL",
-    "readvsion",NULL,"NULL","NULL",
-    "readstatus",NULL,"NULL","NULL",
-    "settiming",NULL,"NULL","NULL",
-    "readtiming",NULL,"NULL","NULL",
-    "setlcdsize",NULL,"NULL","NULL",
-    "getlcdsize",NULL,"NULL","NULL",
+    "setspeed",LcdShellBspSetSpeed,"NULL","NULL",
+    "sendcmd",LcdShellBspSendCmd,"NULL","NULL",
+    "senddata",LcdShellBspSendData,"NULL","NULL",
+    "readdata"LcdShellBspReadData,"NULL","NULL",
+    "setmode",LcdShellBspSetMode,"NULL","NULL",
+    "readmode",LcdShellBspReadMode,"NULL","NULL",
+    "readvsion",LcdShellBspReadVersion,"NULL","NULL",
+    "readstatus",LcdShellBspReadStatus,"NULL","NULL",
+    "settiming",LcdShellBspSetTiming,"NULL","NULL",
+    "readtiming",LcdShellBspReadTiming,"NULL","NULL",
+    "setlcdsize",LcdShellBspSetSize,"NULL","NULL",
+    "getlcdsize",LcdShellBspReadSize,"NULL","NULL",
     "\b",NULL,"NULL","NULL",
 };
 #endif
@@ -546,19 +549,6 @@ static SHELL_CMD ShellLcdBspName[] =
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspReadSize(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.readtimg : 获取LCD显示的宽高大小。\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -577,19 +567,6 @@ SHELL FUN rk_err_t LcdShellBspReadSize(HDC dev, uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspSetSize(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.setsize : 设置LCD显示的宽高大小。\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -608,19 +585,6 @@ SHELL FUN rk_err_t LcdShellBspSetSize(HDC dev, uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspReadTiming(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.readtimg : 读取VOP 时序寄存器值。\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -638,19 +602,6 @@ SHELL FUN rk_err_t LcdShellBspReadTiming(HDC dev, uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspSetTiming(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.settiming : 配置VOP 时序寄存器。\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -669,19 +620,6 @@ SHELL FUN rk_err_t LcdShellBspSetTiming(HDC dev, uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspReadStatus(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.readstatus : 获取VOP工作状态。\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -700,19 +638,6 @@ SHELL FUN rk_err_t LcdShellBspReadStatus(HDC dev, uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspReadVersion(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.readversion : 获取VOP(video output process)版本信息。\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -731,19 +656,6 @@ SHELL FUN rk_err_t LcdShellBspReadVersion(HDC dev, uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspReadMode(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.readmode : 读取LCDC 工作模式。\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -762,19 +674,6 @@ SHELL FUN rk_err_t LcdShellBspReadMode(HDC dev, uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspSetMode(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.setmode : 配置LCDC 工作模式。\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -794,19 +693,6 @@ SHELL FUN rk_err_t LcdShellBspSetMode(HDC dev, uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspReadData(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.readdata : 读取数据.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -825,19 +711,6 @@ SHELL FUN rk_err_t LcdShellBspReadData(HDC dev, uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspTestSpeed(HDC dev,  uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.testspeed : 测试最大传输频率.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -857,19 +730,6 @@ SHELL FUN rk_err_t LcdShellBspTestSpeed(HDC dev,  uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspSendData(HDC dev,  uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.senddata : 想lcd发送数据.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -888,19 +748,6 @@ SHELL FUN rk_err_t LcdShellBspSendData(HDC dev,  uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspSendCmd(HDC dev,  uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.sendcmd c: 发送命令，c为发送的命令参数.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
@@ -920,53 +767,12 @@ SHELL FUN rk_err_t LcdShellBspSendCmd(HDC dev,  uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellBspSetSpeed(HDC dev,  uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.bsp.setspeed : 设置传输频率.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
     // TODO:
     //add other code below:
     //...
 
     return RK_SUCCESS;
 }
-
-
-/*******************************************************************************
-** Name: LcdShellBspHelp
-** Input:HDC dev,  uint8 * pstr
-** Return: rk_err_T
-** Owner:chad.Ma
-** Date: 2014.11.10
-** Time: 15:31:01
-*******************************************************************************/
-_DRIVER_LCD_LCDDEVICE_SHELL_
-SHELL FUN rk_err_t LcdShellBspHelp(HDC dev,  uint8 * pstr)
-{
-    pstr--;
-
-    if (StrLenA(pstr) != 0)
-        return RK_ERROR;
-
-    printf("lcd.bsp命令集提供了一系列的命令对lcd板级驱动接口进行测试\r\n");
-    printf("测试命令如下:\r\n");
-    printf("setspeed s       设置LCD的时钟频率 s，s为设置的时钟频率\r\n");
-    printf("sendcmd c        发送命令 c ，c为命令\r\n");
-    printf("senddata d       发送数据 d ，d为数据\r\n");
-    printf("testspeed        设置LCD的时钟频率，在数据不出错的情况下，验证可达到多少\r\n");
-
-    return RK_SUCCESS;
-}
-
 
 /*******************************************************************************
 ** Name: LcdShellBsp
@@ -982,13 +788,19 @@ SHELL FUN rk_err_t LcdShellBsp(HDC dev,  uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellLcdBspName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1004,66 +816,10 @@ SHELL FUN rk_err_t LcdShellBsp(HDC dev,  uint8 * pstr)
     pItem += StrCnt;
     pItem++;                          //remove '.',the point is the useful item
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellLcdBspName[i].CmdDes, pItem);
+    if(ShellLcdBspName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //bsp help
-#ifdef SHELL_HELP
-            ret = LcdShellBspHelp(dev,pItem);
-#endif
-
-            break;
-
-        case 0x01:  //setspeed
-            ret = LcdShellBspSetSpeed(dev,pItem);
-            break;
-
-        case 0x02:  //send command
-            ret = LcdShellBspSendCmd(dev,pItem);
-            break;
-
-        case 0x03:  //send data
-            ret = LcdShellBspSendData(dev,pItem);
-            break;
-
-        case 0x04:  //read data
-            ret = LcdShellBspReadData(dev,pItem);
-            break;
-
-        case 0x05:  //set mode
-            ret = LcdShellBspSetMode(dev,pItem);
-            break;
-
-        case 0x06:  //read mode
-            ret = LcdShellBspReadMode(dev,pItem);
-            break;
-
-        case 0x07:  //read version
-            ret = LcdShellBspReadVersion(dev,pItem);
-            break;
-
-        case 0x08:  //read status
-            ret = LcdShellBspReadStatus(dev,pItem);
-            break;
-
-        case 0x09:  //set timing
-            ret = LcdShellBspSetTiming(dev,pItem);
-            break;
-
-        case 0x0a:  //read timing
-            ret = LcdShellBspReadTiming(dev,pItem);
-            break;
-
-        case 0x0b:  //set lcd size
-            ret = LcdShellBspSetSize(dev,pItem);
-            break;
-
-        case 0x0c:  //read lcd size
-            ret = LcdShellBspReadSize(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellLcdBspName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 }
@@ -1080,23 +836,15 @@ SHELL FUN rk_err_t LcdShellBsp(HDC dev,  uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 rk_err_t LcdShellPcb(HDC dev,  uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.pcb : lcd pcb info cmd .  \r\n");
-            return RK_SUCCESS;
-        }
-    }
-#endif
 
     // TODO:
     //add other code below:
     //...
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
     return RK_SUCCESS;
 }
@@ -1116,19 +864,11 @@ rk_err_t LcdShellMc(HDC dev,  uint8 * pstr)
     LCD_DEV_ARG stLcdDevArg;
     uint32 ret;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.mc : lcd mc cmd   \r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
+
 
     stLcdDevArg.hBus = RKDev_Open(DEV_CLASS_VOP, 0, NULL);
     if (stLcdDevArg.hBus == NULL)
@@ -1158,19 +898,10 @@ rk_err_t LcdShellMc(HDC dev,  uint8 * pstr)
 _DRIVER_LCD_LCDDEVICE_SHELL_
 SHELL FUN rk_err_t LcdShellDel(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("lcd.del 命令用于删除 lcd device.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
 
     if (RKDev_Delete(DEV_CLASS_LCD, 0, NULL) != RK_SUCCESS)
     {
@@ -1194,19 +925,10 @@ rk_err_t LcdShellTest(HDC dev,  uint8 * pstr)
 {
     HDC hLCD;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            printf("lcd.test : lcd test cmd   \r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
 
     hLCD = RKDev_Open(DEV_CLASS_LCD, 0, NULL);
     if (hLCD == NULL)
@@ -1227,33 +949,6 @@ rk_err_t LcdShellTest(HDC dev,  uint8 * pstr)
 }
 
 /*******************************************************************************
-** Name: LcdShellHelp
-** Input:HDC dev
-** Return: rk_err_t
-** Owner:Aaron.sun
-** Date: 2014.2.24
-** Time: 10:43:17
-*******************************************************************************/
-_DRIVER_LCD_LCDDEVICE_SHELL_
-rk_err_t LcdShellHelp(HDC dev,  uint8 * pstr)
-{
-    pstr--;
-
-    if ( StrLenA( pstr) != 0)
-        return RK_ERROR;
-
-    printf("lcd命令集提供了一系列的命令对lcd进行操作\r\n");
-    printf("lcd包含的子命令如下:           \r\n");
-    printf("pcb       显示pcb信息         \r\n");
-    printf("mc        打开lcd        \r\n");
-    printf("del       删除lcd        \r\n");
-    printf("test      测试lcd命令    \r\n");
-    printf("help      显示lcd命令帮助信息  \r\n");
-
-    return RK_SUCCESS;
-}
-
-/*******************************************************************************
 ** Name: LcdShell
 ** Input:HDC dev
 ** Return: rk_err_t
@@ -1267,13 +962,19 @@ rk_err_t LcdShell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
 
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellLcdName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -1289,38 +990,12 @@ rk_err_t LcdShell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;
 
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellLcdName[i].CmdDes, pItem);
+    if(ShellLcdName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //pcb
-            ret = LcdShellPcb(dev,pItem);
-            break;
-
-        case 0x01:  //mc
-            ret = LcdShellMc(dev,pItem);
-            break;
-
-        case 0x02:  //del
-            ret = LcdShellDel(dev,pItem);
-            break;
-
-        case 0x03:  //test
-            ret = LcdShellTest(dev,pItem);
-            break;
-
-        case 0x04:  //help
-            ret = LcdShellHelp(dev,pItem);
-            break;
-
-        case 0x05:  //bsp
-#ifdef SHELL_BSP
-            ret = LcdShellBsp(dev,pItem);
-#endif
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellLcdName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 }
 #endif

@@ -1136,33 +1136,33 @@ COMMON FUN void RecordSetType(UINT32  Type)
     switch (Type)
     {
         case RECORD_TYPE_MIC_STERO:
-            Codec_SetMode(Codec_MicStero, recSampRate);
+            Codec_SetMode(Codec_MicStero);
             ACodec_Set_MIC_AnaVol(2);
             ACodec_Set_ADCMUX_Vol(5);
             ACodec_Set_ADC_DigVol(0);
             break;
 
         case RECORD_TYPE_LINEIN1:
-            Codec_SetMode(Codec_Line1ADC, recSampRate);
+            Codec_SetMode(Codec_Line1ADC);
             ACodec_Set_ADCMUX_Vol(5);
             ACodec_Set_ADC_DigVol(0);
             break;
 
         case RECORD_TYPE_LINEIN2:
-            Codec_SetMode(Codec_Line2ADC, recSampRate);
+            Codec_SetMode(Codec_Line2ADC);
             ACodec_Set_ADCMUX_Vol(5);
             ACodec_Set_ADC_DigVol(0);
             break;
 
         case RECORD_TYPE_MIC1_MONO:
-            Codec_SetMode(Codec_Mic1Mono, recSampRate);
+            Codec_SetMode(Codec_Mic1Mono);
             ACodec_Set_MIC_AnaVol(2);
             ACodec_Set_ADCMUX_Vol(5);
             ACodec_Set_ADC_DigVol(0);
             break;
 
         case RECORD_TYPE_MIC2_MONO:
-            Codec_SetMode(Codec_Mic2Mono, recSampRate);
+            Codec_SetMode(Codec_Mic2Mono);
             ACodec_Set_MIC_AnaVol(2);
             ACodec_Set_ADCMUX_Vol(5);
             ACodec_Set_ADC_DigVol(0);

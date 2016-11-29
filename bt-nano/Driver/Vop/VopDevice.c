@@ -60,6 +60,9 @@ rk_err_t VopDevResume(HDC dev);
 rk_err_t VopDevSuspend(HDC dev, uint32 Level);
 void DMATranferCallBack(uint32 ch);
 void VopDevInit(VOP_DEVICE_CLASS * pstVopDev);
+rk_err_t VopDevShellMc(HDC dev, uint8 * pstr);
+rk_err_t VopDevShellTest(HDC dev, uint8 * pstr);
+rk_err_t VopDevShellDel(HDC dev, uint8 * pstr);
 
 
 /*
@@ -440,10 +443,9 @@ INIT API rk_err_t VopDev_Delete(uint32 DevID, void * arg)
 _DRIVER_VOP_VOPDEVICE_SHELL_DATA_
 static SHELL_CMD ShellVopName[] =
 {
-    "mc",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "create",VopDevShellMc,"create vop device","vop.create",
+    "delete",VopDevShellDel,"delete vop device","vop.delete",
+    "test",VopDevShellTest,"test vop device","vop.test",
     "\b",NULL,"NULL","NULL",
 };
 /*
@@ -467,11 +469,17 @@ SHELL API rk_err_t VopDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
 
+    if(ShellHelpSampleDesDisplay(dev, ShellVopName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -487,30 +495,10 @@ SHELL API rk_err_t VopDev_Shell(HDC dev, uint8 * pstr)
     pItem += StrCnt;
     pItem++;                      //remove '.',the point is the useful item
 
-
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellVopName[i].CmdDes, pItem);
+    if(ShellVopName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:  //MC
-            ret = VopDevShellMc(dev,pItem);
-            break;
-
-        case 0x01:  //del
-            ret = VopDevShellDel(dev,pItem);
-            break;
-
-        case 0x02:  //test
-            ret = VopDevShellTest(dev,pItem);
-            break;
-
-        case 0x03: //help
-#ifdef SHELL_HELP
-            ret = VopDevShellHelp(dev,pItem);
-#endif
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellVopName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 }
@@ -537,20 +525,14 @@ SHELL FUN rk_err_t VopDevShellTest(HDC dev, uint8 * pstr)
     HDC hVopDev;
     uint32 DevID;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("vop.test 命令用于测试 VOP device\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     hVopDev = RKDev_Open(DEV_CLASS_VOP, 0, NOT_CARE);
     if ((hVopDev == NULL) || (hVopDev == (HDC)RK_ERROR) || (hVopDev == (HDC)RK_PARA_ERR))
     {
@@ -578,20 +560,14 @@ SHELL FUN rk_err_t VopDevShellMc(HDC dev, uint8 * pstr)
     VOP_DEV_ARG stVopDevArg;
     rk_err_t ret;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("vop.mc 命令用于创建vop device.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     return RK_SUCCESS;
 }
 
@@ -606,20 +582,14 @@ SHELL FUN rk_err_t VopDevShellMc(HDC dev, uint8 * pstr)
 _DRIVER_VOP_VOPDEVICE_SHELL_
 SHELL FUN rk_err_t VopDevShellDel(HDC dev, uint8 * pstr)
 {
-#ifdef SHELL_HELP
-    pstr--;
-    if (pstr[0] == '.')
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
     {
-        //list have sub cmd
-        pstr++;
-        if (StrCmpA(pstr, "help", 4) == 0)
-        {
-            rk_print_string("vop.del 命令用于删除 vop device.\r\n");
-            return RK_SUCCESS;
-        }
+        return RK_SUCCESS;
     }
-#endif
-
+    if(*(pstr - 1) == '.')
+    {
+        return RK_ERROR;
+    }
     if (RKDev_Delete(DEV_CLASS_VOP, 0, NULL) != RK_SUCCESS)
     {
         rk_print_string("VopDev delete failure");
@@ -628,36 +598,6 @@ SHELL FUN rk_err_t VopDevShellDel(HDC dev, uint8 * pstr)
 
     return RK_SUCCESS;
 }
-
-#ifdef SHELL_HELP
-/*******************************************************************************
-** Name: UartDevShellHelp
-** Input:HDC dev, uint8 * pstr
-** Return: rk_err_t
-** Owner:chad.ma
-** Date: 2014.10.31
-** Time: 14:34:24
-*******************************************************************************/
-_DRIVER_VOP_VOPDEVICE_SHELL_
-SHELL FUN rk_err_t VopDevShellHelp(HDC dev, uint8 * pstr)
-{
-    pstr--;
-
-    if ( StrLenA( pstr) != 0)
-        return RK_ERROR;
-
-    rk_print_string("Vop命令集提供了一系列的命令对Vop进行操作\r\n");
-    rk_print_string("命令如下:\r\n");
-    rk_print_string("mc        创建Vop device命令 \r\n");
-    rk_print_string("del       删除Vop device命令 \r\n");
-    rk_print_string("test      测试命令            \r\n");
-    rk_print_string("help      显示命令帮助信息\r\n");
-
-    return RK_SUCCESS;
-
-}
-#endif
-
 
 #endif
 

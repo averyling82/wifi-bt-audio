@@ -30,7 +30,11 @@
 #include "RKOS.h"
 #include "DeviceInclude.h"
 #include "music.h"
+
+#ifdef _RK_EQ_
 #include "effect.h"
+#endif
+
 #include "BSP.h"
 #include "http.h"
 #include "wiced_management.h"
@@ -140,24 +144,26 @@ rk_err_t music_shell_del(HDC dev, uint8 * pstr);
 _APP_AUDIO_MUSIC_SHELL_
 static SHELL_CMD ShellMusicName[] =
 {
-    "play",music_shell_play,"NULL","NULL",
-    "stop",music_shell_stop,"NULL","NULL",
-    "prev",music_shell_prev,"NULL","NULL",
-    "next",music_shell_next,"NULL","NULL",
-    "ffw",music_shell_ffw,"NULL","NULL",
-    "ffws",music_shell_ffw_stop,"NULL","NULL",
-    "ffd",music_shell_ffd,"NULL","NULL",
-    "ffds",music_shell_ffd_stop,"NULL","NULL",
-    "eq",music_shell_set_eq,"NULL","NULL",
-    "sf",music_shell_set_sf,"NULL","NULL",
-    "rp",music_shell_set_rp,"NULL","NULL",
-    "vol",music_shell_set_vol,"NULL","NULL",
-    "create",music_shell_create,"NULL","NULL",
-    "pause",music_shell_pause,"NULL","NULL",
-    "ffr",music_shell_ff_resume,"NULL","NULL",
-    "ffp",music_shell_ff_pause,"NULL","NULL",
-    "delete",music_shell_del,"NULL","NULL",
-    "shuf",music_shell_shuffle_test,"test shuffle", "music.shuf\n",
+    "play",music_shell_play,"play song","music.play",
+    "stop",music_shell_stop,"stop song","music.stop",
+    "prev",music_shell_prev,"prevous song","music.prev",
+    "next",music_shell_next,"next song","music.next",
+    "ffw",music_shell_ffw,"fast foward song","music.ffw",
+    "ffws",music_shell_ffw_stop,"fast rewind stop","music.ffws",
+    "ffd",music_shell_ffd,"fast forward","music.ffd",
+    "ffds",music_shell_ffd_stop,"fast forward stop","music.ffds",
+    #ifdef _RK_EQ_
+    "eq",music_shell_set_eq,"set eq mode","music.eq </h | /f | /j | /un | /c | /b | /r | /us | /n>",
+    #endif
+    "sf",music_shell_set_sf,"set shuffle mode","music.sf </on | /off>",
+    "rp",music_shell_set_rp,"set repeat mode","music.rp </d | /o | /e>",
+    "vol",music_shell_set_vol,"set volume","music.vol",
+    "create",music_shell_create,"create a music player","music.create <dir path>",
+    "pause",music_shell_pause,"pause song","music.pause",
+    "ffr",music_shell_ff_resume,"fast mode resume","music.ffr",
+    "ffp",music_shell_ff_pause,"fast mode pause","music.ffp",
+    "delete",music_shell_del,"delete a player","music.delete",
+    "shuf",music_shell_shuffle_test,"test shuffle", "music.shuf",
     "\b",NULL,"NULL","NULL",               // the end
 };
 
@@ -175,15 +181,22 @@ SHELL API rk_err_t music_shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellMusicName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
     StrCnt = ShellItemExtract(pstr,&pItem, &Space);
 
-    if (StrCnt == 0)
+    if((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
+
     ret = ShellCheckCmd(ShellMusicName, pItem, StrCnt);
     if (ret < 0)
     {
@@ -536,7 +549,7 @@ SHELL COMMON rk_err_t music_shell_ffd_stop(HDC dev, uint8 * pstr)
     return RK_SUCCESS;
 }
 
-
+#ifdef _RK_EQ_
 /*******************************************************************************
 ** Name: music_shell_set_eq
 ** Input:uint8 * pstr
@@ -605,6 +618,7 @@ SHELL COMMON rk_err_t music_shell_set_eq(HDC dev, uint8 * pstr)
 
     return RK_SUCCESS;
 }
+#endif
 
 
 /*******************************************************************************
@@ -649,6 +663,8 @@ SHELL COMMON rk_err_t music_shell_create(HDC dev, uint8 * pstr)
     }
 
     Arg.ucSelPlayType = SOURCE_FROM_FILE_BROWSER;
+    Arg.SaveMemory = 0;
+    Arg.DirectPlay = 0;
     Arg.FileNum = 0;
     Arg.pfAudioState = NULL;
 
@@ -656,7 +672,7 @@ SHELL COMMON rk_err_t music_shell_create(HDC dev, uint8 * pstr)
 
     if(RKTaskCreate(TASK_ID_AUDIOCONTROL, 0, &Arg, SYNC_MODE) != RK_SUCCESS)
     {
-         rk_printf("Audio control task create failure");
+         rk_printf("22Audio control task create failure");
          return RK_SUCCESS;
     }
 

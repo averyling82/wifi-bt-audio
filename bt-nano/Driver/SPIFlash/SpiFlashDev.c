@@ -34,6 +34,7 @@
 #include "SPIFlash.h"
 #include "SFNand.c"
 #include "SFNor.c"
+#include "spiflashdev.h"
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *
@@ -48,6 +49,7 @@ typedef  struct _SPIFLASH_DEVICE_CLASS
     DEVICE_CLASS stSpiFlashDevice;
     pSemaphore osSpiFlashOperSem;
     uint32 capacity;
+    HDC hDma;
 
 } SPIFLASH_DEVICE_CLASS;
 
@@ -535,6 +537,8 @@ COMMON FUN rk_err_t SpiFlashDevResume(HDC dev)
     SpiFlashDevHwInit();
     SpiFlashDevInit(pstSpiFlashDev);
 
+    RKDev_Resume(pstSpiFlashDev->hDma);
+
     pstSpiFlashDev->stSpiFlashDevice.State = DEV_STATE_WORKING;
 
     return RK_SUCCESS;
@@ -569,6 +573,8 @@ COMMON FUN rk_err_t SpiFlashDevSuspend(HDC dev, uint32 Level)
     SpiFlashDevDeInit(pstSpiFlashDev);
     SpiFlashDevHwDeInit();
 
+    RKDev_Suspend(pstSpiFlashDev->hDma);
+
     return RK_SUCCESS;
 }
 
@@ -593,10 +599,22 @@ _DRIVER_SPIFLASH_SPIFLASHDEV_INIT_
 INIT API rk_err_t SpiFlashDev_Delete(uint32 DevID, void * arg)
 {
     //Check SpiFlashDev is not exist...
+
+    SPIFLASH_DEV_ARG * pstSpiFlashDevArg;
+
+    pstSpiFlashDevArg = (SPIFLASH_DEV_ARG *)arg;
+
     if(gpstSpiFlashDevInf[DevID] == NULL)
     {
         return RK_ERROR;
     }
+
+    if(pstSpiFlashDevArg == NULL)
+    {
+        return RK_ERROR;
+    }
+
+    pstSpiFlashDevArg->hDma = gpstSpiFlashDevInf[DevID]->hDma;
 
     //SpiFlashDev deinit...
     SpiFlashDevDeInit(gpstSpiFlashDevInf[DevID]);
@@ -662,6 +680,7 @@ INIT API HDC SpiFlashDev_Create(uint32 DevID, void * arg)
 
     //init arg...
     //pstSpiFlashDev->usbmode = pstSpiFlashDevArg->usbmode;
+    pstSpiFlashDev->hDma = pstSpiFlashDevArg->hDma;
 
     //device init...
     gpstSpiFlashDevInf[DevID] = NULL;
@@ -738,10 +757,10 @@ INIT FUN rk_err_t SpiFlashDevInit(SPIFLASH_DEVICE_CLASS * pstSpiFlashDev)
 _DRIVER_SPIFLASH_SPIFLASHDEV_SHELL_
 static SHELL_CMD ShellSpiFlashName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "mc",NULL,"NULL","NULL",
-    "del",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
+    "pcb",SpiFlashDevShellPcb,"list spiflash device pcb inf","spiflash.pcb [object id]",
+    "create",SpiFlashDevShellMc,"create spiflash device","spiflash.create [object id]",
+    "delete",SpiFlashDevShellDel,"delete spiflash device","spiflash.delete [object id]",
+    "test",SpiFlashDevShellTest,"test spiflash device","spiflash.test [object id]",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -803,14 +822,21 @@ SHELL API rk_err_t SpiFlashDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellSpiFlashName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
-
     ret = ShellCheckCmd(ShellSpiFlashName, pItem, StrCnt);
     if(ret < 0)
     {
@@ -821,27 +847,11 @@ SHELL API rk_err_t SpiFlashDev_Shell(HDC dev, uint8 * pstr)
 
     pItem += StrCnt;
     pItem++;
-    switch (i)
+
+    ShellHelpDesDisplay(dev, ShellSpiFlashName[i].CmdDes, pItem);
+    if(ShellSpiFlashName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = SpiFlashDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = SpiFlashDevShellMc(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = SpiFlashDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:
-            ret = SpiFlashDevShellTest(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellSpiFlashName[i].ShellCmdParaseFun(dev, pItem);
     }
     return ret;
 
@@ -869,6 +879,11 @@ SHELL FUN rk_err_t SpiFlashDevShellTest(HDC dev, uint8 * pstr)
 {
     HDC hSpiFlashDev;
     uint32 DevID;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
     //Get SpiFlashDev ID...
     if(StrCmpA(pstr, "0", 1) == 0)
@@ -913,6 +928,11 @@ SHELL FUN rk_err_t SpiFlashDevShellDel(HDC dev, uint8 * pstr)
 {
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     //Get SpiFlashDev ID...
     if(StrCmpA(pstr, "0", 1) == 0)
     {
@@ -947,6 +967,11 @@ SHELL FUN rk_err_t SpiFlashDevShellMc(HDC dev, uint8 * pstr)
     SPIFLASH_DEV_ARG stSpiFlashDevArg;
     rk_err_t ret;
     uint32 DevID;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
     if(StrCmpA(pstr, "0", 1) == 0)
     {
@@ -988,23 +1013,14 @@ SHELL FUN rk_err_t SpiFlashDevShellPcb(HDC dev, uint8 * pstr)
     SPIFLASH_DEVICE_CLASS * pstSpiFlashDev;
     uint32 i;
 
-#ifdef SHELL_HELP
-    pstr--;
-    if(pstr[0] == '.')
-    {
-        //list have sub cmd
-        pstr++;
-        if(StrCmpA((uint8 *)pstr, "help", 4) == 0)
-        {
-            rk_print_string("spiflash.pcb : spiflash pcb info cmd.\r\n");
-            return RK_SUCCESS;
-        }
-    }
-    pstr++;
-#endif
     // TODO:
     //add other code below:
     //...
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
     DevID = String2Num(pstr);
 

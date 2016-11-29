@@ -678,6 +678,7 @@ void bt_mediadata_input(const unsigned char *s, unsigned int len)
 _ATTR_BLUETOOTHCONTROL_CODE_
 void bt_phonedata_input(const unsigned char *s, unsigned int len)
 {
+
     if(CHECK_BTSTATE(BTState,BT_CALL_PLAYING) && CHECK_BTSTATE(BTState,BT_PLAY_CALL))
     {
         uint16 *monoBuf = NULL;
@@ -1135,6 +1136,8 @@ rk_err_t music_player_start(void)
 
     RK_TASK_AUDIOCONTROL_ARG pArg;
     pArg.ucSelPlayType = SOURCE_FROM_BT;
+    pArg.SaveMemory = 0;
+    pArg.DirectPlay = 0;
     pArg.FileNum = 1;
     pArg.pfAudioState = 0;
     RKTaskCreate(TASK_ID_AUDIOCONTROL, 0, &pArg, SYNC_MODE);
@@ -1442,7 +1445,7 @@ void BlueToothControlService(void *arg)
 
     if(BlueToothControlInit(NULL, NULL) != RK_SUCCESS)
     {
-        BT_DEBUG("\n\n!!!!!BlueToothControlInit fail!!!!\n");
+        BT_DEBUG("BlueToothControlInit fail\n");
         gSysConfig.BtOpened = -1;
         bt_ctrl_task_exit = 1;
         while(1)
@@ -2138,19 +2141,118 @@ void bluetooth_stop(void)
 
 #ifdef _BLUETOOTH_SHELL_
 
+rk_err_t BlueTooth_ShellOpen(HDC dev, uint8 * pstr);
+rk_err_t BlueTooth_ShellClose(HDC dev, uint8 * pstr);
+rk_err_t BlueTooth_ShellPlay(HDC dev, uint8 * pstr);
+rk_err_t BlueTooth_ShellPause(HDC dev, uint8 * pstr);
+rk_err_t BlueTooth_ShellNext(HDC dev, uint8 * pstr);
+rk_err_t BlueTooth_ShellStop(HDC dev, uint8 * pstr);
+rk_err_t BlueTooth_ShellPrev(HDC dev, uint8 * pstr);
+
 
 _ATTR_BLUETOOTH_SHELL_
 static SHELL_CMD ShellBlueToothName[] =
 {
-    "open",NULL,"NULL","NULL",
-    "close",NULL,"NULL","NULL",
-    "play",NULL,"NULL","NULL",
-    "pause",NULL,"NULL","NULL",
-    "next",NULL,"NULL","NULL",
-    "stop",NULL,"NULL","NULL",
-    "prev",NULL,"NULL","NULL",
+    "open",BlueTooth_ShellOpen,"open bluetooth","bt.open",
+    "close",BlueTooth_ShellClose,"close bluetooth","bt.close",
+    "play",BlueTooth_ShellPlay,"play a2dp audio","bt.play",
+    "pause",BlueTooth_ShellPause,"pause a2dp audio","bt.pause",
+    "next",BlueTooth_ShellNext,"next a2dp audio","bt.next",
+    "stop",BlueTooth_ShellStop,"stop a2dp audio","bt.stop",
+    "prev",BlueTooth_ShellPrev,"revious a2dp audio","bt.prev",
     "\b",NULL,"NULL","NULL",
 };
+
+
+_ATTR_BLUETOOTH_SHELL_
+SHELL FUN rk_err_t BlueTooth_ShellOpen(HDC dev, uint8 * pstr)
+{
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    FW_LoadSegment(SEGMENT_ID_BLUETOOTH, SEGMENT_OVERLAY_ALL);
+    FW_LoadSegment(SEGMENT_ID_BLUETOOTH_LWBT, SEGMENT_OVERLAY_ALL);
+    bluetooth_start();
+    return RK_SUCCESS;
+}
+
+
+_ATTR_BLUETOOTH_SHELL_
+SHELL FUN rk_err_t BlueTooth_ShellClose(HDC dev, uint8 * pstr)
+{
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    bluetooth_stop();
+    FW_RemoveSegment(SEGMENT_ID_BLUETOOTH);
+    FW_RemoveSegment(SEGMENT_ID_BLUETOOTH_LWBT);
+    return RK_SUCCESS;
+}
+
+_ATTR_BLUETOOTH_SHELL_
+SHELL FUN rk_err_t BlueTooth_ShellPlay(HDC dev, uint8 * pstr)
+{
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    ct_play();
+    return RK_SUCCESS;
+}
+
+_ATTR_BLUETOOTH_SHELL_
+SHELL FUN rk_err_t BlueTooth_ShellPause(HDC dev, uint8 * pstr)
+{
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    ct_pause();
+    return RK_SUCCESS;
+}
+
+_ATTR_BLUETOOTH_SHELL_
+SHELL FUN rk_err_t BlueTooth_ShellNext(HDC dev, uint8 * pstr)
+{
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    ct_next();
+    return RK_SUCCESS;
+}
+
+_ATTR_BLUETOOTH_SHELL_
+SHELL FUN rk_err_t BlueTooth_ShellStop(HDC dev, uint8 * pstr)
+{
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    ct_stop();
+    return RK_SUCCESS;
+}
+
+_ATTR_BLUETOOTH_SHELL_
+SHELL FUN rk_err_t BlueTooth_ShellPrev(HDC dev, uint8 * pstr)
+{
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+    ct_previous();
+    return RK_SUCCESS;
+}
+
 
 /*******************************************************************************
 ** Name: KeyDev_Shell
@@ -2166,11 +2268,17 @@ SHELL API rk_err_t BlueTooth_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
-    printf("BlueTooth_Shell\n");
+
+    if(ShellHelpSampleDesDisplay(dev, ShellBlueToothName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -2185,49 +2293,12 @@ SHELL API rk_err_t BlueTooth_Shell(HDC dev, uint8 * pstr)
 
     pItem += StrCnt;
     pItem++;
-    switch (i)
+    ShellHelpDesDisplay(dev, ShellBlueToothName[i].CmdDes, pItem);
+    if(ShellBlueToothName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            FW_LoadSegment(SEGMENT_ID_BLUETOOTH, SEGMENT_OVERLAY_ALL);
-            FW_LoadSegment(SEGMENT_ID_BLUETOOTH_LWBT, SEGMENT_OVERLAY_ALL);
-            bluetooth_start();
-            break;
-
-        case 0x01:
-            bluetooth_stop();
-            FW_RemoveSegment(SEGMENT_ID_BLUETOOTH);
-            FW_RemoveSegment(SEGMENT_ID_BLUETOOTH_LWBT);
-            break;
-
-        case 0x02:
-            // play
-            ct_play();
-            break;
-
-        case 0x03:
-            // pause
-            ct_pause();
-            break;
-
-        case 0x04:
-            // next
-            ct_next();
-            break;
-
-        case 0x05:
-            // stop
-            ct_stop();
-            break;
-
-        case 0x06:
-            // prev
-            ct_previous();
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellBlueToothName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 
 }

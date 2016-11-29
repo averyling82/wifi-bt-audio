@@ -2813,8 +2813,15 @@ COMMON FUN void FUSBRKCmdHook(uint32 cmd, uint32 param)
     {
         if (0 == param)
         {
-            printf ("Firmware Upgrade...\n");
-            System_Reset(SYS_RESET_MASKROM); //Entry Maskrom
+            rk_printf ("Firmware Upgrade");
+            {
+                extern  rk_err_t UsbService_ButtonCallBack(uint32 event_type,
+                                                            uint32 event,
+                                                            void * arg,
+                                                            uint32 mode);
+
+                UsbService_ButtonCallBack(0,0xFFFFFFFE,0,0);
+            }
         }
     }
 }
@@ -3388,13 +3395,12 @@ INIT FUN rk_err_t USBMSCDevInit(USBMSC_DEVICE_CLASS * pstUSBMSCDev)
 _DRIVER_USBMSC_USBMSCDEVICE_SHELL_DATA_
 static SHELL_CMD ShellUSBMSCName[] =
 {
-    "pcb",NULL,"NULL","NULL",
-    "create",NULL,"NULL","NULL",
-    "delete",NULL,"NULL","NULL",
-    "test",NULL,"NULL","NULL",
-    "test_r",NULL,"NULL","NULL",
-    "test_w",NULL,"NULL","NULL",
-    "help",NULL,"NULL","NULL",
+    "pcb",USBMSCDevShellPcb,"list usbmsc device pcb inf","usbmsc.pcb [object id]",
+    "create",USBMSCDevShellMc,"create usbmsc device","usbmsc.create [object id]",
+    "delete",USBMSCDevShellDel,"delete usbmsc device","usbmsc.delete [object id]",
+    "test",USBMSCDevShellTest,"test usbmsc device","usbmsc.delete [object id]",
+    "test_r",USBMSCDevShellTestRead,"read usbmsc device","usbmsc.test_r [object id]",
+    "test_w",USBMSCDevShellTestWrite,"write usbmsc device","usbmsc.test_w [object id]",
     "\b",NULL,"NULL","NULL",
 };
 
@@ -3421,10 +3427,16 @@ SHELL API rk_err_t USBMSCDev_Shell(HDC dev, uint8 * pstr)
     uint32 i = 0;
     uint8  *pItem;
     uint16 StrCnt = 0;
-    rk_err_t   ret;
+    rk_err_t   ret = RK_SUCCESS;
     uint8 Space;
+
+    if(ShellHelpSampleDesDisplay(dev, ShellUSBMSCName, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     StrCnt = ShellItemExtract(pstr, &pItem, &Space);
-    if (StrCnt == 0)
+    if ((StrCnt == 0) || (*(pstr - 1) != '.'))
     {
         return RK_ERROR;
     }
@@ -3439,37 +3451,13 @@ SHELL API rk_err_t USBMSCDev_Shell(HDC dev, uint8 * pstr)
 
     pItem += StrCnt;
     pItem++;
-    switch (i)
+
+    ShellHelpDesDisplay(dev, ShellUSBMSCName[i].CmdDes, pItem);
+    if(ShellUSBMSCName[i].ShellCmdParaseFun != NULL)
     {
-        case 0x00:
-            ret = USBMSCDevShellPcb(dev,pItem);
-            break;
-
-        case 0x01:
-            ret = USBMSCDevShellMc(dev,pItem);
-            break;
-
-        case 0x02:
-            ret = USBMSCDevShellDel(dev,pItem);
-            break;
-
-        case 0x03:
-            ret = USBMSCDevShellTest(dev,pItem);
-            break;
-        case 0x04:
-            ret = USBMSCDevShellTestRead(dev,pItem);
-            break;
-        case 0x05:
-            ret = USBMSCDevShellTestWrite(dev,pItem);
-            break;
-        case 0x06:
-            ret = USBMSCDevShellHelp(dev,pItem);
-            break;
-
-        default:
-            ret = RK_ERROR;
-            break;
+        ret = ShellUSBMSCName[i].ShellCmdParaseFun(dev, pItem);
     }
+
     return ret;
 
 }
@@ -3524,6 +3512,11 @@ SHELL FUN rk_err_t USBMSCDevShellTest(HDC dev, uint8 * pstr)
     HDC hUSBMSCDev;
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     //Get USBMSCDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -3572,6 +3565,11 @@ SHELL FUN rk_err_t USBMSCDevShellTestRead(HDC dev,  uint8 * pstr)
     uint8  *pBuf;
     int32  ret = 0;
     int i = 0;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
 
 #if 1
     hUSBMSC = RKDev_Open(DEV_CLASS_USBMSC, 0, NOT_CARE);
@@ -3674,6 +3672,11 @@ SHELL FUN rk_err_t USBMSCDevShellTestWrite(HDC dev,  uint8 * pstr)
     uint8  *pBuf;
     uint32 ret;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
     hUSBMSC = RKDev_Open(DEV_CLASS_USBMSC, 0, NOT_CARE);
     if (hUSBMSC == NULL)
@@ -3731,6 +3734,11 @@ SHELL FUN rk_err_t USBMSCDevShellDel(HDC dev, uint8 * pstr)
     uint32 DevID = 0;
     USBMSC_DEV_ARG pstUSBMSCDevArg;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
     //Get USBMSCDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -3772,6 +3780,12 @@ SHELL FUN rk_err_t USBMSCDevShellMc(HDC dev, uint8 * pstr)
     HDC hUSBMSCDev;
     HDC hUsbOtgDev;
     HDC hLun;
+
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
+
 
     if (StrCmpA(pstr, "0", 1) == 0)
     {
@@ -3829,6 +3843,10 @@ SHELL FUN rk_err_t USBMSCDevShellPcb(HDC dev, uint8 * pstr)
     HDC hUSBMSCDev;
     uint32 DevID;
 
+    if(ShellHelpSampleDesDisplay(dev, NULL, pstr) == RK_SUCCESS)
+    {
+        return RK_SUCCESS;
+    }
     //Get USBMSCDev ID...
     if (StrCmpA(pstr, "0", 1) == 0)
     {

@@ -981,6 +981,7 @@ COMMON FUN rk_err_t FMMenu_KeyEvent(uint32 Cmd, uint32 Offset)
                 case 5://SID_RECORD - SID_MANUAL_MOD:
                     if(gpstFmUiData->PlayerState == FM_PLAYER_STATE_PLAY)
                     {
+                        #ifdef _RECORD_
                         RK_TASK_RECORDCONTROL_ARG Arg;
 
                         Arg.RecordEncodeType    = RECORD_ENCODE_TYPE_WAV;
@@ -1004,7 +1005,9 @@ COMMON FUN rk_err_t FMMenu_KeyEvent(uint32 Cmd, uint32 Offset)
                         }
 
                         gpstFmUiData->FMPlayerMod = MOD_REC;
+                        #ifdef _RECORD_
                         RecordControlTask_SendCmd(RECORD_CMD_START, NULL, SYNC_MODE);
+                        #endif
                         gpstFmUiData->PlayerState = FM_PLAYER_STATE_RECORDING;
                         //gpstFmUiData->Recordstate = RECORD_STATE_BEING;
                         FMControlTask_SendCmd(FM_CMD_RECORD, (void *)0, SYNC_MODE);
@@ -1012,6 +1015,7 @@ COMMON FUN rk_err_t FMMenu_KeyEvent(uint32 Cmd, uint32 Offset)
                         //FMPlay_FMModeDisplay((void *)SID_RECORDING, 7, 0, TEXT_CMD_ID);
                         FMPlayer_RecordFileNameDisplay();
                         FMPlay_StateDisplay();
+                        #endif
                     }
 
                     break;
@@ -1021,7 +1025,9 @@ COMMON FUN rk_err_t FMMenu_KeyEvent(uint32 Cmd, uint32 Offset)
                     if(RKTaskFind(TASK_ID_RECORDCONTROL, 0) != NULL)
                     {
                         FMControlTask_SendCmd(FM_CMD_RECORD_STOP,(void *)0, SYNC_MODE);
+                        #ifdef _RECORD_
                         RecordControlTask_SendCmd(RECORD_CMD_STOP,(void *)0, SYNC_MODE);
+                        #endif
                         gpstFmUiData->Recordstate= RECORD_STATE_STOP;
                         if(RKTaskDelete(TASK_ID_RECORDCONTROL, 0, SYNC_MODE)!= RK_SUCCESS)
                         {
@@ -1444,7 +1450,9 @@ COMMON FUN rk_err_t FMPlay_StartPlayer()
         fmArg.FMInputType = gpstFmUiData->stAudioInfo.FMInputType;//RECORD_TYPE_LINEIN1
         fmArg.SamplesPerBlock = 4096;
         fmArg.pfmStateCallBcakForAPP = FMPlay_AudioCallBack;
+              #ifdef _RECORD_
         gSysConfig.RecordConfig.RecordQuality = RECORD_QUALITY_NORMAL;
+              #endif
         ret = RKTaskCreate(TASK_ID_FMCONTROL, 0, &fmArg, SYNC_MODE);
         if(ret != RK_SUCCESS)
         {
@@ -1792,6 +1800,8 @@ COMMON FUN void FMPlay_DisplayAll(void)
     GuiTask_ScreenUnLock();
 #endif
 }
+
+#ifdef _RK_EQ_
 /*******************************************************************************
 ** Name: FMPlay_MusicEqDisplay
 ** Input:void
@@ -1843,6 +1853,8 @@ COMMON FUN void FMPlay_MusicEqDisplay(void)
     }
 #endif
 }
+#endif
+
 /*******************************************************************************
 ** Name: FMPlay_VolumeDisplay
 ** Input:void
@@ -2043,7 +2055,11 @@ COMMON FUN rk_err_t FMUITask_DisplayInit(void)
 
     FMPlay_BackGroundDisplay();
     FMPlay_VolumeDisplay();
+
+    #ifdef _RK_EQ_
     FMPlay_MusicEqDisplay();
+    #endif
+
     FMPlay_DisplayAll();
     if(gpstFmUiData->stAudioInfo.playerr)
     {
@@ -2351,19 +2367,25 @@ COMMON FUN rk_err_t FMUITask_KeyEvent(uint32 KeyVal)
                 int16 resource;
                 if(gpstFmUiData->Recordstate == RECORD_STATE_BEING)
                 {
+                    #ifdef _RECORD_
                     RecordControlTask_SendCmd(RECORD_CMD_PAUSE, NULL, SYNC_MODE);
+                    #endif
                     resource = SID_RECORD_PAUSE;
                     gpstFmUiData->PlayerState = FM_PLAYER_STATE_PAUSE_RECORD;
                 }
                 else if(gpstFmUiData->Recordstate == RECORD_STATE_PAUSE)
                 {
+                    #ifdef _RECORD_
                     RecordControlTask_SendCmd(RECORD_CMD_RESUME, NULL, SYNC_MODE);
+                    #endif
                     resource = SID_RECORDING;
                     gpstFmUiData->PlayerState = FM_PLAYER_STATE_RECORDING;
                 }
                 else
                 {
+                    #ifdef _RECORD_
                     RecordControlTask_SendCmd(RECORD_CMD_START, NULL, SYNC_MODE);
+                    #endif
                     gpstFmUiData->PlayerState = FM_PLAYER_STATE_RECORDING;
                     resource = SID_RECORDING;
                 }
@@ -2378,7 +2400,9 @@ COMMON FUN rk_err_t FMUITask_KeyEvent(uint32 KeyVal)
                     if(RKTaskFind(TASK_ID_RECORDCONTROL, 0) != NULL)
                     {
                         FMControlTask_SendCmd(FM_CMD_RECORD_STOP,(void *)0, SYNC_MODE);
+                        #ifdef _RECORD_
                         RecordControlTask_SendCmd(RECORD_CMD_STOP,(void *)0, SYNC_MODE);
+                        #endif
                         gpstFmUiData->Recordstate= RECORD_STATE_STOP;
                         if(RKTaskDelete(TASK_ID_RECORDCONTROL, 0, SYNC_MODE)!= RK_SUCCESS)
                         {
@@ -2420,7 +2444,9 @@ COMMON FUN rk_err_t FMUITask_KeyEvent(uint32 KeyVal)
                 if(RKTaskFind(TASK_ID_RECORDCONTROL, 0) != NULL)
                 {
                     FMControlTask_SendCmd(FM_CMD_RECORD_STOP,(void *)0, SYNC_MODE);
+                    #ifdef _RECORD_
                     RecordControlTask_SendCmd(RECORD_CMD_STOP,(void *)0, SYNC_MODE);
+                    #endif
                     gpstFmUiData->Recordstate= RECORD_STATE_STOP;
                     if(RKTaskDelete(TASK_ID_RECORDCONTROL, 0, SYNC_MODE)!= RK_SUCCESS)
                     {
