@@ -12,7 +12,7 @@
 
 
 #define          MENU_ITEM_LENGTH            (unsigned short)250             // The length of menu item in bytes
-#define          TOTAL_MENU_ITEM             (unsigned short)196
+#define          TOTAL_MENU_ITEM             (unsigned short)197
 #define          TOTAL_LANAUAGE_NUM          (unsigned short)19
 #define          MAX_SUBMENU_NUM             (unsigned short)17
 #define          MENU_CONTENT_OFFSET         (unsigned short)50
@@ -156,69 +156,70 @@
 #define          SID_SETTINGS                                     (unsigned short)0x0082       //Settings
 #define          SID_WLAN                                         (unsigned short)0x0083       //WLAN
 #define          SID_WIFICONFIG                                   (unsigned short)0x0084       //WiFi Power
-#define          SID_WIFICONFIG_ON                                (unsigned short)0x0085       //On                    [Function Index: 0000]
-#define          SID_WIFICONFIG_OFF                               (unsigned short)0x0086       //Off                   [Function Index: 0001]
-#define          SID_APCONFIG                                     (unsigned short)0x0087       //AP Config             [Function Index: 0002]
-#define          SID_BLUETOOTH                                    (unsigned short)0x0088       //Bluetooth
-#define          SID_BLUETOOTH_ON                                 (unsigned short)0x0089       //On                    [Function Index: 0003]
-#define          SID_BLUETOOTH_OFF                                (unsigned short)0x008a       //Off                   [Function Index: 0004]
-#define          SID_SETTING_MUSIC                                (unsigned short)0x008b       //Music Settings
-#define          SID_MUSIC_SHUFFLE                                (unsigned short)0x008c       //Shuffle
-#define          SID_MUSIC_SHUFFLE_OFF                            (unsigned short)0x008d       //Shuffle Off           [Function Index: 0005]
-#define          SID_MUSIC_SHUFFLE_ON                             (unsigned short)0x008e       //Shuffle On            [Function Index: 0006]
-#define          SID_MUSIC_REPEAT_MODE                            (unsigned short)0x008f       //Repeat
-#define          SID_MUSIC_FOLDER_ONCE                            (unsigned short)0x0090       //Off                   [Function Index: 0007]
-#define          SID_MUSIC_FOLDER_REPEAT                          (unsigned short)0x0091       //Repeat                [Function Index: 0008]
-#define          SID_MUSIC_REPEAT_ONE                             (unsigned short)0x0092       //Repeat 1 Song         [Function Index: 0009]
-#define          SID_EQ_SELECT                                    (unsigned short)0x0093       //Equalizer
-#define          SID_EQ_NONE                                      (unsigned short)0x0094       //Normal                [Function Index: 0010]
-#define          SID_EQ_BASS                                      (unsigned short)0x0095       //Bass                  [Function Index: 0011]
-#define          SID_EQ_HEAVY                                     (unsigned short)0x0096       //Heavy                 [Function Index: 0012]
-#define          SID_EQ_POP                                       (unsigned short)0x0097       //Pop                   [Function Index: 0013]
-#define          SID_EQ_JAZZ                                      (unsigned short)0x0098       //Jazz                  [Function Index: 0014]
-#define          SID_EQ_UNIQUE                                    (unsigned short)0x0099       //Unique                [Function Index: 0015]
-#define          SID_EQ_CUSTOM                                    (unsigned short)0x009a       //Custom                [Function Index: 0016]
-#define          SID_SETTING_RADIO                                (unsigned short)0x009b       //FM Settings
-#define          SID_RADIO_SCAN_SENSITIVITY                       (unsigned short)0x009c       //Scan Sensitivity
-#define          SID_SCAN_SENSITIVITY_HIGH                        (unsigned short)0x009d       //High                  [Function Index: 0017]
-#define          SID_SCAN_SENSITIVITY_LOW                         (unsigned short)0x009e       //Low                   [Function Index: 0018]
-#define          SID_FM_AUTO_PRESET                               (unsigned short)0x009f       //FM Auto Preset        [Function Index: 0019]
-#define          SID_SETTING_COMMON                               (unsigned short)0x00a0       //Common Settings
-#define          SID_COMMON_SCREEN_OFF_TIMER                      (unsigned short)0x00a1       //Screen Off Timer
-#define          SID_SCREEN_OFF_15_SEC                            (unsigned short)0x00a2       //15 Seconds            [Function Index: 0020]
-#define          SID_SCREEN_OFF_30_SEC                            (unsigned short)0x00a3       //30 Seconds            [Function Index: 0021]
-#define          SID_SCREEN_OFF_1_MIN                             (unsigned short)0x00a4       //1 Minute              [Function Index: 0022]
-#define          SID_SCREEN_OFF_3_MIN                             (unsigned short)0x00a5       //3 Minutes             [Function Index: 0023]
-#define          SID_SCREEN_OFF_5_MIN                             (unsigned short)0x00a6       //5 Minutes             [Function Index: 0024]
-#define          SID_SCREEN_OFF_30_MIN                            (unsigned short)0x00a7       //30 Minutes            [Function Index: 0025]
-#define          SID_COMMON_BRIGHTNESS                            (unsigned short)0x00a8       //Brightness
-#define          SID_LUM_1                                        (unsigned short)0x00a9       //1                     [Function Index: 0026]
-#define          SID_LUM_2                                        (unsigned short)0x00aa       //2                     [Function Index: 0027]
-#define          SID_LUM_3                                        (unsigned short)0x00ab       //3                     [Function Index: 0028]
-#define          SID_LUM_4                                        (unsigned short)0x00ac       //4                     [Function Index: 0029]
-#define          SID_LUM_5                                        (unsigned short)0x00ad       //5                     [Function Index: 0030]
-#define          SID_SYS_ABOUT                                    (unsigned short)0x00ae       //Information           [Function Index: 0031]
-#define          SID_LANGUAGE                                     (unsigned short)0x00af       //Language
-#define          SID_CHINESE_S                                    (unsigned short)0x00b0       //简体中文              [Function Index: 0032]
-#define          SID_CHINESE_T                                    (unsigned short)0x00b1       //繁體中文              [Function Index: 0033]
-#define          SID_ENGLISH                                      (unsigned short)0x00b2       //English               [Function Index: 0034]
-#define          SID_KOREAN                                       (unsigned short)0x00b3       //??                    [Function Index: 0035]
-#define          SID_JAPANESE                                     (unsigned short)0x00b4       //日本語                [Function Index: 0036]
-#define          SID_FRENCH                                       (unsigned short)0x00b5       //Fran?ais              [Function Index: 0037]
-#define          SID_GERMAN                                       (unsigned short)0x00b6       //Deutsch               [Function Index: 0038]
-#define          SID_PORTUGUESE                                   (unsigned short)0x00b7       //Português            [Function Index: 0039]
-#define          SID_RUSSIAN                                      (unsigned short)0x00b8       //Русский        [Function Index: 0040]
-#define          SID_SWEDISH                                      (unsigned short)0x00b9       //Svenska               [Function Index: 0041]
-#define          SID_THAI                                         (unsigned short)0x00ba       //???????               [Function Index: 0042]
-#define          SID_POLISH                                       (unsigned short)0x00bb       //j?zyk polski          [Function Index: 0043]
-#define          SID_DENISH                                       (unsigned short)0x00bc       //Dansk                 [Function Index: 0044]
-#define          SID_HOLLANDS                                     (unsigned short)0x00bd       //Hollands              [Function Index: 0045]
-#define          SID_GREEK                                        (unsigned short)0x00be       //Ελληνικ?       [Function Index: 0046]
-#define          SID_CZECHIC                                      (unsigned short)0x00bf       //?í?tina              [Function Index: 0047]
-#define          SID_TURKISH                                      (unsigned short)0x00c0       //Türk?e               [Function Index: 0048]
-#define          SID_SETTING_INITIALIZE                           (unsigned short)0x00c1       //Initialize
-#define          SID_SYS_DEFAULT_SET                              (unsigned short)0x00c2       //Reset All Settings    [Function Index: 0049]
-#define          SID_FORMAT_DISK                                  (unsigned short)0x00c3       //Format                [Function Index: 0050]
+#define          SID_WIFICONFIG_ON_STA                            (unsigned short)0x0085       //On STA                [Function Index: 0000]
+#define          SID_WIFICONFIG_ON_AP                             (unsigned short)0x0086       //On AP                 [Function Index: 0001]
+#define          SID_WIFICONFIG_OFF                               (unsigned short)0x0087       //Off                   [Function Index: 0002]
+#define          SID_APCONFIG                                     (unsigned short)0x0088       //AP Config             [Function Index: 0003]
+#define          SID_BLUETOOTH                                    (unsigned short)0x0089       //Bluetooth
+#define          SID_BLUETOOTH_ON                                 (unsigned short)0x008a       //On                    [Function Index: 0004]
+#define          SID_BLUETOOTH_OFF                                (unsigned short)0x008b       //Off                   [Function Index: 0005]
+#define          SID_SETTING_MUSIC                                (unsigned short)0x008c       //Music Settings
+#define          SID_MUSIC_SHUFFLE                                (unsigned short)0x008d       //Shuffle
+#define          SID_MUSIC_SHUFFLE_OFF                            (unsigned short)0x008e       //Shuffle Off           [Function Index: 0006]
+#define          SID_MUSIC_SHUFFLE_ON                             (unsigned short)0x008f       //Shuffle On            [Function Index: 0007]
+#define          SID_MUSIC_REPEAT_MODE                            (unsigned short)0x0090       //Repeat
+#define          SID_MUSIC_FOLDER_ONCE                            (unsigned short)0x0091       //Off                   [Function Index: 0008]
+#define          SID_MUSIC_FOLDER_REPEAT                          (unsigned short)0x0092       //Repeat                [Function Index: 0009]
+#define          SID_MUSIC_REPEAT_ONE                             (unsigned short)0x0093       //Repeat 1 Song         [Function Index: 0010]
+#define          SID_EQ_SELECT                                    (unsigned short)0x0094       //Equalizer
+#define          SID_EQ_NONE                                      (unsigned short)0x0095       //Normal                [Function Index: 0011]
+#define          SID_EQ_BASS                                      (unsigned short)0x0096       //Bass                  [Function Index: 0012]
+#define          SID_EQ_HEAVY                                     (unsigned short)0x0097       //Heavy                 [Function Index: 0013]
+#define          SID_EQ_POP                                       (unsigned short)0x0098       //Pop                   [Function Index: 0014]
+#define          SID_EQ_JAZZ                                      (unsigned short)0x0099       //Jazz                  [Function Index: 0015]
+#define          SID_EQ_UNIQUE                                    (unsigned short)0x009a       //Unique                [Function Index: 0016]
+#define          SID_EQ_CUSTOM                                    (unsigned short)0x009b       //Custom                [Function Index: 0017]
+#define          SID_SETTING_RADIO                                (unsigned short)0x009c       //FM Settings
+#define          SID_RADIO_SCAN_SENSITIVITY                       (unsigned short)0x009d       //Scan Sensitivity
+#define          SID_SCAN_SENSITIVITY_HIGH                        (unsigned short)0x009e       //High                  [Function Index: 0018]
+#define          SID_SCAN_SENSITIVITY_LOW                         (unsigned short)0x009f       //Low                   [Function Index: 0019]
+#define          SID_FM_AUTO_PRESET                               (unsigned short)0x00a0       //FM Auto Preset        [Function Index: 0020]
+#define          SID_SETTING_COMMON                               (unsigned short)0x00a1       //Common Settings
+#define          SID_COMMON_SCREEN_OFF_TIMER                      (unsigned short)0x00a2       //Screen Off Timer
+#define          SID_SCREEN_OFF_15_SEC                            (unsigned short)0x00a3       //15 Seconds            [Function Index: 0021]
+#define          SID_SCREEN_OFF_30_SEC                            (unsigned short)0x00a4       //30 Seconds            [Function Index: 0022]
+#define          SID_SCREEN_OFF_1_MIN                             (unsigned short)0x00a5       //1 Minute              [Function Index: 0023]
+#define          SID_SCREEN_OFF_3_MIN                             (unsigned short)0x00a6       //3 Minutes             [Function Index: 0024]
+#define          SID_SCREEN_OFF_5_MIN                             (unsigned short)0x00a7       //5 Minutes             [Function Index: 0025]
+#define          SID_SCREEN_OFF_30_MIN                            (unsigned short)0x00a8       //30 Minutes            [Function Index: 0026]
+#define          SID_COMMON_BRIGHTNESS                            (unsigned short)0x00a9       //Brightness
+#define          SID_LUM_1                                        (unsigned short)0x00aa       //1                     [Function Index: 0027]
+#define          SID_LUM_2                                        (unsigned short)0x00ab       //2                     [Function Index: 0028]
+#define          SID_LUM_3                                        (unsigned short)0x00ac       //3                     [Function Index: 0029]
+#define          SID_LUM_4                                        (unsigned short)0x00ad       //4                     [Function Index: 0030]
+#define          SID_LUM_5                                        (unsigned short)0x00ae       //5                     [Function Index: 0031]
+#define          SID_SYS_ABOUT                                    (unsigned short)0x00af       //Information           [Function Index: 0032]
+#define          SID_LANGUAGE                                     (unsigned short)0x00b0       //Language
+#define          SID_CHINESE_S                                    (unsigned short)0x00b1       //简体中文              [Function Index: 0033]
+#define          SID_CHINESE_T                                    (unsigned short)0x00b2       //繁體中文              [Function Index: 0034]
+#define          SID_ENGLISH                                      (unsigned short)0x00b3       //English               [Function Index: 0035]
+#define          SID_KOREAN                                       (unsigned short)0x00b4       //??                    [Function Index: 0036]
+#define          SID_JAPANESE                                     (unsigned short)0x00b5       //日本語                [Function Index: 0037]
+#define          SID_FRENCH                                       (unsigned short)0x00b6       //Fran?ais              [Function Index: 0038]
+#define          SID_GERMAN                                       (unsigned short)0x00b7       //Deutsch               [Function Index: 0039]
+#define          SID_PORTUGUESE                                   (unsigned short)0x00b8       //Português            [Function Index: 0040]
+#define          SID_RUSSIAN                                      (unsigned short)0x00b9       //Русский        [Function Index: 0041]
+#define          SID_SWEDISH                                      (unsigned short)0x00ba       //Svenska               [Function Index: 0042]
+#define          SID_THAI                                         (unsigned short)0x00bb       //???????               [Function Index: 0043]
+#define          SID_POLISH                                       (unsigned short)0x00bc       //j?zyk polski          [Function Index: 0044]
+#define          SID_DENISH                                       (unsigned short)0x00bd       //Dansk                 [Function Index: 0045]
+#define          SID_HOLLANDS                                     (unsigned short)0x00be       //Hollands              [Function Index: 0046]
+#define          SID_GREEK                                        (unsigned short)0x00bf       //Ελληνικ?       [Function Index: 0047]
+#define          SID_CZECHIC                                      (unsigned short)0x00c0       //?í?tina              [Function Index: 0048]
+#define          SID_TURKISH                                      (unsigned short)0x00c1       //Türk?e               [Function Index: 0049]
+#define          SID_SETTING_INITIALIZE                           (unsigned short)0x00c2       //Initialize
+#define          SID_SYS_DEFAULT_SET                              (unsigned short)0x00c3       //Reset All Settings    [Function Index: 0050]
+#define          SID_FORMAT_DISK                                  (unsigned short)0x00c4       //Format                [Function Index: 0051]
 
 
 
@@ -226,7 +227,7 @@
 
 //-----------------------------------------------------------------------------------------------------------------------------
 #define          SID_SETTINGS_ENTRY                               SID_SETTINGS       //Settings
-#define          SID_SETTINGS_ENTRY_FUN_COUNTER                   0x0033
+#define          SID_SETTINGS_ENTRY_FUN_COUNTER                   0x0034
 
 
 #endif

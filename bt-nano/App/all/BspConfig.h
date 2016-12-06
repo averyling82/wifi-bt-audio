@@ -128,6 +128,7 @@
 
 //#define _EMMC_BOOT_                             /* Enable eMMC Flash                 */
 #ifdef _EMMC_BOOT_                              /* -----eMMC Flash config------------*/
+#define _OTA_UPDATEFW_SUPPORT
 #define EMMC_SDC_DEV_ID     0                   /* SDC controller: 0 eMMC, 1 SDIO    */
 #define EMMC_SDC_CHANNEL    1                   /* SDC iomux: 0 SD card, 1 Emmc      */
 #define EMMC_LUN0_SIZE      40                  /* EMMC Firmware area: 40MB          */
@@ -150,7 +151,7 @@
 
 #define _SPI_BOOT_                            /* Enable SPI Flash                  */
 #ifdef _SPI_BOOT_                               /* -----SPI Flash config-------------*/
-#define _OTA_UPDATEFW_SPI
+#define _OTA_UPDATEFW_SUPPORT
 #define SPI_LUN0_SIZE       6                  /* SPI Firmware area: 6MB=x*512 */
 #define SPI_LUN1_SIZE       2                   /* SPI Database area: 2MB            */
 #define SPI_PAGE_SIZE       1                   /* Page size: 1 sector               */

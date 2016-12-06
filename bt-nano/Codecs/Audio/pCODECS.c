@@ -251,7 +251,7 @@ unsigned long CodeOpenDec(unsigned long directplay, unsigned long savememory)
 	rk_printf("directplay=%d savememory=%d\n",directplay,savememory);
     // Pass the open request to the entry point for the codec.
     ulRet = (CodecDecPFn[CurrentDecCodec])(SUBFN_CODEC_OPEN_DEC, directplay, savememory, 0);
-	rk_printf("20161129 111aaaa1\n");
+
     // Return the result to the caller.
     return(ulRet);
 }

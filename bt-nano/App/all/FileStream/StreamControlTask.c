@@ -151,6 +151,7 @@ COMMON API void StreamControlTask_Enter(void)
    FILE_WRITE_OP_t   *gpFileWriteParm;
    FLAC_SEEKFAST_OP_t *gpFlacSeekFastParm;
    HTC hSelf;
+
    hSelf = RKTaskGetRunHandle();
 
    rk_printf("stream control enter....");

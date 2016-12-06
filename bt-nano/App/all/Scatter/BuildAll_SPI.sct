@@ -173,7 +173,6 @@ LOAD_REGION SYS_CODE_BASE
         sdiodevice.o(.conststrlit)
         wifi.o(.conststrlit)
         dlna.o(.conststrlit)
-        airplay.o(.conststrlit)
         rk903device.o(.conststrlit)
         wlcdevice.o(.conststrlit)
         uartdevice.o(.conststrlit)

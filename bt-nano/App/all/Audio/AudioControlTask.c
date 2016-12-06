@@ -1250,7 +1250,6 @@ COMMON API void AudioControlTask_Enter(void)
     {
         rkos_sleep(10);
     }
-
     hSelf = RKTaskGetRunHandle();
 
     gpstAudioControlData->AudioPlayState = AUDIO_STATE_STOP;

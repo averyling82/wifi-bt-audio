@@ -70,7 +70,7 @@
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-#ifdef _OTA_UPDATEFW_SPI
+#ifdef _OTA_UPDATEFW_SUPPORT
 #define MAX_URL_LEN 512
 #define OTA_URL_HEADER "http://120.24.12.226:8800/otaUpgrade?"
 
@@ -97,7 +97,7 @@ typedef struct __OTAINFOR
 }OTAINFOR;
 OTAINFOR g_OTAINFOR;
 
-#endif//_OTA_UPDATEFW_SPI
+#endif//_OTA_UPDATEFW_SUPPORT
 #ifdef _FW_CRC_
 _OS_FWANALYSIS_FWUPDATE_COMMON_
 unsigned long gTable_Crc32[256]={
@@ -513,7 +513,7 @@ COMMON API void FwCheck(void)
     pIDSEC0 IdSec0;
     pIDSEC1 IdSec1;
 
-#ifdef _OTA_UPDATEFW_SPI
+#ifdef _OTA_UPDATEFW_SUPPORT
 	memset(&g_OTAINFOR,0x0,sizeof(OTAINFOR));//init g_OTAINFOR----jjjjhhhh20161105
 #endif
 	rk_printf("FwCheck start\n");
@@ -675,7 +675,7 @@ COMMON API void FwCheck(void)
 *
 *---------------------------------------------------------------------------------------------------------------------
 */
-#ifdef _OTA_UPDATEFW_SPI
+#ifdef _OTA_UPDATEFW_SUPPORT
 _OS_FWANALYSIS_FWUPDATE_COMMON_
 static COMMON FUN rk_err_t OTAFwUpdate(void)
 {
@@ -1010,7 +1010,7 @@ COMMON API rk_err_t CheckOTAandUpdateFw(void)//check only once
 
 
 
-#endif // #ifdef _OTA_UPDATEFW_SPI end
+#endif // #ifdef _OTA_UPDATEFW_SUPPORT end
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *

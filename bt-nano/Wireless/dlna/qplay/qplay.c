@@ -159,7 +159,7 @@ static BOOL qplay_auth_func(CgUpnpAction * action)
 
 	snprintf(str_seed_prekey,sizeof(str_seed_prekey),"%s%s",seed,presharedkey);
 	//rk_printf("aa presharedkey=%s  aa\n\n",presharedkey);
-	md5code = MD5Create(str_seed_prekey);//32bit
+	md5code = MD5_32_Create(str_seed_prekey);//32bit
 	if(NULL == md5code)
 	{
         rk_printf("ERROR MD5Create failed\n");

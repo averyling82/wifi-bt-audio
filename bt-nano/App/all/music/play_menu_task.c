@@ -820,7 +820,7 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
 		*/
 		switch (gSysConfig.PlayerType)
 		{
-#if 0//dlna->airplay->sd
+#if 1//dlna->airplay->sd
 			case SOURCE_FROM_HTTP:
 				if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER)==1)//STOP DLNA
 				{
@@ -1136,7 +1136,8 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
                         gpstPlayMenuData->smartconfig=1;
                         MainTask_SetStatus(MAINTASK_WIFICONFIG,1);
                         rk_wifi_smartconfig();
-                        MusicPlayMenuTask_StartTimer();
+						MusicPlayMenuTask_CloseTimer();//STOP TIMER FIRST
+                        MusicPlayMenuTask_StartTimer();//RESTART
                         #ifdef NOSCREEN_USE_LED
                         {
                             MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);

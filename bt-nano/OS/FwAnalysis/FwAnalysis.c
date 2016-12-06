@@ -182,7 +182,7 @@ FONT_CODEPAGE_TYPE U2CodePage[] =
 */
 rk_err_t FWShellList(HDC dev, uint8 * pstr);
 rk_err_t FWShellUpdate(HDC dev,  uint8 * pstr);
-#ifdef _OTA_UPDATEFW_SPI
+#ifdef _OTA_UPDATEFW_SUPPORT
 rk_err_t FWShellOTAUpdate(HDC dev,  uint8 * pstr);
 #endif
 rk_err_t FWShellSn(HDC dev, uint8 * pstr);
@@ -1715,7 +1715,7 @@ INIT API void FW_Resource_Init(void)
 
 }
 
-#ifdef _OTA_UPDATEFW_SPI
+#ifdef _OTA_UPDATEFW_SUPPORT
 /*******************************************************************************
 ** Name: FW_GetOTAParameter
 ** Input:void *dat, Ucs2 * buf,uint8 EncodeMode
@@ -1781,7 +1781,7 @@ rk_err_t FW_GetOTAParameter(uint8 *product_cu,uint8 *product_vc,uint8 *product_s
 	/****************************************/
 	return RK_ERROR;
 }
-#endif//#ifdef _OTA_UPDATEFW_SPI
+#endif//#ifdef _OTA_UPDATEFW_SUPPORT
 /*
 *---------------------------------------------------------------------------------------------------------------------
 *
@@ -1797,7 +1797,7 @@ static SHELL_CMD ShellFWName[] =
 {
     "inf",FWShellSn,"get fw inf","fw.inf",
     "update",FWShellUpdate,"up date fw","fw.update",
-#ifdef _OTA_UPDATEFW_SPI
+#ifdef _OTA_UPDATEFW_SUPPORT
     "ota",FWShellOTAUpdate,"ota update fw","fw.ota",
 #endif
     "pcb", FWShellPcb, "get firmwave some information", "fw.pcb",
@@ -2218,13 +2218,13 @@ SHELL FUN rk_err_t FWShellUpdate(HDC dev,  uint8 * pstr)
 ** Date: 2016.11.01
 ** Time: 23:25:44
 *******************************************************************************/
-#ifdef _OTA_UPDATEFW_SPI
+#ifdef _OTA_UPDATEFW_SUPPORT
 _SYSTEM_FWANALYSIS_FWANALYSIS_SHELL_
 SHELL FUN rk_err_t FWShellOTAUpdate(HDC dev,  uint8 * pstr)
 {
 	return CheckOTAandUpdateFw();
 }
-#endif// #ifdef _OTA_UPDATEFW_SPI end
+#endif// #ifdef _OTA_UPDATEFW_SUPPORT end
 /*******************************************************************************
 ** Name: FWShellSn
 ** Input:HDC dev, uint8 * pstr
