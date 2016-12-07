@@ -1136,7 +1136,7 @@ COMMON FUN int MusicPlayMenuTask_KeyEvent(uint32 KeyVal)
                         gpstPlayMenuData->smartconfig=1;
                         MainTask_SetStatus(MAINTASK_WIFICONFIG,1);
                         rk_wifi_smartconfig();
-						MusicPlayMenuTask_CloseTimer();//STOP TIMER FIRST
+						//MusicPlayMenuTask_CloseTimer();//STOP TIMER FIRST
                         MusicPlayMenuTask_StartTimer();//RESTART
                         #ifdef NOSCREEN_USE_LED
                         {
@@ -3032,8 +3032,8 @@ COMMON FUN int MusicPlayMenuTask_NoScreenEvent(uint32 cmd, int type)
         case 0:
 #ifdef _WIFI_
 			rk_printf("1.wifi connect ok:start palyer=0x%x",gSysConfig.PlayerType);
-			MusicPlay_StartPlayer(gSysConfig.PlayerType);
-			//CheckOTAandUpdateFw();//check ota and update fw //jjjhhh 20161105 must place here
+			MusicPlay_StartPlayer(gSysConfig.PlayerType);//(SOURCE_FROM_XXX);//
+			CheckOTAandUpdateFw();//check ota and update fw //jjjhhh 20161105 must place here
 #endif
             break;
         default:

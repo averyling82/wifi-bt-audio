@@ -126,7 +126,7 @@
 #define _HIDDEN_DISK2_                          /* Enable hidden disk(B:)            */
 //#define ENABLE_MBR                            /* Enable MBR                        */
 
-//#define _EMMC_BOOT_                             /* Enable eMMC Flash                 */
+#define _EMMC_BOOT_                             /* Enable eMMC Flash                 */
 #ifdef _EMMC_BOOT_                              /* -----eMMC Flash config------------*/
 #define _OTA_UPDATEFW_SUPPORT
 #define EMMC_SDC_DEV_ID     0                   /* SDC controller: 0 eMMC, 1 SDIO    */
@@ -149,7 +149,7 @@
 
 #endif
 
-#define _SPI_BOOT_                            /* Enable SPI Flash                  */
+//#define _SPI_BOOT_                            /* Enable SPI Flash                  */
 #ifdef _SPI_BOOT_                               /* -----SPI Flash config-------------*/
 #define _OTA_UPDATEFW_SUPPORT
 #define SPI_LUN0_SIZE       6                  /* SPI Firmware area: 6MB=x*512 */

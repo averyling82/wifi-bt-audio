@@ -326,17 +326,17 @@ COMMON API void PnPSever(void)
                         }
                     }
                 }
-                else if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER) == 1/* ||
-					(MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) == 1)*/)//DLNA/AIRPLAY MODE----LED1:ON; LED2:ON
+                else if (MainTask_GetStatus(MAINTASK_APP_DLNA_PLAYER) == 1 ||
+					(MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) == 1)/**/)//DLNA/AIRPLAY MODE----LED1:ON; LED2:ON
                 {	//rk_printf(">>>>>>>5555555555\n");
                     MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);
                     MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_ON);
                 }
-                else if (MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) == 1)//AIRPLAY MODE----LED1:OFF; LED2:OFF
+                /*else if (MainTask_GetStatus(MAINTASK_APP_XXX_PLAYER) == 1)//AIRPLAY MODE----LED1:OFF; LED2:OFF
                 {	//rk_printf(">>>>>>>5555555555\n");
                     MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_OFF);
                     MainTask_SetLED (MAINTASK_LED2,MAINTASK_LED_OFF);
-                }
+                }*/
 				else if (MainTask_GetStatus(MAINTASK_APP_LOCAL_PLAYER) == 1)//MP3/本地播放 MODE----LED1:ON; LED2:OFF
                 {	//rk_printf(">>>>>>>6666666666\n");
                     MainTask_SetLED (MAINTASK_LED1,MAINTASK_LED_ON);

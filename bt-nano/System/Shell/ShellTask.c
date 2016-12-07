@@ -1002,10 +1002,14 @@ COMMON FUN rk_err_t ShellTaskCheckIdle(HTC hTask)
 _SYSTEM_SHELL_SHELLTASK_COMMON_
 COMMON FUN rk_err_t ShellTaskResume(HTC hTask)
 {
+#ifdef DEBUG_UART_PORT
    RK_TASK_CLASS*   pShellTask = (RK_TASK_CLASS*)hTask;
    gpstShellTaskDataBlock->hUart = RKDev_Open(DEV_CLASS_UART, DEBUG_UART_PORT, NOT_CARE);
    pShellTask->State = TASK_STATE_WORKING;
    return RK_SUCCESS;
+#else
+	return RK_ERROR;
+#endif
 }
 
 /*******************************************************************************
@@ -1379,6 +1383,7 @@ INIT API rk_err_t ShellTaskInit(void *pvParameters, void * arg)
     if (pShellTask == NULL)
         return RK_PARA_ERR;
 
+#ifdef DEBUG_UART_PORT
     pShellTask->Idle1EventTime = 10 * PM_TIME;
     pShellTask->TaskSuspendFun = ShellTaskSuspend;
     pShellTask->TaskResumeFun = ShellTaskResume;
@@ -1402,7 +1407,7 @@ INIT API rk_err_t ShellTaskInit(void *pvParameters, void * arg)
     return RK_SUCCESS;
 
 exit:
-
+#endif
     return RK_ERROR;
 }
 
