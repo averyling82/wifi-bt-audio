@@ -1377,7 +1377,7 @@ void *player_get_qplaylist_value(G_QPLAY_LIST_VALUE type)
 		case QPLAY_LIST_VALUE_TRACKSNUM:
 			return (void *)g_qplay_list.tracksNum;
 		case QPLAY_LIST_VALUE_TRACKSCUR:
-			return (void *)g_qplay_list.tracksCur;
+			return (void *)(g_medata_p.music_cur);//g_qplay_list.tracksCur;
 		case QPLAY_LIST_VALUE_TRACKSDURATION:
 			return (void *)g_qplay_list.tracksDuration;
 		case QPLAY_LIST_VALUE_PTRACKSROOT:
