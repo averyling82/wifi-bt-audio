@@ -13,7 +13,7 @@ static unsigned char PADDING[]={0x80,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-void MD5_32_Init(MD5_CTX_32 *context)
+void Qplay_MD5Init(QPLAY_MD5_CTX *context)
 {
 	context->count[0] = 0;
 	context->count[1] = 0;
@@ -22,7 +22,7 @@ void MD5_32_Init(MD5_CTX_32 *context)
 	context->state[2] = 0x98BADCFE;
 	context->state[3] = 0x10325476;
 }
-void MD5_32_Update(MD5_CTX_32 *context,unsigned char *input,unsigned int inputlen)
+void Qplay_MD5Update(QPLAY_MD5_CTX *context,unsigned char *input,unsigned int inputlen)
 {
 	unsigned int i = 0,index = 0,partlen = 0;
 	index = (context->count[0] >> 3) & 0x3F;
@@ -35,9 +35,9 @@ void MD5_32_Update(MD5_CTX_32 *context,unsigned char *input,unsigned int inputle
 	if(inputlen >= partlen)
 	{
 		memcpy(&context->buffer[index],input,partlen);
-		MD5_32_Transform(context->state,context->buffer);
+		Qplay_MD5Transform(context->state,context->buffer);
 		for(i = partlen;i+64 <= inputlen;i+=64)
-			MD5_32_Transform(context->state,&input[i]);
+			Qplay_MD5Transform(context->state,&input[i]);
 		index = 0;        
 	}  
 	else
@@ -46,18 +46,18 @@ void MD5_32_Update(MD5_CTX_32 *context,unsigned char *input,unsigned int inputle
 	}
 	memcpy(&context->buffer[index],&input[i],inputlen-i);
 }
-void MD5_32_Final(MD5_CTX_32 *context,unsigned char digest[16])
+void Qplay_MD5Final(QPLAY_MD5_CTX *context,unsigned char digest[16])
 {
 	unsigned int index = 0,padlen = 0;
 	unsigned char bits[8];
 	index = (context->count[0] >> 3) & 0x3F;
 	padlen = (index < 56)?(56-index):(120-index);
-	MD5_32_Encode(bits,context->count,8);
-	MD5_32_Update(context,PADDING,padlen);
-	MD5_32_Update(context,bits,8);
-	MD5_32_Encode(digest,context->state,16);
+	Qplay_MD5Encode(bits,context->count,8);
+	Qplay_MD5Update(context,PADDING,padlen);
+	Qplay_MD5Update(context,bits,8);
+	Qplay_MD5Encode(digest,context->state,16);
 }
-void MD5_32_Encode(unsigned char *output,unsigned int *input,unsigned int len)
+void Qplay_MD5Encode(unsigned char *output,unsigned int *input,unsigned int len)
 {
 	unsigned int i = 0,j = 0;
 	while(j < len)
@@ -70,7 +70,7 @@ void MD5_32_Encode(unsigned char *output,unsigned int *input,unsigned int len)
 		j+=4;
 	}
 }
-void MD5_32_Decode(unsigned int *output,unsigned char *input,unsigned int len)
+void Qplay_MD5Decode(unsigned int *output,unsigned char *input,unsigned int len)
 {
 	unsigned int i = 0,j = 0;
 	while(j < len)
@@ -83,14 +83,14 @@ void MD5_32_Decode(unsigned int *output,unsigned char *input,unsigned int len)
 		j+=4; 
 	}
 }
-void MD5_32_Transform(unsigned int state[4],unsigned char block[64])
+void Qplay_MD5Transform(unsigned int state[4],unsigned char block[64])
 {
 	unsigned int a = state[0];
 	unsigned int b = state[1];
 	unsigned int c = state[2];
 	unsigned int d = state[3];
 	unsigned int x[64];
-	MD5_32_Decode(x,block,64);
+	Qplay_MD5Decode(x,block,64);
 	FF(a, b, c, d, x[ 0], 7, 0xd76aa478); /* 1 */
 	FF(d, a, b, c, x[ 1], 12, 0xe8c7b756); /* 2 */
 	FF(c, d, a, b, x[ 2], 17, 0x242070db); /* 3 */
@@ -166,9 +166,9 @@ void MD5_32_Transform(unsigned int state[4],unsigned char block[64])
 	state[2] += c;
 	state[3] += d;
 }
-char *MD5_32_Create(char *str)
+char *Qplay_MD5Create(char *str)
 {
-	MD5_CTX_32 md5;
+	QPLAY_MD5_CTX md5;
 	int i;
 	unsigned char decrypt[16];
 	char *md5string = NULL;
@@ -176,9 +176,9 @@ char *MD5_32_Create(char *str)
         if(NULL == str)
            return NULL;
 
-	MD5_32_Init(&md5);	
-	MD5_32_Update(&md5,str,strlen((char *)str));
-	MD5_32_Final(&md5,decrypt);
+	Qplay_MD5Init(&md5);
+	Qplay_MD5Update(&md5,str,strlen((char *)str));
+	Qplay_MD5Final(&md5,decrypt);
     md5string = (char *)malloc(33);
 	for(i=0;i<16;i++)
 	{
@@ -187,6 +187,8 @@ char *MD5_32_Create(char *str)
 	if(strlen(md5string) != 32)
 	{	 
 		rk_printf("MD5Create ERROR!\n");
+		if(md5string)
+			free(md5string);
 		return NULL;
 	}/*printf("%d\n",strlen(md5string));*/
 

@@ -347,7 +347,7 @@ int MplayerCtrl_Playing(char *url)
     RK_TASK_AUDIOCONTROL_ARG pArg;
     rk_err_t ret = RK_ERROR;
 
-    rk_printf("paly play_state = %d", play_state);
+    rk_printf("paly play_state = %d, url = %s", play_state, url);
     //return 0;
 #ifdef PLAYER_TEST
     if(play_state == PLAYER_PLAYING)

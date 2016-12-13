@@ -1,6 +1,13 @@
 #ifndef _QPLAY_LIST_H
 #define _QPLAY_LIST_H
 #include <cybergarage/upnp/caction.h>
+#include <cybergarage/http/chttp.h>
+
+#define CG_HTTP_LEN_MAX   5000//5K
+#define HTTP_CONTENT   L"httpcontent.txt"
+#define TRACK_DATA     L"TracksMetaData.txt"
+
+
 
 typedef enum {
 	QPLAY_LIST_VALUE_UNKNOW = 0,
@@ -21,6 +28,7 @@ typedef enum {
 	QPLAY_TRANSPORT_STATE__COUNT
 } G_QPLAY_TRANSPORT_STATE;
 
+
 G_QPLAY_TRANSPORT_STATE get_qplay_seek_state(void);
 void set_qplay_seek_state(G_QPLAY_TRANSPORT_STATE state);
 
@@ -32,5 +40,10 @@ void *player_get_qplaylist_value(G_QPLAY_LIST_VALUE type);
 char *player_get_curQPLAYtrack_metadata(void);
 BOOL player_seek_qplay_index(int index);
 BOOL player_seek_next_qplay_index(void);
+
+
+
+int qplay_httptrackmedata_packet_write_file(CgHttpPacket *httpPkt, CgSocket *sock,unsigned long conLen);
+void qplay_httptrackmedata_response_from_file(CgHttpPacket *httpPkt, CgSocket *sock);
 
 #endif

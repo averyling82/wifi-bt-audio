@@ -242,13 +242,13 @@ BOOL cg_upnpav_dmr_actionreceived(CgUpnpAction *action)
     dmr = (CgUpnpAvRenderer *)cg_upnp_device_getuserdata(dev);
     if (!dmr)
         return FALSE;
-    rk_printf("cg upnpav dmr action");
+   // rk_printf("cg upnpav dmr action");
     userActionListener = cg_upnpav_dmr_getactionlistener(dmr);
     if (userActionListener) {
         if (userActionListener(action))
             return TRUE;
     }
-    rk_printf("cg upnpav dmr action11");
+    //rk_printf("cg upnpav dmr action11");
     if (cg_streq(cg_upnp_service_getservicetype(service), CG_UPNPAV_DMR_AVTRANSPORT_SERVICE_TYPE))
     {
        rk_printf("avtranstpot server type 1");

@@ -50,7 +50,6 @@ extern "C" {
 * Define
 ****************************************/
 
-
 #define CG_HTTP_READLINE_BUFSIZE 512
 #define CG_HTTP_SEVERNAME_MAXLEN 64
 #define CG_HTTP_DATE_MAXLEN 128
@@ -200,6 +199,8 @@ typedef struct _CgHttpHeader {
 typedef struct _CgHttpPacket {
     CgHttpHeaderList *headerList;
     CgString *content;
+    unsigned short conlen;
+    int cgfile_flag;
 } CgHttpPacket;
 
 typedef struct _CgHttpResponse {
@@ -215,6 +216,10 @@ typedef struct _CgHttpResponse {
 typedef struct _CgHttpRequest {
     CgHttpHeaderList *headerList;
     CgString *content;
+
+    unsigned short conlen;
+    int cgfile_flag;
+
     CgString *method;
     CgString *uri;
     CgString *version;

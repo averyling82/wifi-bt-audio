@@ -84,7 +84,7 @@ void dmr_nomedia_lastchange(CgUpnpAvRenderer *dmr)
 
     sprintf(buf, last_change_action, CG_UPNPAV_DMR_AVTRANSPORT_CURRENTTRANSPORTSTATE_STOPPED, "Play, Seek, X_DLNA_SeekTime");
     cg_upnp_statevariable_setvalue(stateVar, buf);
-    ALOGD("buf= %s\n", buf);
+   // ALOGD("buf= %s\n", buf);
 
     free(play_duration);
     free(buf);
@@ -129,7 +129,7 @@ void dmr_stop_lastchange(CgUpnpAvRenderer *dmr)
     stateVar = cg_upnp_service_getstatevariablebyname(service, CG_UPNPAV_DMR_RENDERINGCONTROL_LASTCHANGE);
 
     cg_upnp_statevariable_setvalue(stateVar, buf);
-    ALOGD("buf= %s\n", buf);
+    //ALOGD("buf= %s\n", buf);
     free(buf);
     return;
 }
@@ -174,7 +174,7 @@ void dmr_transport_lastchange(CgUpnpAvRenderer *dmr)
     stateVar = cg_upnp_service_getstatevariablebyname(service, CG_UPNPAV_DMR_RENDERINGCONTROL_LASTCHANGE);
 
     cg_upnp_statevariable_setvalue(stateVar, buf);
-    ALOGD("buf= %s\n", buf);
+    //ALOGD("buf= %s\n", buf);
     free(buf);
     return;
 }
@@ -199,7 +199,7 @@ void dmr_playing_lastchange(CgUpnpAvRenderer *dmr)
     stateVar = cg_upnp_service_getstatevariablebyname(service, CG_UPNPAV_DMR_RENDERINGCONTROL_LASTCHANGE);
 
     cg_upnp_statevariable_setvalue(stateVar, buf);
-    ALOGD("buf= %s\n", buf);
+    //ALOGD("buf= %s\n", buf);
     free(buf);
 }
 
@@ -227,7 +227,7 @@ void dmr_pause_lastchange(CgUpnpAvRenderer *dmr, int value)
 
     cg_upnp_statevariable_setvalue(stateVar, buf);
 
-    ALOGD("buf= %s\n", buf);
+    //ALOGD("buf= %s\n", buf);
 
     free(buf);
 }

@@ -37,9 +37,10 @@ void set_qplay_seek_state(G_QPLAY_TRANSPORT_STATE state)
 
 #endif
 
-
+extern int g_TrackMedata;
+int g_CurrentURIMetaData = 0;
+int g_CurrentTest= 0;
 //#pragma arm section code = "dlnaCode", rodata = "dlnaCode", rwdata = "dlnadata", zidata = "dlnadata"
-
 #define BUF_SIZE (1024)
 
 extern void stop_dlna_device(void);
@@ -164,13 +165,15 @@ static BOOL dmr_avtransport_actionreceived(CgUpnpAction * action)
 		if(g_qqplayflag)
 		{
 			char *trackmetadata = NULL;
+			//rk_printf("get TrackMetaData 000\n");
 			trackmetadata = player_get_curQPLAYtrack_metadata();
+			//rk_printf("get TrackMetaData 1111\ntrackmetadata=%s\n",trackmetadata);
 			if(trackmetadata )
 			{
 				cg_upnp_argument_setvalue(arg,trackmetadata );
 				free(trackmetadata);
 				trackmetadata = NULL;
-				//rk_printf("TrackMetaData=%s!",arg->value->value);
+				rk_printf("TrackMetaData=%s!",arg->value->value);
 			}
 		}
 		else
@@ -392,7 +395,7 @@ static BOOL dmr_avtransport_actionreceived(CgUpnpAction * action)
 				sec = ((int)player_get_qplaylist_value(QPLAY_LIST_VALUE_TRACKSDURATION)%3600)%60;
 				sprintf(tracksDuration,"%02d:%02d:%02d",hour,minute,sec); 
 				cg_upnp_argument_setvalue(arg, tracksDuration);
-				rk_printf("MediaDuration = %s\n", arg->value->value);
+				//rk_printf("MediaDuration = %s\n", arg->value->value);
 			}
 			else
 		#endif
@@ -423,12 +426,31 @@ static BOOL dmr_avtransport_actionreceived(CgUpnpAction * action)
         // CurrentURIMetaData
         if(g_qqplayflag)
         {
-        	arg = NULL;
+            g_CurrentTest = 1;
+            arg = NULL;
         	arg = cg_upnp_action_getargumentbyname(action,"CurrentURIMetaData");
         	if (!arg)
             	return FALSE;
-        	cg_upnp_argument_setvalue(arg, (char *)player_get_qplaylist_value(QPLAY_LIST_VALUE_TRACKSMETADATA));
-			//rk_printf("CurrentURIMetaData = %s\n", arg->value->value);
+            if(g_TrackMedata == 0)
+            {
+        	    cg_upnp_argument_setvalue(arg, (char *)player_get_qplaylist_value(QPLAY_LIST_VALUE_TRACKSMETADATA));
+            }
+            else
+            {
+                g_CurrentURIMetaData = 1;
+                cg_upnp_argument_setvalue(arg, "httpcontent");
+                #if 0
+                char *trackmetadata = NULL;
+    			trackmetadata = player_get_curQPLAYtrack_metadata();
+    			if(trackmetadata )
+    			{
+    				cg_upnp_argument_setvalue(arg,trackmetadata );
+    				free(trackmetadata);
+    				trackmetadata = NULL;
+    			}
+                #endif
+            }
+			printf("CurrentURIMetaData = %s\n", arg->value->value);
     	}
 	#endif
 
@@ -572,7 +594,7 @@ static BOOL dmr_conmgr_actionreceived(CgUpnpAction * action)
         return FALSE;
 
     /* GetProtocolInfo*/
-    if (cg_streq(actionName, CG_UPNPAV_DMR_CONNECTIONMANAGER_GET_PROTOCOL_INFO))
+    if (cg_streq(actionName, CG_UPNPAV_DMR_CONNECTIONMANAGER_GET_PROTOCOL_INFO)) //GetProtocolInfo
     {
         arg = cg_upnp_action_getargumentbyname(action, CG_UPNPAV_DMR_CONNECTIONMANAGER_SINK);
         if (!arg)
