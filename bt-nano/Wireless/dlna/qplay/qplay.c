@@ -27,9 +27,9 @@
 
 #define QPLAYNULLLIST ""//"{\"TracksMetaData\":[]}"//
 #define QPLAYMAXTRACKS "100"
-#define MANUFACTURID "62900058"
+#define MANUFACTURID "xxxxxx"
 //#define PRESHAREDKEY "xxxxxx"
-#define DEVICETYPEID "nw11"
+#define DEVICETYPEID "xxxx"
 
 #define REMALLOCALLTRACK 1
 #define ALLTARCKLENGTH 65536
